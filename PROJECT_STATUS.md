@@ -77,16 +77,20 @@ Montada globalmente no arquivo raiz `app/app.vue`, estando acessível em **100% 
 4. **Centralização do Dev Bypass**:
    - Removido componente obsoleto duplicado e centralizado no `DevFloatingTool.vue` montado no `app.vue`.
    - Adicionados botões duplos (`Preencher` para ver os dados no form e `⚡ Entrar` para login direto).
-5. **Verificação de Build**:
+6. **Conexão com Backend & Configuração de Portas**:
+   - Criado `.env` do `zuvio-web` configurado para rodar na porta `3001` e consumir a API do backend na porta `3000` (`NUXT_PUBLIC_API_BASE=http://localhost:3000`).
+   - Removido mock de autenticação do Nitro (`server/api/auth/login.post.ts`) para direcionamento direto ao backend real.
+   - Atualizado CORS em `server-consorcio/.env` para permitir a origem `http://localhost:3001`.
+7. **PWA & Suporte Mobile**:
+   - Instalado e configurado `@vite-pwa/nuxt` com manifest standalone, cores Katari e ícones.
+8. **Verificação de Build**:
    - `npm run build` executado e aprovado com **0 erros**.
 
 ---
 
-## 🎯 6. Próximos Passos (Para quando voltar):
+## 🎯 6. Próximos Passos:
 
-1. **Conexão com Backend de Produção**:
-   - Conectar as rotas mockadas (`/api/auth/login`, lances, KYC) com os endpoints reais da API em `Server para o consorcio`.
-2. **PWA & Instalação Mobile**:
-   - Configurar `manifest.json` e ícones para habilitar a instalação PWA no celular.
-3. **Refinamentos Finais**:
-   - Executar testes de ponta a ponta adicionais em diferentes tamanhos de tela.
+1. **Testes de Integração de Ponta a Ponta**:
+   - Subir `server-consorcio` e `zuvio-web` simultaneamente e validar fluxos reais de login, contratação, PIX e lances.
+2. **Refinamentos Finais**:
+   - Testes visuais em telas mobile reais / emulador.

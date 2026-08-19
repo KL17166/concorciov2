@@ -4,8 +4,46 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   modules: [
-    '@pinia/nuxt'
+    '@pinia/nuxt',
+    '@vite-pwa/nuxt'
   ],
+
+  pwa: {
+    manifest: {
+      name: 'Katari Consórcios',
+      short_name: 'Katari',
+      description: 'Plataforma digital de consórcios de motos e veículos',
+      theme_color: '#263238',
+      background_color: '#1e282d',
+      display: 'standalone',
+      orientation: 'portrait',
+      scope: '/',
+      start_url: '/',
+      icons: [
+        {
+          src: '/favicon.svg',
+          sizes: 'any',
+          type: 'image/svg+xml',
+          purpose: 'any'
+        },
+        {
+          src: '/logo.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'any maskable'
+        }
+      ]
+    },
+    workbox: {
+      navigateFallback: '/'
+    },
+    client: {
+      installPrompt: true
+    },
+    devOptions: {
+      enabled: false
+    }
+  },
 
   css: [
     '~/assets/css/main.css'
