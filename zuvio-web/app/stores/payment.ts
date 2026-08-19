@@ -25,29 +25,18 @@ export const usePaymentStore = defineStore('payment', {
       }
     },
 
-    async generatePix(installment: Installment): Promise<PixPaymentResponse | null> {
+    async generatePix(installmentOrId: Installment | string, maybeToken?: string): Promise<PixPaymentResponse | null> {
       this.isLoading = true
-      this.selectedInstallment = installment
       const api = useApiClient()
-      const authStore = useAuthStore()
+
+      const id = typeof installmentOrId === 'string' ? installmentOrId : installmentOrId.id
+      const token = typeof installmentOrId === 'string' ? (maybeToken || '') : installmentOrId.idTokenPay
+      if (typeof installmentOrId !== 'string') {
+        this.selectedInstallment = installmentOrId
+      }
 
       try {
-        if (authStore.isDevBypass) {
-          // Instant mock PIX response for seamless offline testing
-          const mockPix: PixPaymentResponse = {
-            success: true,
-            provider: 'pixgo-sandbox',
-            paymentId: 'pix_mock_' + Date.now(),
-            qrCode: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-            copyPaste: '00020126360014BR.GOV.BCB.PIX0114+551199999999520400005303986540510.005802BR5913Katari Consorcios6008BRASILIA62070503***63041D3D',
-            amount: installment.valueToPay || installment.amount,
-            expirationDate: new Date(Date.now() + 30 * 60 * 1000).toISOString()
-          }
-          this.activePix = mockPix
-          return mockPix
-        }
-
-        const res = await api.payments.generatePix(installment.id, installment.idTokenPay)
+        const res = await api.payments.generatePix(id, token)
         this.activePix = res
         return res
       } catch (err) {
@@ -58,27 +47,18 @@ export const usePaymentStore = defineStore('payment', {
       }
     },
 
-    async generateBoleto(installment: Installment): Promise<BoletoPaymentResponse | null> {
+    async generateBoleto(installmentOrId: Installment | string, maybeToken?: string): Promise<BoletoPaymentResponse | null> {
       this.isLoading = true
-      this.selectedInstallment = installment
       const api = useApiClient()
-      const authStore = useAuthStore()
+
+      const id = typeof installmentOrId === 'string' ? installmentOrId : installmentOrId.id
+      const token = typeof installmentOrId === 'string' ? (maybeToken || '') : installmentOrId.idTokenPay
+      if (typeof installmentOrId !== 'string') {
+        this.selectedInstallment = installmentOrId
+      }
 
       try {
-        if (authStore.isDevBypass) {
-          const mockBoleto: BoletoPaymentResponse = {
-            success: true,
-            provider: 'sigilopay-sandbox',
-            paymentId: 'boleto_mock_' + Date.now(),
-            copyPaste: '34191.09008 61713.957308 71444.640008 2 92900000000000',
-            amount: installment.valueToPay || installment.amount,
-            expirationDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
-          }
-          this.activeBoleto = mockBoleto
-          return mockBoleto
-        }
-
-        const res = await api.payments.generateBoleto(installment.id, installment.idTokenPay)
+        const res = await api.payments.generateBoleto(id, token)
         this.activeBoleto = res
         return res
       } catch (err) {

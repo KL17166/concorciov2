@@ -138,19 +138,22 @@ async function copyToClipboard(text: string) {
   }
 }
 
-function simulatePaymentSuccess() {
-  isPaymentConfirmed.value = true
+const isChecking = ref(false)
+
+async function checkPaymentStatus() {
+  isChecking.value = true
+  toast.info('Verificando confirmação do pagamento no servidor...', 'Status')
   
-  if (contract.value) {
-    contract.value.isAdesaoPaid = true
-    contract.value.status = 'active'
-    contract.value.paidInstallments = [1]
-    contract.value.currentInstallment = 2
-    contract.value.progressPercentage = Math.round((1 / (contract.value.totalInstallments || 80)) * 100)
-    contract.value.dueDate = '15/09/2026'
+  await consortiumStore.loadHomeData()
+  
+  if (contract.value && (contract.value.isAdesaoPaid || contract.value.status === 'active')) {
+    isPaymentConfirmed.value = true
+    toast.success('Pagamento da adesão confirmado com sucesso no servidor!', 'Parabéns!')
+  } else {
+    toast.info('Aguardando compensação do banco ou aprovação do gateway.', 'Pendente')
   }
 
-  toast.success('Pagamento da adesão confirmado com sucesso!', 'Parabéns!')
+  isChecking.value = false
 }
 
 function handleFinish() {
@@ -380,15 +383,16 @@ function handleFinish() {
         </div>
       </div>
 
-      <!-- ── Simulação / Ações de Conclusão ─────────────────────────────────── -->
+      <!-- ── Ações de Verificação / Conclusão ─────────────────────────────────── -->
       <div class="payment-actions-card">
         <button
           type="button"
           class="btn-simulate-success"
-          @click="simulatePaymentSuccess"
+          :disabled="isChecking"
+          @click="checkPaymentStatus"
         >
-          <Zap :size="18" />
-          <span>JÁ REALIZEI O PAGAMENTO (SIMULAR SUCESSO)</span>
+          <RefreshCw :size="18" :class="{ 'spin-icon': isChecking }" />
+          <span>{{ isChecking ? 'VERIFICANDO NO SERVIDOR...' : 'VERIFICAR STATUS DO PAGAMENTO' }}</span>
         </button>
 
         <div class="security-guarantee">

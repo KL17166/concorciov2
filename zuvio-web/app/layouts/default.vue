@@ -36,11 +36,6 @@ function handleLogout() {
 
         <!-- Right User Actions -->
         <div class="header-actions">
-          <!-- Dev Mode Indicator if active -->
-          <div v-if="authStore.isDevBypass" class="dev-badge" title="Sessão iniciada via Dev Bypass">
-            <Zap :size="12" />
-            <span>DEV MOCK</span>
-          </div>
 
           <div class="user-chip">
             <div class="user-avatar">

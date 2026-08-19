@@ -103,15 +103,20 @@ onMounted(() => {
     }
   }, 1000)
 
-  // Start payment status polling
+  // Real payment status polling against backend
   pollInterval = setInterval(async () => {
     if (isPaymentConfirmed.value) return
     isVerifying.value = true
-    // Simulate payment check
-    setTimeout(() => {
-      isVerifying.value = false
-    }, 1500)
-  }, 12000)
+    try {
+      await consortiumStore.loadHomeData()
+      const subId = checkoutStore.createdSubscriptionId
+      const contract = consortiumStore.activeContracts.find(c => c.id === subId)
+      if (contract && (contract.isAdesaoPaid || contract.status === 'active')) {
+        isPaymentConfirmed.value = true
+      }
+    } catch (_) {}
+    isVerifying.value = false
+  }, 8000)
 })
 
 onUnmounted(() => {
@@ -131,18 +136,17 @@ async function copyToClipboard(text: string) {
   }
 }
 
-function simulatePaymentSuccess() {
-  isPaymentConfirmed.value = true
-  const subId = checkoutStore.createdSubscriptionId
-  const contract = consortiumStore.activeContracts.find(c => c.id === subId)
-  if (contract) {
-    contract.isAdesaoPaid = true
-    contract.status = 'active'
-    contract.paidInstallments = [1]
-    contract.currentInstallment = 2
-    contract.progressPercentage = Math.round((1 / contract.totalInstallments) * 100)
-    contract.dueDate = '15/09/2026'
-  }
+async function checkPaymentStatus() {
+  isVerifying.value = true
+  try {
+    await consortiumStore.loadHomeData()
+    const subId = checkoutStore.createdSubscriptionId
+    const contract = consortiumStore.activeContracts.find(c => c.id === subId)
+    if (contract && (contract.isAdesaoPaid || contract.status === 'active')) {
+      isPaymentConfirmed.value = true
+    }
+  } catch (_) {}
+  isVerifying.value = false
 }
 
 function handleFinish() {
@@ -313,11 +317,11 @@ function handleFinish() {
           </div>
         </div>
 
-        <!-- Dev Mode: Instant Simulation Button -->
+        <!-- Real status check action -->
         <div class="dev-simulation-wrap">
-          <button class="btn-simulate-confirm" @click="simulatePaymentSuccess">
-            <Sparkles :size="16" />
-            <span>Simular Confirmação Imediata (Ambiente de Testes)</span>
+          <button class="btn-check-status" :disabled="isVerifying" @click="checkPaymentStatus">
+            <RefreshCw :size="16" :class="{ 'spin-icon': isVerifying }" />
+            <span>{{ isVerifying ? 'Consultando confirmação no servidor...' : 'Verificar Pagamento no Servidor' }}</span>
           </button>
         </div>
       </div>
@@ -348,9 +352,9 @@ function handleFinish() {
         </div>
 
         <div class="dev-simulation-wrap">
-          <button class="btn-simulate-confirm" @click="simulatePaymentSuccess">
-            <Sparkles :size="16" />
-            <span>Simular Pagamento do Boleto (Ambiente de Testes)</span>
+          <button class="btn-check-status" :disabled="isVerifying" @click="checkPaymentStatus">
+            <RefreshCw :size="16" :class="{ 'spin-icon': isVerifying }" />
+            <span>{{ isVerifying ? 'Consultando compensação no servidor...' : 'Verificar Pagamento no Servidor' }}</span>
           </button>
         </div>
       </div>
