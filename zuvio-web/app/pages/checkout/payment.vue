@@ -282,7 +282,7 @@ function handleFinish() {
         <div class="copy-paste-card">
           <div class="copy-paste-header">
             <span class="copy-label">Código Pix Copia e Cola</span>
-            <span v-if="isCopied" class="copied-badge">✓ Copiado!</span>
+            <span v-if="isCopied" class="copied-badge"><Check :size="12" /> Copiado!</span>
           </div>
           <div class="copy-box" @click="copyToClipboard(pixCode)">
             <p class="pix-raw-text">{{ pixCode }}</p>
@@ -339,7 +339,7 @@ function handleFinish() {
         <div class="copy-paste-card">
           <div class="copy-paste-header">
             <span class="copy-label">Linha Digitável</span>
-            <span v-if="isCopied" class="copied-badge">✓ Copiado!</span>
+            <span v-if="isCopied" class="copied-badge"><Check :size="12" /> Copiado!</span>
           </div>
           <div class="copy-box" @click="copyToClipboard(boletoLine)">
             <p class="pix-raw-text">{{ boletoLine }}</p>
@@ -608,6 +608,9 @@ function handleFinish() {
 }
 
 .copied-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   font-weight: 800;
   color: #2E7D32;

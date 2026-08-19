@@ -410,7 +410,10 @@ function handleFinish() {
             <CheckCircle2 :size="48" color="#FFFFFF" />
           </div>
 
-          <h2 class="success-modal-title">Adesão Confirmada! 🎉</h2>
+          <h2 class="success-modal-title">
+            <span>Adesão Confirmada!</span>
+            <Sparkles :size="24" color="#FF6D00" />
+          </h2>
           <p class="success-modal-desc">
             Parabéns! O pagamento da 1ª parcela (adesão) foi compensado. Sua cota está 100% ativa e todas as funcionalidades foram desbloqueadas.
           </p>
@@ -940,6 +943,10 @@ function handleFinish() {
   font-weight: 900;
   color: #263238;
   margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .success-modal-desc {

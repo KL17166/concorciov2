@@ -69,10 +69,13 @@ function handlePayAdhesion(contract: ActiveContract) {
     <!-- Main Scroll View -->
     <div class="home-scroll-container">
       <div class="home-centered-content">
-        <!-- 1. Header (Olá, {userName}! 👋) -->
+        <!-- 1. Header (Olá, {userName}!) -->
         <header class="home-header">
           <div class="header-text-col">
-            <h1 class="greeting-title">Olá, {{ authStore.userName }}! 👋</h1>
+            <h1 class="greeting-title">
+              <span>Olá, {{ authStore.userName }}!</span>
+              <Sparkles :size="22" class="greeting-sparkle" />
+            </h1>
             <p class="greeting-subtitle">Encontre o produto ideal</p>
           </div>
         </header>
@@ -528,6 +531,14 @@ function handlePayAdhesion(contract: ActiveContract) {
   font-weight: 800;
   color: #263238;
   line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.greeting-sparkle {
+  color: #FF6D00;
+  flex-shrink: 0;
 }
 
 .greeting-subtitle {
@@ -1064,6 +1075,7 @@ function handlePayAdhesion(contract: ActiveContract) {
   color: #263238;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 34px;

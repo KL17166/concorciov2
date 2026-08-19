@@ -172,7 +172,7 @@ async function handleSubmit() {
               </div>
               <div class="doc-info-col">
                 <span class="doc-name">Frente do RG / CNH</span>
-                <span class="doc-desc">{{ docFront ? 'Foto capturada ✓' : 'Toque para enviar a foto' }}</span>
+                <span class="doc-desc">{{ docFront ? 'Foto capturada com sucesso' : 'Toque para enviar a foto' }}</span>
               </div>
               <div class="doc-action-icon">
                 <RefreshCw v-if="docFront" :size="18" color="#4CAF50" />
@@ -197,7 +197,7 @@ async function handleSubmit() {
               </div>
               <div class="doc-info-col">
                 <span class="doc-name">Verso do RG / CNH</span>
-                <span class="doc-desc">{{ docBack ? 'Foto capturada ✓' : 'Toque para enviar a foto' }}</span>
+                <span class="doc-desc">{{ docBack ? 'Foto capturada com sucesso' : 'Toque para enviar a foto' }}</span>
               </div>
               <div class="doc-action-icon">
                 <RefreshCw v-if="docBack" :size="18" color="#4CAF50" />
@@ -222,7 +222,7 @@ async function handleSubmit() {
               </div>
               <div class="doc-info-col">
                 <span class="doc-name">Selfie com o Documento</span>
-                <span class="doc-desc">{{ selfie ? 'Foto capturada ✓' : 'Segure o documento próximo ao rosto' }}</span>
+                <span class="doc-desc">{{ selfie ? 'Foto capturada com sucesso' : 'Segure o documento próximo ao rosto' }}</span>
               </div>
               <div class="doc-action-icon">
                 <RefreshCw v-if="selfie" :size="18" color="#4CAF50" />

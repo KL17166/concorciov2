@@ -6,61 +6,61 @@ export const PRODUCT_CATEGORIES: { key: ProductTypeKey; label: string; subCatego
     key: 'MOTO',
     label: 'Motos',
     subCategories: [
-      { key: 'sport', displayName: 'Esportiva', icon: '🏍️' },
-      { key: 'trail', displayName: 'Trail', icon: '🏔️' },
-      { key: 'custom', displayName: 'Custom', icon: '🦅' },
-      { key: 'urbana', displayName: 'Urbana', icon: '🏙️' },
-      { key: 'scooter', displayName: 'Scooter', icon: '🛵' },
-      { key: 'touring', displayName: 'Touring', icon: '🗺️' }
+      { key: 'sport', displayName: 'Esportiva', icon: 'Bike' },
+      { key: 'trail', displayName: 'Trail', icon: 'Mountain' },
+      { key: 'custom', displayName: 'Custom', icon: 'Flame' },
+      { key: 'urbana', displayName: 'Urbana', icon: 'Building' },
+      { key: 'scooter', displayName: 'Scooter', icon: 'Zap' },
+      { key: 'touring', displayName: 'Touring', icon: 'Compass' }
     ]
   },
   {
     key: 'CARRO',
     label: 'Carros',
     subCategories: [
-      { key: 'sedan', displayName: 'Sedan', icon: '🚗' },
-      { key: 'suv', displayName: 'SUV', icon: '🚙' },
-      { key: 'hatch', displayName: 'Hatch', icon: '🚘' },
-      { key: 'pickup', displayName: 'Pickup', icon: '🛻' },
-      { key: 'esportivo', displayName: 'Esportivo', icon: '🏎️' }
+      { key: 'sedan', displayName: 'Sedan', icon: 'Car' },
+      { key: 'suv', displayName: 'SUV', icon: 'Truck' },
+      { key: 'hatch', displayName: 'Hatch', icon: 'Car' },
+      { key: 'pickup', displayName: 'Pickup', icon: 'Truck' },
+      { key: 'esportivo', displayName: 'Esportivo', icon: 'Zap' }
     ]
   },
   {
     key: 'CARTA_CREDITO',
     label: 'Cartas de Crédito',
     subCategories: [
-      { key: 'veiculo', displayName: 'Veículo', icon: '💳' },
-      { key: 'imovel', displayName: 'Imóvel', icon: '🏠' },
-      { key: 'servicos', displayName: 'Serviços', icon: '🛠️' },
-      { key: 'livre', displayName: 'Livre', icon: '✨' }
+      { key: 'veiculo', displayName: 'Veículo', icon: 'CreditCard' },
+      { key: 'imovel', displayName: 'Imóvel', icon: 'Home' },
+      { key: 'servicos', displayName: 'Serviços', icon: 'Wrench' },
+      { key: 'livre', displayName: 'Livre', icon: 'Sparkles' }
     ]
   },
   {
     key: 'ELETRONICO',
     label: 'Eletrônicos',
     subCategories: [
-      { key: 'celular', displayName: 'Celular', icon: '📱' },
-      { key: 'notebook', displayName: 'Notebook', icon: '💻' },
-      { key: 'gaming', displayName: 'Gaming', icon: '🎮' },
-      { key: 'tv', displayName: 'TV', icon: '📺' }
+      { key: 'celular', displayName: 'Celular', icon: 'Smartphone' },
+      { key: 'notebook', displayName: 'Notebook', icon: 'Laptop' },
+      { key: 'gaming', displayName: 'Gaming', icon: 'Gamepad2' },
+      { key: 'tv', displayName: 'TV', icon: 'Tv' }
     ]
   },
   {
     key: 'IMOVEL',
     label: 'Imóveis',
     subCategories: [
-      { key: 'casa', displayName: 'Casa', icon: '🏡' },
-      { key: 'apartamento', displayName: 'Apartamento', icon: '🏢' },
-      { key: 'terreno', displayName: 'Terreno', icon: '🏞️' }
+      { key: 'casa', displayName: 'Casa', icon: 'Home' },
+      { key: 'apartamento', displayName: 'Apartamento', icon: 'Building' },
+      { key: 'terreno', displayName: 'Terreno', icon: 'Mountain' }
     ]
   },
   {
     key: 'SERVICO',
     label: 'Serviços',
     subCategories: [
-      { key: 'reforma', displayName: 'Reforma', icon: '🔨' },
-      { key: 'viagem', displayName: 'Viagem', icon: '✈️' },
-      { key: 'educacao', displayName: 'Educação', icon: '🎓' }
+      { key: 'reforma', displayName: 'Reforma', icon: 'Hammer' },
+      { key: 'viagem', displayName: 'Viagem', icon: 'Plane' },
+      { key: 'educacao', displayName: 'Educação', icon: 'GraduationCap' }
     ]
   }
 ]

@@ -119,7 +119,7 @@ const competitiveness = computed(() => {
     return {
       level: 'ALTA',
       color: '#4CAF50',
-      label: 'Alta Probabilidade 🔥',
+      label: 'Alta Probabilidade',
       description: 'Acima da média de lances vencedores das últimas 3 assembleias!',
       badgeClass: 'green'
     }

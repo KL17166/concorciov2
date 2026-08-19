@@ -6,6 +6,7 @@ import { useConsortiumStore } from '~/stores/consortium'
 import { useCheckoutStore } from '~/stores/checkout'
 import {
   ArrowLeft,
+  ArrowRight,
   User,
   MapPin,
   Camera,
@@ -195,11 +196,13 @@ function isValidCpf(str: string): boolean {
 }
 
 function isValidBirthDate(str: string): boolean {
+  if (!str) return false
   const parts = str.split('/')
-  if (parts.length !== 3) return false
+  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return false
   const day = parseInt(parts[0], 10)
   const month = parseInt(parts[1], 10) - 1
   const year = parseInt(parts[2], 10)
+  if (isNaN(day) || isNaN(month) || isNaN(year)) return false
 
   if (year < 1920 || year > new Date().getFullYear()) return false
   const date = new Date(year, month, day)
@@ -439,7 +442,8 @@ function handleContinue() {
             <span>Recarregar Dados</span>
           </button>
           <button class="btn-dev-skip" @click="applyBypassAndFill(true)">
-            <span>Pular p/ Contrato ➔</span>
+            <span>Pular p/ Contrato</span>
+            <ArrowRight :size="14" />
           </button>
         </div>
       </div>
@@ -701,7 +705,7 @@ function handleContinue() {
               <div class="doc-info-col">
                 <span class="doc-name">Frente do RG / CNH</span>
                 <span class="doc-desc">{{ docFront ? 'Foto anexada com sucesso' : 'Toque para enviar a foto' }}</span>
-                <span v-if="docFront" class="doc-status-pill">✓ Anexado</span>
+                <span v-if="docFront" class="doc-status-pill"><Check :size="12" /> Anexado</span>
               </div>
               <div class="doc-action-icon">
                 <RefreshCw v-if="docFront" :size="20" color="#4CAF50" />
@@ -727,7 +731,7 @@ function handleContinue() {
               <div class="doc-info-col">
                 <span class="doc-name">Verso do RG / CNH</span>
                 <span class="doc-desc">{{ docBack ? 'Foto anexada com sucesso' : 'Toque para enviar a foto' }}</span>
-                <span v-if="docBack" class="doc-status-pill">✓ Anexado</span>
+                <span v-if="docBack" class="doc-status-pill"><Check :size="12" /> Anexado</span>
               </div>
               <div class="doc-action-icon">
                 <RefreshCw v-if="docBack" :size="20" color="#4CAF50" />
@@ -753,7 +757,7 @@ function handleContinue() {
               <div class="doc-info-col">
                 <span class="doc-name">Selfie com o Documento</span>
                 <span class="doc-desc">{{ selfie ? 'Foto anexada com sucesso' : 'Segure o documento próximo ao rosto' }}</span>
-                <span v-if="selfie" class="doc-status-pill">✓ Anexado</span>
+                <span v-if="selfie" class="doc-status-pill"><Check :size="12" /> Anexado</span>
               </div>
               <div class="doc-action-icon">
                 <RefreshCw v-if="selfie" :size="20" color="#4CAF50" />
@@ -1249,7 +1253,9 @@ function handleContinue() {
 }
 
 .doc-status-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   align-self: flex-start;
   padding: 2px 8px;
   border-radius: 6px;

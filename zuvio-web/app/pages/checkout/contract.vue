@@ -7,6 +7,7 @@ import { useCheckoutStore } from '~/stores/checkout'
 import { formatCurrency } from '~~/shared/utils/currency'
 import {
   ArrowLeft,
+  ArrowRight,
   FileText,
   User,
   Package,
@@ -212,7 +213,8 @@ async function handleSignContract() {
         </div>
         <button class="btn-dev-sign-quick" @click="isAccepted = true; hasScrolledToBottom = true; handleSignContract()">
           <Sparkles :size="14" />
-          <span>Assinar e Pular p/ Pagamento ➔</span>
+          <span>Assinar e Pular p/ Pagamento</span>
+          <ArrowRight :size="14" />
         </button>
       </div>
 

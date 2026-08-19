@@ -299,7 +299,7 @@ async function processPayment() {
         <div class="summary-due-row">
           <CalendarCheck :size="20" color="#4CAF50" />
           <span class="due-text" :class="{ 'paid-off': !hasPending }">
-            {{ hasPending ? `Próxima: ${formatDate(contract.dueDate)}` : '✓ Contrato Quitado' }}
+            {{ hasPending ? `Próxima: ${formatDate(contract.dueDate)}` : 'Contrato Quitado' }}
           </span>
           <div v-if="hasPending" class="due-amount-pill">
             {{ formatCurrency(contract.nextPaymentAmount || 289.90) }}
