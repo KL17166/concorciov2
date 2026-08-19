@@ -9,7 +9,6 @@ import { PRODUCT_CATEGORIES } from '~~/shared/utils/catalogData'
 import type { Product, ActiveContract, ProductTypeKey } from '~~/shared/types/catalog'
 import {
   Search,
-  User as UserIcon,
   CheckCircle,
   Clock,
   Lock,
@@ -70,21 +69,11 @@ function handlePayAdhesion(contract: ActiveContract) {
     <!-- Main Scroll View -->
     <div class="home-scroll-container">
       <div class="home-centered-content">
-        <!-- 1. Header (Olá, {userName}! 👋 + Avatar) -->
+        <!-- 1. Header (Olá, {userName}! 👋) -->
         <header class="home-header">
           <div class="header-text-col">
             <h1 class="greeting-title">Olá, {{ authStore.userName }}! 👋</h1>
             <p class="greeting-subtitle">Encontre o produto ideal</p>
-          </div>
-
-          <div
-            class="header-avatar-btn"
-            title="Perfil do usuário"
-            @click="toast.info('Perfil do usuário Katari')"
-          >
-            <div class="avatar-circle">
-              <UserIcon :size="28" class="avatar-icon" />
-            </div>
           </div>
         </header>
 
@@ -545,34 +534,6 @@ function handlePayAdhesion(contract: ActiveContract) {
   font-size: 16px;
   color: #757575;
   margin-top: 4px;
-}
-
-.header-avatar-btn {
-  cursor: pointer;
-  border-radius: 50%;
-  border: 3px solid #FF6D00;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease;
-}
-
-.header-avatar-btn:hover {
-  transform: scale(1.05);
-}
-
-.avatar-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background-color: rgba(255, 109, 0, 0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.avatar-icon {
-  color: #FF6D00;
 }
 
 /* ── 2. Active Contract Carousel / Promo Banner ─────────────────────────── */
