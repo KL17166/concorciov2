@@ -1,0 +1,18 @@
+{
+  "name": "katari-consorcio-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Katari Consórcios - Fullstack Monorepo (Server Express + Frontend Nuxt)",
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,WEB\" -c \"cyan.bold,magenta.bold\" \"npm run dev --prefix server-consorcio\" \"npm run dev --prefix zuvio-web\"",
+    "dev:server": "npm run dev --prefix server-consorcio",
+    "dev:web": "npm run dev --prefix zuvio-web",
+    "build:web": "npm run build --prefix zuvio-web",
+    "build:server": "npm run build --prefix server-consorcio",
+    "build": "npm run build:server && npm run build:web",
+    "install:all": "npm install && npm install --prefix server-consorcio && npm install --prefix zuvio-web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
