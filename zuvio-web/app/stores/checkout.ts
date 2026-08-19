@@ -7,7 +7,7 @@ import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
 export interface CheckoutPersonalData {
   name: string
   cpf: string
-  birthDate: string
+  birthDate?: string
   phone: string
 }
 
@@ -63,7 +63,6 @@ export const useCheckoutStore = defineStore('checkout', {
       return (
         state.personal.name.trim().length > 3 &&
         state.personal.cpf.replace(/\D/g, '').length === 11 &&
-        state.personal.birthDate.length >= 10 &&
         state.personal.phone.replace(/\D/g, '').length >= 10
       )
     },

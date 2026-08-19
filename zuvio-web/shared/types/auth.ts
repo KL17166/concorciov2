@@ -18,7 +18,7 @@ export interface RegisterData {
   email: string
   cpf: string
   password: string
-  birthDate: string // YYYY-MM-DD
+  birthDate?: string // YYYY-MM-DD
   phone?: string
 }
 

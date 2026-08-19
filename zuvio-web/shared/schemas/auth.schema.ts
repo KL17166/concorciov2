@@ -50,10 +50,6 @@ export function validateRegisterSchema(data: RegisterData): ValidationResult {
     errors.password = 'A senha deve ter no mínimo 6 caracteres'
   }
 
-  if (!data.birthDate) {
-    errors.birthDate = 'Data de nascimento é obrigatória'
-  }
-
   return {
     isValid: Object.keys(errors).length === 0,
     errors

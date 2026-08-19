@@ -42,7 +42,7 @@ const registerSchema = z.object({
     cpf: z.string().transform(cpf => cpf.replace(/\D/g, '')).refine(isValidCpf, "CPF inválido"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     phone: z.string().nullable().optional(),
-    birthDate: z.string().transform((str) => new Date(str)), // Expecting ISO string or YYYY-MM-DD
+    birthDate: z.string().transform((str) => new Date(str)).optional().nullable(),
 });
 
 const loginSchema = z.object({
@@ -72,7 +72,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
                 passwordHash,
                 phone: data.phone,
                 role: 'CLIENT', // Default
-                birthDate: data.birthDate as any,
+                birthDate: data.birthDate ? (data.birthDate as any) : null,
             },
             select: { id: true, name: true, email: true, cpf: true, role: true, createdAt: true },
         });

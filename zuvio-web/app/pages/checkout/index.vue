@@ -46,7 +46,6 @@ const formError = ref<string | null>(null)
 // Step 0 - Personal
 const name = ref('')
 const cpf = ref('')
-const birthDate = ref('')
 const phone = ref('')
 
 // Step 1 - Address
@@ -69,7 +68,6 @@ function applyBypassAndFill(directToContract = false) {
   checkoutStore.fillDevBypassData()
   name.value = checkoutStore.personal.name
   cpf.value = formatCpf(checkoutStore.personal.cpf)
-  birthDate.value = formatDateMask(checkoutStore.personal.birthDate)
   phone.value = formatPhone(checkoutStore.personal.phone)
 
   cep.value = formatCep(checkoutStore.address.cep)
@@ -92,15 +90,9 @@ function applyBypassAndFill(directToContract = false) {
 onMounted(() => {
   checkoutStore.initFromAuth()
 
-  if (authStore.isDevBypass && !checkoutStore.personal.name) {
-    applyBypassAndFill(false)
-    return
-  }
-
   // Pre-fill from store or auth
   name.value = checkoutStore.personal.name
   cpf.value = formatCpf(checkoutStore.personal.cpf)
-  birthDate.value = formatDateMask(checkoutStore.personal.birthDate)
   phone.value = formatPhone(checkoutStore.personal.phone)
 
   cep.value = formatCep(checkoutStore.address.cep)
@@ -153,9 +145,6 @@ function formatCep(v: string) {
 watch(cpf, (val) => {
   cpf.value = formatCpf(val)
 })
-watch(birthDate, (val) => {
-  birthDate.value = formatDateMask(val)
-})
 watch(phone, (val) => {
   phone.value = formatPhone(val)
 })
@@ -172,9 +161,6 @@ watch(cep, (val) => {
 function isValidCpf(str: string): boolean {
   const clean = str.replace(/\D/g, '')
   if (clean.length !== 11) return false
-
-  // In Dev Bypass mode, accept any 11-digit test CPF (e.g. 111.111.111-11, etc.)
-  if (authStore.isDevBypass) return true
 
   if (/^(\d)\1{10}$/.test(clean)) return false
 
@@ -193,28 +179,6 @@ function isValidCpf(str: string): boolean {
   let secondDigit = (sum * 10) % 11
   if (secondDigit === 10) secondDigit = 0
   return secondDigit === parseInt(clean.charAt(10), 10)
-}
-
-function isValidBirthDate(str: string): boolean {
-  if (!str) return false
-  const parts = str.split('/')
-  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return false
-  const day = parseInt(parts[0], 10)
-  const month = parseInt(parts[1], 10) - 1
-  const year = parseInt(parts[2], 10)
-  if (isNaN(day) || isNaN(month) || isNaN(year)) return false
-
-  if (year < 1920 || year > new Date().getFullYear()) return false
-  const date = new Date(year, month, day)
-  if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) return false
-
-  // Min 18 years
-  const now = new Date()
-  let age = now.getFullYear() - year
-  if (now.getMonth() < month || (now.getMonth() === month && now.getDate() < day)) {
-    age--
-  }
-  return age >= 18
 }
 
 async function fetchAddressFromViaCep(cleanCep: string) {
@@ -279,10 +243,6 @@ function validateCurrentStep(): boolean {
     }
     if (!isValidCpf(cpf.value)) {
       formError.value = 'CPF inválido. Verifique os dígitos digitados.'
-      return false
-    }
-    if (!isValidBirthDate(birthDate.value)) {
-      formError.value = 'Data de nascimento inválida ou idade inferior a 18 anos.'
       return false
     }
     if (phone.value.replace(/\D/g, '').length < 10) {
@@ -352,7 +312,6 @@ function handleContinue() {
     checkoutStore.updatePersonal({
       name: name.value,
       cpf: cpf.value,
-      birthDate: birthDate.value,
       phone: phone.value
     })
     currentStep.value = 1
@@ -494,22 +453,6 @@ function handleContinue() {
                 type="text"
                 placeholder="000.000.000-00"
                 maxlength="14"
-                class="form-input"
-              />
-            </div>
-          </div>
-
-          <!-- Data de Nascimento -->
-          <div class="input-group">
-            <label class="input-label" for="birth-input">Data de Nascimento</label>
-            <div class="input-wrapper">
-              <Calendar :size="18" class="input-icon" />
-              <input
-                id="birth-input"
-                v-model="birthDate"
-                type="text"
-                placeholder="DD/MM/AAAA"
-                maxlength="10"
                 class="form-input"
               />
             </div>
