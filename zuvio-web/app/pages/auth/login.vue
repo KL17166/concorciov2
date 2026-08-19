@@ -70,24 +70,6 @@ async function handleLogin() {
 
   const cleanCpf = unmaskCpf(form.cpf)
 
-  if (cleanCpf.length !== 11) {
-    errors.cpf = 'Digite um CPF válido'
-    toast.error('Digite um CPF válido')
-    return
-  }
-
-  if (!isValidCpf(cleanCpf)) {
-    errors.cpf = 'Digite um CPF válido'
-    toast.error('Digite um CPF válido')
-    return
-  }
-
-  if (!form.password) {
-    errors.password = 'Digite sua senha'
-    toast.error('Digite sua senha')
-    return
-  }
-
   const result = await authStore.login({
     cpf: cleanCpf,
     password: form.password

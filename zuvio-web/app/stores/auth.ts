@@ -113,16 +113,6 @@ export const useAuthStore = defineStore('auth', {
       } catch (error: any) {
         console.error('Login error:', error)
 
-        // If backend endpoint is 404 or offline, apply automatic Dev Bypass session
-        const isNotFound = error?.status === 404 || error?.statusCode === 404 || error?.data?.statusCode === 404
-        const isNetworkErr = !error?.status || error?.message?.includes('fetch failed') || error?.message?.includes('ECONNREFUSED')
-
-        if (isNotFound || isNetworkErr) {
-          console.warn('API /api/auth/login indisponível ou 404. Ativando bypass automático para desenvolvimento.')
-          this.devBypassLogin('CLIENT', 'client_approved')
-          return { success: true }
-        }
-
         let errorMessage = 'Erro de conexão com o servidor'
 
         if (typeof error?.data?.message === 'string' && error.data.message.trim()) {
@@ -147,53 +137,6 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
-     * Fast Dev Bypass Login for quick prototyping & screen-by-screen testing
-     */
-    devBypassLogin(role: UserRole = 'CLIENT', customPreset?: 'client_approved' | 'client_pending' | 'admin_master') {
-      let presetUser: UserProfile = {
-        id: 'usr_dev_demo_' + Date.now(),
-        name: 'Carlos Alberto Silva (Dev Test)',
-        email: 'carlos.dev@katari.com.br',
-        role: role,
-        cpf: '111.444.777-35',
-        birthDate: '1990-05-15',
-        phone: '(11) 98765-4321',
-        cep: '01310-100',
-        street: 'Avenida Paulista',
-        number: '1000',
-        district: 'Bela Vista',
-        city: 'São Paulo',
-        state: 'SP',
-        kycStatus: 'APPROVED',
-        createdAt: new Date().toISOString()
-      }
-
-      if (customPreset === 'client_pending') {
-        presetUser.name = 'Mariana Oliveira (KYC Pendente)'
-        presetUser.email = 'mariana.dev@katari.com.br'
-        presetUser.cpf = '222.333.444-05'
-        presetUser.kycStatus = 'PENDING'
-      } else if (customPreset === 'admin_master' || role === 'ADMIN' || role === 'MASTER') {
-        presetUser.name = 'Admin Master Katari'
-        presetUser.email = 'admin@katari.com.br'
-        presetUser.role = 'MASTER'
-        presetUser.cpf = '529.982.247-25'
-      }
-
-      const mockJwt = 'mock_jwt_dev_bypass_' + btoa(JSON.stringify({ sub: presetUser.id, role: presetUser.role, exp: Date.now() + 86400000 }))
-
-      this.setSession({
-        token: mockJwt,
-        user: presetUser,
-        signingSecret: 'mock_session_signing_secret_dev',
-        payloadSecret: 'mock_session_payload_secret_dev',
-        isDevBypass: true
-      })
-
-      return presetUser
-    },
-
-    /**
      * Store session state in memory and localStorage
      */
     setSession(data: {
@@ -207,13 +150,13 @@ export const useAuthStore = defineStore('auth', {
       this.user = data.user
       this.signingSecret = data.signingSecret || null
       this.payloadSecret = data.payloadSecret || null
-      this.isDevBypass = !!data.isDevBypass
+      this.isDevBypass = false
       this.isAuthenticated = true
 
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEYS.TOKEN, data.token)
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user))
-        localStorage.setItem(STORAGE_KEYS.DEV_BYPASS, this.isDevBypass ? 'true' : 'false')
+        localStorage.setItem(STORAGE_KEYS.DEV_BYPASS, 'false')
         if (data.signingSecret) localStorage.setItem(STORAGE_KEYS.SIGNING_SECRET, data.signingSecret)
         if (data.payloadSecret) localStorage.setItem(STORAGE_KEYS.PAYLOAD_SECRET, data.payloadSecret)
       }

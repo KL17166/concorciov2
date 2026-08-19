@@ -23,12 +23,6 @@ export const useKycStore = defineStore('kyc', {
       const api = useApiClient()
 
       try {
-        if (authStore.isDevBypass) {
-          this.status = authStore.user.kycStatus || 'APPROVED'
-          this.documentsUploaded = true
-          return
-        }
-
         const res = await api.kyc.getStatus()
         this.status = res.kycStatus
         this.rejectReason = res.rejectReason || null
@@ -43,17 +37,8 @@ export const useKycStore = defineStore('kyc', {
     async uploadDocument(file: File, type: 'document' | 'document_back' | 'selfie'): Promise<string | null> {
       this.isLoading = true
       const api = useApiClient()
-      const authStore = useAuthStore()
 
       try {
-        if (authStore.isDevBypass) {
-          const fakeUrl = `/uploads/mock_${type}_${Date.now()}.jpg`
-          if (type === 'document') this.documentFrontUrl = fakeUrl
-          if (type === 'document_back') this.documentBackUrl = fakeUrl
-          if (type === 'selfie') this.selfieUrl = fakeUrl
-          return fakeUrl
-        }
-
         const res = await api.auth.uploadDocument(file, type)
         if (res.url) {
           if (type === 'document') this.documentFrontUrl = res.url
@@ -79,12 +64,6 @@ export const useKycStore = defineStore('kyc', {
       const authStore = useAuthStore()
 
       try {
-        if (authStore.isDevBypass) {
-          this.status = 'SUBMITTED'
-          if (authStore.user) authStore.user.kycStatus = 'SUBMITTED'
-          return { success: true, message: 'Documentos enviados com sucesso no modo Dev!' }
-        }
-
         const res = await api.kyc.submit({
           documentFrontUrl: this.documentFrontUrl,
           documentBackUrl: this.documentBackUrl,

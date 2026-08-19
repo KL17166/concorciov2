@@ -149,59 +149,7 @@ export const useCheckoutStore = defineStore('checkout', {
       const consortiumStore = useConsortiumStore()
       const api = useApiClient()
 
-      const groupClean = (this.groupNumber || '104').replace(/\D/g, '').substring(0, 3) || '104'
-
       try {
-        if (authStore.isDevBypass) {
-          const subId = `sub_${Date.now()}`
-          this.createdSubscriptionId = subId
-          this.paymentData = {
-            installmentId: `inst_1_${subId}`,
-            idTokenPay: `tok_1_${subId}`,
-            amount: selectedPlan.monthlyInstallment,
-            method: 'PIX',
-            qrCode: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-            copyPaste: '00020126360014BR.GOV.BCB.PIX0114+551199999999520400005303986540510.005802BR5913Katari Consorcios6008BRASILIA62070503***63041D3D',
-            expirationDate: new Date(Date.now() + 30 * 60 * 1000).toISOString()
-          }
-
-          // Register in consortium store as pending adhesion
-          const newContract: any = {
-            id: subId,
-            userId: authStore.user?.id || 'usr_dev',
-            productId: selectedProduct.id,
-            product: selectedProduct,
-            planId: selectedPlan.id,
-            durationMonths: selectedPlan.durationMonths,
-            currentInstallment: 1,
-            totalInstallments: selectedPlan.durationMonths,
-            groupNumber: groupClean,
-            quotaNumber: '088',
-            creditValue: selectedProduct.price,
-            administrationFee: (selectedPlan.adminFeeRate || selectedPlan.adminFeePercentage || 15) / 100,
-            status: 'pending_payment',
-            isAdesaoPaid: false,
-            nextPaymentAmount: selectedPlan.monthlyInstallment,
-            dueDate: 'Aguardando Pagamento da Adesão',
-            contractDate: new Date().toISOString(),
-            progressPercentage: 0,
-            paidInstallments: [],
-            installmentValues: { 1: selectedPlan.monthlyInstallment },
-            installmentIds: { 1: `inst_1_${subId}` },
-            installmentTokens: { 1: `tok_1_${subId}` },
-            installmentDueDates: { 1: new Date(Date.now() + 30 * 60 * 1000).toISOString() }
-          }
-
-          const existingIdx = consortiumStore.activeContracts.findIndex(c => c.id === subId)
-          if (existingIdx >= 0) {
-            consortiumStore.activeContracts[existingIdx] = newContract
-          } else {
-            consortiumStore.activeContracts.unshift(newContract)
-          }
-
-          return { success: true, subscriptionId: subId }
-        }
-
         const res = await api.subscriptions.create({
           userId: authStore.user?.id || '',
           productId: selectedProduct.id,
@@ -215,44 +163,14 @@ export const useCheckoutStore = defineStore('checkout', {
         if (res.success && res.subscriptionId) {
           this.createdSubscriptionId = res.subscriptionId
 
-          const newContract: any = {
-            id: res.subscriptionId,
-            userId: authStore.user?.id || '',
-            productId: selectedProduct.id,
-            product: selectedProduct,
-            planId: selectedPlan.id,
-            durationMonths: selectedPlan.durationMonths,
-            currentInstallment: 1,
-            totalInstallments: selectedPlan.durationMonths,
-            groupNumber: groupClean,
-            quotaNumber: '088',
-            creditValue: selectedProduct.price,
-            administrationFee: (selectedPlan.adminFeeRate || selectedPlan.adminFeePercentage || 15) / 100,
-            status: 'pending_payment',
-            isAdesaoPaid: false,
-            nextPaymentAmount: selectedPlan.monthlyInstallment,
-            dueDate: 'Aguardando Pagamento da Adesão',
-            contractDate: new Date().toISOString(),
-            progressPercentage: 0,
-            paidInstallments: [],
-            installmentValues: { 1: selectedPlan.monthlyInstallment },
-            installmentIds: { 1: `inst_1_${res.subscriptionId}` },
-            installmentTokens: { 1: `tok_1_${res.subscriptionId}` },
-            installmentDueDates: { 1: new Date(Date.now() + 30 * 60 * 1000).toISOString() }
-          }
-
-          const existingIdx = consortiumStore.activeContracts.findIndex(c => c.id === res.subscriptionId)
-          if (existingIdx >= 0) {
-            consortiumStore.activeContracts[existingIdx] = newContract
-          } else {
-            consortiumStore.activeContracts.unshift(newContract)
-          }
+          // Reload fresh contracts from backend server
+          await consortiumStore.loadHomeData()
 
           return { success: true, subscriptionId: res.subscriptionId }
         }
         return { success: false, message: 'Erro ao criar contratação' }
       } catch (err: any) {
-        return { success: false, message: err?.message || 'Erro ao processar contratação' }
+        return { success: false, message: err?.data?.error || err?.message || 'Erro ao processar contratação' }
       } finally {
         this.isLoading = false
       }

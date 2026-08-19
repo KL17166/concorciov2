@@ -7,20 +7,21 @@ import { useCheckoutStore } from '~/stores/checkout'
 import { useToast } from '~/composables/useToast'
 import {
   Zap,
-  Clock,
   CheckCircle2,
-  Layers,
-  Trash2,
   ChevronUp,
   ChevronDown,
   X,
   CreditCard,
   FileText,
   RotateCcw,
-  Sparkles,
   UserCheck,
   Shield,
-  LogOut
+  LogOut,
+  Send,
+  TrendingUp,
+  UserPlus,
+  Home,
+  FileCheck
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -31,8 +32,12 @@ const checkoutStore = useCheckoutStore()
 const toast = useToast()
 
 const isOpen = ref(false)
+const isLoggingIn = ref(false)
 
-function fillPreset(cpf: string, pass: string = '123456') {
+/**
+ * Preenche os campos de login na tela com as credenciais do preset
+ */
+function fillLoginPreset(cpf: string, pass: string = '123456') {
   if (route.path !== '/login' && route.path !== '/auth/login') {
     router.push('/login').then(() => {
       setTimeout(() => {
@@ -42,90 +47,83 @@ function fillPreset(cpf: string, pass: string = '123456') {
   } else {
     window.dispatchEvent(new CustomEvent('dev-fill-credentials', { detail: { cpf, pass } }))
   }
-  toast.info(`Credenciais preenchidas no formulário: ${cpf}`, 'Dev Helper')
+  toast.info(`Credenciais preenchidas no formulário: ${cpf}`, 'Preenchimento Automático')
   isOpen.value = false
 }
 
-function directBypass(preset: 'client_approved' | 'client_pending' | 'admin_master') {
-  const user = authStore.devBypassLogin(
-    preset === 'admin_master' ? 'MASTER' : 'CLIENT',
-    preset
-  )
+/**
+ * Preenche e submete a autenticação diretamente para o servidor backend
+ */
+async function directLoginPreset(cpf: string, pass: string = '123456') {
+  isLoggingIn.value = true
+  fillLoginPreset(cpf, pass)
 
-  // Seed the corresponding scenario based on preset
-  if (preset === 'client_pending') {
-    consortiumStore.seedScenario('pending_adhesion')
-  } else if (preset === 'client_approved') {
-    consortiumStore.seedScenario('active_12')
+  try {
+    const result = await authStore.login({ cpf, password: pass })
+    if (result.success) {
+      toast.success(`Autenticado com sucesso no servidor!`, 'Backend Auth')
+      await consortiumStore.loadHomeData()
+      isOpen.value = false
+      router.push('/')
+    } else {
+      toast.error(result.message || 'Falha ao autenticar no servidor', 'Erro de Login')
+    }
+  } catch (err: any) {
+    toast.error(err?.message || 'Erro de conexão com o backend', 'Erro')
+  } finally {
+    isLoggingIn.value = false
   }
+}
 
-  toast.success(`Logado instantaneamente como ${user.name}!`, 'Dev Bypass')
+/**
+ * Preenche os dados do funil de checkout (Dados Pessoais + Endereço) como um cliente real
+ */
+function fillCheckoutForm() {
+  checkoutStore.fillDevBypassData()
   isOpen.value = false
-  router.push('/')
+  if (route.path !== '/checkout') {
+    router.push('/checkout')
+  }
+  toast.success('Formulário de Checkout preenchido com dados realistas!', 'Cliente Preenchido')
+}
+
+/**
+ * Navega e preenche dados para envio de lances
+ */
+function fillBidForm() {
+  isOpen.value = false
+  if (route.path !== '/consortium/bids') {
+    router.push('/consortium/bids')
+  }
+  toast.info('Tela de lances aberta. Escolha a modalidade e submeta para o servidor!', 'Lances')
+}
+
+/**
+ * Navega e preenche dados para envio de KYC
+ */
+function fillKycForm() {
+  isOpen.value = false
+  if (route.path !== '/profile/kyc') {
+    router.push('/profile/kyc')
+  }
+  toast.info('Tela de KYC aberta para envio direto de documentos ao servidor.', 'KYC')
+}
+
+/**
+ * Atualiza todos os dados vindos do backend
+ */
+async function refreshServerData() {
+  toast.info('Sincronizando com o servidor...', 'Backend')
+  await consortiumStore.loadHomeData()
+  toast.success('Dados atualizados diretamente do servidor!', 'Sucesso')
 }
 
 function handleLogout() {
   authStore.logout()
+  consortiumStore.activeContracts = []
   isOpen.value = false
   router.push('/login')
-}
-
-function applyScenario(type: 'pending_adhesion' | 'active_12' | 'multiple' | 'empty') {
-  if (!authStore.isAuthenticated) {
-    authStore.devBypassLogin('CLIENT', type === 'pending_adhesion' ? 'client_pending' : 'client_approved')
-  }
-
-  consortiumStore.seedScenario(type)
-
-  const messages: Record<string, string> = {
-    pending_adhesion: 'Cenário aplicado: Contrato com Adesão Pendente (R$ 289,90)!',
-    active_12: 'Cenário aplicado: Contrato Ativo (12 parcelas pagas)!',
-    multiple: 'Cenário aplicado: Múltiplos Contratos (1 Ativo + 1 Pendente)!',
-    empty: 'Cenário aplicado: Cliente Novo (Sem contratos ativos)!'
-  }
-
-  toast.success(messages[type] || 'Cenário alterado com sucesso!', 'Dev Scenario')
-  isOpen.value = false
-
-  if (route.path !== '/') {
-    router.push('/')
-  }
-}
-
-function quickCheckout() {
-  if (!authStore.isAuthenticated) {
-    authStore.devBypassLogin('CLIENT', 'client_approved')
-  }
-  checkoutStore.fillDevBypassData()
-  isOpen.value = false
-  router.push('/checkout')
-  toast.info('Checkout iniciado com dados de teste preenchidos!')
-}
-
-function quickPayment() {
-  if (!authStore.isAuthenticated) {
-    authStore.devBypassLogin('CLIENT', 'client_pending')
-  }
-  const contract = consortiumStore.activeContracts[0]
-  if (contract && !contract.isAdesaoPaid) {
-    isOpen.value = false
-    router.push('/consortium/adhesion')
-    return
-  }
-  if (contract) {
-    checkoutStore.createdSubscriptionId = contract.id
-    checkoutStore.paymentData = {
-      installmentId: contract.installmentIds?.[1] || `inst_1_${contract.id}`,
-      idTokenPay: contract.installmentTokens?.[1] || `tok_1_${contract.id}`,
-      amount: contract.nextPaymentAmount || 289.90,
-      method: 'PIX',
-      qrCode: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-      copyPaste: '00020126360014BR.GOV.BCB.PIX0114+551199999999520400005303986540510.005802BR5913Katari Consorcios6008BRASILIA62070503***63041D3D',
-      expirationDate: new Date(Date.now() + 30 * 60 * 1000).toISOString()
-    }
-  }
-  isOpen.value = false
-  router.push('/checkout/payment')
+  toast.info('Sessão encerrada com sucesso.')
 }
 </script>
 
@@ -136,12 +134,12 @@ function quickPayment() {
       type="button"
       class="dev-pill-trigger"
       :class="{ 'is-open': isOpen }"
-      title="Painel de Cenários de Teste (Dev Bypass)"
+      title="Assistente de Preenchimento de Formulários (Dev Helper)"
       @click="isOpen = !isOpen"
     >
       <div class="pill-pulse-dot"></div>
       <Zap :size="15" class="zap-icon" />
-      <span class="pill-title">DEV BYPASS</span>
+      <span class="pill-title">DEV AUTOFILL</span>
       <component :is="isOpen ? ChevronDown : ChevronUp" :size="14" />
     </button>
 
@@ -155,9 +153,9 @@ function quickPayment() {
               <Zap :size="16" color="#FF6D00" />
             </div>
             <div>
-              <h3 class="drawer-title">Ferramentas de Desenvolvimento</h3>
+              <h3 class="drawer-title">Assistente de Testes (Cliente Real)</h3>
               <p class="drawer-sub">
-                {{ authStore.isAuthenticated ? `Logado como ${authStore.userName}` : 'Preencha os campos ou entre instantaneamente' }}
+                {{ authStore.isAuthenticated ? `Conectado como ${authStore.userName}` : 'Preencha os campos e envie ao servidor' }}
               </p>
             </div>
           </div>
@@ -166,181 +164,166 @@ function quickPayment() {
           </button>
         </div>
 
-        <!-- Section: If Not Authenticated (Login Presets with Fill + Enter) -->
-        <div v-if="!authStore.isAuthenticated" class="dev-scenarios-grid">
-          <!-- Preset 1: Carlos Alberto (Approved + Active Contract) -->
-          <div class="preset-card-row">
-            <div class="card-icon-circle active-bg">
-              <UserCheck :size="18" color="#2E7D32" />
-            </div>
-            <div class="card-meta">
-              <div class="meta-title-row">
-                <span class="meta-title">Carlos Alberto</span>
-                <span class="tag-status status-active">Contrato Ativo</span>
-              </div>
-              <span class="preset-cpf-sub">CPF: 111.444.777-35</span>
-            </div>
-            <div class="preset-btn-actions">
-              <button
-                type="button"
-                class="btn-action-fill"
-                title="Preencher campos para você clicar em Entrar"
-                @click="fillPreset('111.444.777-35', '123456')"
-              >
-                Preencher
-              </button>
-              <button
-                type="button"
-                class="btn-action-bypass"
-                title="Entrar direto"
-                @click="directBypass('client_approved')"
-              >
-                <Zap :size="12" /> Entrar
-              </button>
-            </div>
+        <!-- Section 1: Presets de Login (Form Autofill & Real Submit) -->
+        <div class="section-container">
+          <div class="section-label">
+            <span>PRESETS DE LOGIN (AUTOFILTRADOS)</span>
           </div>
 
-          <!-- Preset 2: Mariana Oliveira (Pending + Adesão Pendente) -->
-          <div class="preset-card-row">
-            <div class="card-icon-circle pending-bg">
-              <Clock :size="18" color="#F57C00" />
-            </div>
-            <div class="card-meta">
-              <div class="meta-title-row">
-                <span class="meta-title">Mariana Oliveira</span>
-                <span class="tag-status status-pending">Adesão Pendente</span>
+          <div class="dev-scenarios-grid">
+            <!-- Preset 1: Carlos Alberto -->
+            <div class="preset-card-row">
+              <div class="card-icon-circle active-bg">
+                <UserCheck :size="18" color="#2E7D32" />
               </div>
-              <span class="preset-cpf-sub">CPF: 222.333.444-05</span>
+              <div class="card-meta">
+                <div class="meta-title-row">
+                  <span class="meta-title">Carlos Alberto</span>
+                </div>
+                <span class="preset-cpf-sub">CPF: 111.444.777-35</span>
+              </div>
+              <div class="preset-btn-actions">
+                <button
+                  type="button"
+                  class="btn-action-fill"
+                  title="Preencher campos no formulário de login"
+                  @click="fillLoginPreset('111.444.777-35', '123456')"
+                >
+                  Preencher
+                </button>
+                <button
+                  type="button"
+                  class="btn-action-bypass"
+                  title="Preencher e enviar requisição real de login ao servidor"
+                  :disabled="isLoggingIn"
+                  @click="directLoginPreset('111.444.777-35', '123456')"
+                >
+                  <Send :size="12" /> Entrar
+                </button>
+              </div>
             </div>
-            <div class="preset-btn-actions">
-              <button
-                type="button"
-                class="btn-action-fill"
-                title="Preencher campos para você clicar em Entrar"
-                @click="fillPreset('222.333.444-05', '123456')"
-              >
-                Preencher
-              </button>
-              <button
-                type="button"
-                class="btn-action-bypass"
-                title="Entrar direto"
-                @click="directBypass('client_pending')"
-              >
-                <Zap :size="12" /> Entrar
-              </button>
-            </div>
-          </div>
 
-          <!-- Preset 3: Admin Master -->
-          <div class="preset-card-row">
-            <div class="card-icon-circle multi-bg">
-              <Shield :size="18" color="#1565C0" />
-            </div>
-            <div class="card-meta">
-              <div class="meta-title-row">
-                <span class="meta-title">Admin Master</span>
-                <span class="tag-status status-multi">Administrador</span>
+            <!-- Preset 2: Mariana Oliveira -->
+            <div class="preset-card-row">
+              <div class="card-icon-circle pending-bg">
+                <UserCheck :size="18" color="#F57C00" />
               </div>
-              <span class="preset-cpf-sub">CPF: 529.982.247-25</span>
+              <div class="card-meta">
+                <div class="meta-title-row">
+                  <span class="meta-title">Mariana Oliveira</span>
+                </div>
+                <span class="preset-cpf-sub">CPF: 222.333.444-05</span>
+              </div>
+              <div class="preset-btn-actions">
+                <button
+                  type="button"
+                  class="btn-action-fill"
+                  title="Preencher campos no formulário de login"
+                  @click="fillLoginPreset('222.333.444-05', '123456')"
+                >
+                  Preencher
+                </button>
+                <button
+                  type="button"
+                  class="btn-action-bypass"
+                  title="Preencher e enviar requisição real de login ao servidor"
+                  :disabled="isLoggingIn"
+                  @click="directLoginPreset('222.333.444-05', '123456')"
+                >
+                  <Send :size="12" /> Entrar
+                </button>
+              </div>
             </div>
-            <div class="preset-btn-actions">
-              <button
-                type="button"
-                class="btn-action-fill"
-                title="Preencher campos para você clicar em Entrar"
-                @click="fillPreset('529.982.247-25', '123456')"
-              >
-                Preencher
-              </button>
-              <button
-                type="button"
-                class="btn-action-bypass"
-                title="Entrar direto"
-                @click="directBypass('admin_master')"
-              >
-                <Zap :size="12" /> Entrar
-              </button>
+
+            <!-- Preset 3: Admin Master -->
+            <div class="preset-card-row">
+              <div class="card-icon-circle multi-bg">
+                <Shield :size="18" color="#1565C0" />
+              </div>
+              <div class="card-meta">
+                <div class="meta-title-row">
+                  <span class="meta-title">Admin Master</span>
+                </div>
+                <span class="preset-cpf-sub">CPF: 529.982.247-25</span>
+              </div>
+              <div class="preset-btn-actions">
+                <button
+                  type="button"
+                  class="btn-action-fill"
+                  title="Preencher campos no formulário de login"
+                  @click="fillLoginPreset('529.982.247-25', '123456')"
+                >
+                  Preencher
+                </button>
+                <button
+                  type="button"
+                  class="btn-action-bypass"
+                  title="Preencher e enviar requisição real de login ao servidor"
+                  :disabled="isLoggingIn"
+                  @click="directLoginPreset('529.982.247-25', '123456')"
+                >
+                  <Send :size="12" /> Entrar
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Section: If Authenticated (Contract Scenarios) -->
-        <div v-else class="dev-scenarios-grid">
-          <!-- 1. Adesão Pendente -->
-          <div class="scenario-card card-pending" @click="applyScenario('pending_adhesion')">
-            <div class="card-icon-circle pending-bg">
-              <Clock :size="18" color="#F57C00" />
-            </div>
-            <div class="card-meta">
-              <div class="meta-title-row">
-                <span class="meta-title">Adesão Pendente</span>
-                <span class="tag-status status-pending">Aguardando Pagamento</span>
-              </div>
-              <p class="meta-desc">
-                Contrato assinado aguardando 1ª parcela (R$ 289,90). Testa aviso e bloqueios na Home.
-              </p>
-            </div>
+        <!-- Section 2: Preenchedores de Formulários (Autofill de Cliente) -->
+        <div class="section-container">
+          <div class="section-label">
+            <span>PREENCHEDORES DE FORMULÁRIO (CLIENT AUTOFILL)</span>
           </div>
-
-          <!-- 2. Contrato Ativo -->
-          <div class="scenario-card card-active" @click="applyScenario('active_12')">
-            <div class="card-icon-circle active-bg">
-              <CheckCircle2 :size="18" color="#2E7D32" />
-            </div>
-            <div class="card-meta">
-              <div class="meta-title-row">
-                <span class="meta-title">Contrato Ativo (Normal)</span>
-                <span class="tag-status status-active">12 Parcelas Pagas</span>
+          <div class="form-fillers-grid">
+            <button type="button" class="btn-form-fill" @click="fillCheckoutForm">
+              <FileText :size="15" color="#FF6D00" />
+              <div class="fill-meta">
+                <span class="fill-title">Preencher Checkout</span>
+                <span class="fill-sub">Nome, CPF, CEP, Endereço e Docs</span>
               </div>
-              <p class="meta-desc">
-                Contrato ativo e adimplente. Libera Extrato, Lances e pagamentos normais.
-              </p>
-            </div>
+            </button>
+            <button type="button" class="btn-form-fill" @click="fillBidForm">
+              <TrendingUp :size="15" color="#1976D2" />
+              <div class="fill-meta">
+                <span class="fill-title">Ir para Lances</span>
+                <span class="fill-sub">Ofertar lance real no grupo</span>
+              </div>
+            </button>
+            <button type="button" class="btn-form-fill" @click="fillKycForm">
+              <FileCheck :size="15" color="#388E3C" />
+              <div class="fill-meta">
+                <span class="fill-title">Ir para KYC</span>
+                <span class="fill-sub">Submissão de documentos</span>
+              </div>
+            </button>
           </div>
+        </div>
 
-          <!-- 3. Múltiplos Contratos -->
-          <div class="scenario-card card-multi" @click="applyScenario('multiple')">
-            <div class="card-icon-circle multi-bg">
-              <Layers :size="18" color="#1565C0" />
-            </div>
-            <div class="card-meta">
-              <div class="meta-title-row">
-                <span class="meta-title">Múltiplos Contratos</span>
-                <span class="tag-status status-multi">2 Cotas</span>
-              </div>
-              <p class="meta-desc">
-                1 Moto Ativa + 1 Carro Pendente. Testa carrossel de cotas na Home.
-              </p>
-            </div>
+        <!-- Section 3: Status da Sessão Real no Backend -->
+        <div v-if="authStore.isAuthenticated" class="session-info-box">
+          <div class="session-info-header">
+            <span class="session-badge">SESSÃO AUTENTICADA NO SERVIDOR</span>
+            <button type="button" class="btn-refresh-server" title="Recarregar dados do servidor" @click="refreshServerData">
+              <RotateCcw :size="13" />
+            </button>
           </div>
-
-          <!-- 4. Cliente Novo (Sem Contratos) -->
-          <div class="scenario-card card-empty" @click="applyScenario('empty')">
-            <div class="card-icon-circle empty-bg">
-              <Trash2 :size="18" color="#757575" />
-            </div>
-            <div class="card-meta">
-              <div class="meta-title-row">
-                <span class="meta-title">Cliente Novo (Zerado)</span>
-                <span class="tag-status status-empty">0 Contratos</span>
-              </div>
-              <p class="meta-desc">
-                Sem consórcios ativos. Exibe banners promocionais e catálogo inicial.
-              </p>
-            </div>
+          <div class="session-details">
+            <p><strong>Usuário:</strong> {{ authStore.userName }}</p>
+            <p><strong>Perfil:</strong> {{ authStore.userRole }}</p>
+            <p><strong>CPF:</strong> {{ authStore.userCpfFormatted }}</p>
+            <p><strong>Contratos Ativos:</strong> {{ consortiumStore.activeContracts.length }} no backend</p>
           </div>
         </div>
 
         <!-- Quick Route Shortcuts -->
         <div class="dev-quick-actions">
-          <button type="button" class="btn-quick-nav" @click="quickCheckout">
-            <FileText :size="14" />
-            <span>Checkout</span>
+          <button type="button" class="btn-quick-nav" @click="router.push('/'); isOpen = false">
+            <Home :size="14" />
+            <span>Home</span>
           </button>
-          <button type="button" class="btn-quick-nav" @click="quickPayment">
+          <button type="button" class="btn-quick-nav" @click="router.push('/consortium/payments'); isOpen = false">
             <CreditCard :size="14" />
-            <span>PIX/Boleto</span>
+            <span>Parcelas</span>
           </button>
           <button v-if="authStore.isAuthenticated" type="button" class="btn-quick-nav btn-quick-logout" @click="handleLogout">
             <LogOut :size="14" />
@@ -418,17 +401,19 @@ function quickPayment() {
   position: absolute;
   bottom: 50px;
   right: 0;
-  width: 380px;
+  width: 390px;
   max-width: calc(100vw - 32px);
   background-color: #FFFFFF;
   border: 1px solid #E0E0E0;
   border-radius: 20px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
-  padding: 20px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   animation: scale-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 .dev-drawer-header {
@@ -436,7 +421,7 @@ function quickPayment() {
   justify-content: space-between;
   align-items: flex-start;
   border-bottom: 1px solid #F0F0F0;
-  padding-bottom: 12px;
+  padding-bottom: 10px;
 }
 
 .header-left {
@@ -457,14 +442,14 @@ function quickPayment() {
 }
 
 .drawer-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   color: #263238;
   margin: 0;
 }
 
 .drawer-sub {
-  font-size: 11.5px;
+  font-size: 11px;
   color: #757575;
   margin: 2px 0 0 0;
 }
@@ -484,24 +469,34 @@ function quickPayment() {
   color: #263238;
 }
 
-/* ── Scenarios Grid ─────────────────────────────────────────────────────── */
+.section-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #9E9E9E;
+  letter-spacing: 0.6px;
+}
+
+/* ── Presets Grid ────────────────────────────────────────────────────────── */
 .dev-scenarios-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: 380px;
-  overflow-y: auto;
-  padding-right: 2px;
+  gap: 8px;
 }
 
 .preset-card-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background-color: #FAFAFA;
   border: 1.5px solid #EEEEEE;
-  border-radius: 14px;
+  border-radius: 12px;
   transition: all 0.2s ease;
 }
 
@@ -511,8 +506,35 @@ function quickPayment() {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
+.card-icon-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pending-bg { background-color: #FFF3E0; }
+.active-bg { background-color: #E8F5E9; }
+.multi-bg { background-color: #E3F2FD; }
+
+.card-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meta-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #263238;
+}
+
 .preset-cpf-sub {
-  font-size: 11px;
+  font-size: 10.5px;
   color: #757575;
   font-family: monospace;
 }
@@ -524,12 +546,12 @@ function quickPayment() {
 }
 
 .btn-action-fill {
-  padding: 6px 10px;
-  border-radius: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
   border: 1px solid #CFD8DC;
   background-color: #FFFFFF;
   color: #37474F;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -545,12 +567,12 @@ function quickPayment() {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 10px;
-  border-radius: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
   border: none;
   background: linear-gradient(135deg, #FF6D00 0%, #FF8F00 100%);
   color: #FFFFFF;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -561,81 +583,101 @@ function quickPayment() {
   box-shadow: 0 3px 8px rgba(255, 109, 0, 0.35);
 }
 
-.scenario-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
-  background-color: #FAFAFA;
-  border: 1.5px solid #EEEEEE;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.btn-action-bypass:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-.scenario-card:hover {
-  transform: translateX(3px);
-  background-color: #FFFFFF;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-
-.card-pending:hover { border-color: #FFB74D; }
-.card-active:hover { border-color: #81C784; }
-.card-multi:hover { border-color: #64B5F6; }
-.card-empty:hover { border-color: #BDBDBD; }
-
-.card-icon-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.pending-bg { background-color: #FFF3E0; }
-.active-bg { background-color: #E8F5E9; }
-.multi-bg { background-color: #E3F2FD; }
-.empty-bg { background-color: #F5F5F5; }
-
-.card-meta {
-  flex: 1;
+/* ── Form Fillers ────────────────────────────────────────────────────────── */
+.form-fillers-grid {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-}
-
-.meta-title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 6px;
 }
 
-.meta-title {
-  font-size: 13px;
+.btn-form-fill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background-color: #FAFAFA;
+  border: 1px solid #E0E0E0;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.btn-form-fill:hover {
+  background-color: #FFFFFF;
+  border-color: #FFB74D;
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.fill-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.fill-title {
+  font-size: 12px;
   font-weight: 800;
   color: #263238;
 }
 
-.tag-status {
-  font-size: 10px;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 6px;
-  white-space: nowrap;
+.fill-sub {
+  font-size: 10.5px;
+  color: #757575;
 }
 
-.status-pending { background-color: #FFE082; color: #E65100; }
-.status-active { background-color: #C8E6C9; color: #1B5E20; }
-.status-multi { background-color: #BBDEFB; color: #0D47A1; }
-.status-empty { background-color: #EEEEEE; color: #616161; }
+/* ── Session Box ────────────────────────────────────────────────────────── */
+.session-info-box {
+  background-color: #F1F8E9;
+  border: 1px solid #C8E6C9;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
-.meta-desc {
+.session-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.session-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #2E7D32;
+}
+
+.btn-refresh-server {
+  background: none;
+  border: none;
+  color: #2E7D32;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.btn-refresh-server:hover {
+  transform: rotate(180deg);
+}
+
+.session-details {
   font-size: 11px;
-  color: #757575;
-  line-height: 1.35;
+  color: #33691E;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.session-details p {
   margin: 0;
 }
 
@@ -644,7 +686,7 @@ function quickPayment() {
   display: flex;
   gap: 8px;
   border-top: 1px solid #F0F0F0;
-  padding-top: 12px;
+  padding-top: 10px;
 }
 
 .btn-quick-nav {
@@ -658,7 +700,7 @@ function quickPayment() {
   border: 1px solid #E0E0E0;
   background-color: #FAFAFA;
   color: #37474F;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -668,6 +710,18 @@ function quickPayment() {
   background-color: #ECEFF1;
   border-color: #CFD8DC;
   color: #263238;
+}
+
+.btn-quick-logout {
+  color: #D32F2F;
+  border-color: #FFCDD2;
+  background-color: #FFEBEE;
+}
+
+.btn-quick-logout:hover {
+  background-color: #FFCDD2;
+  border-color: #EF5350;
+  color: #B71C1C;
 }
 
 /* ── Transitions ────────────────────────────────────────────────────────── */

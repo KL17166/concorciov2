@@ -75,31 +75,23 @@ export const useConsortiumStore = defineStore('consortium', {
           this.products = DEFAULT_PRODUCTS
         }
 
-        // Fetch or simulate active contracts
+        // Fetch active contracts from backend
         if (authStore.isAuthenticated && authStore.user) {
           try {
             const apiContracts = await $fetch<ActiveContract[]>(`${apiBase}/api/subscriptions/${authStore.user.id}`, {
               headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
             })
-            if (Array.isArray(apiContracts) && apiContracts.length > 0) {
+            if (Array.isArray(apiContracts)) {
               this.activeContracts = apiContracts
-            } else if (this.activeContracts.length === 0) {
-              // If not seeded yet, seed according to user state
-              if (authStore.user.kycStatus === 'PENDING' || authStore.user.cpf === '222.333.444-05') {
-                this.seedScenario('pending_adhesion')
-              } else {
-                this.seedScenario('active_12')
-              }
+            } else {
+              this.activeContracts = []
             }
-          } catch (_) {
-            if (this.activeContracts.length === 0) {
-              if (authStore.user.kycStatus === 'PENDING' || authStore.user.cpf === '222.333.444-05') {
-                this.seedScenario('pending_adhesion')
-              } else {
-                this.seedScenario('active_12')
-              }
-            }
+          } catch (err) {
+            console.warn('Could not load contracts from backend:', err)
+            this.activeContracts = []
           }
+        } else {
+          this.activeContracts = []
         }
       } finally {
         this.isLoading = false
@@ -139,173 +131,6 @@ export const useConsortiumStore = defineStore('consortium', {
       this.searchQuery = ''
       this.selectedCategory = 'TODOS'
       this.selectedSubCategory = null
-    },
-
-    seedScenario(type: 'active_12' | 'pending_adhesion' | 'multiple' | 'empty') {
-      const authStore = useAuthStore()
-      const motoProd = this.products.find(p => p.type === 'MOTO') || this.products[0] || DEFAULT_PRODUCTS[0]!
-      const carroProd = this.products.find(p => p.type === 'CARRO') || this.products[1] || DEFAULT_PRODUCTS[1]!
-
-      if (type === 'empty') {
-        this.activeContracts = []
-        return
-      }
-
-      if (type === 'pending_adhesion') {
-        const instValues: Record<number, number> = { 1: 289.90 }
-        const instIds: Record<number, string> = { 1: 'inst_1_pending' }
-        const instTokens: Record<number, string> = { 1: 'tok_1_pending' }
-        const instDueDates: Record<number, string> = { 1: new Date(Date.now() + 30 * 60 * 1000).toISOString() }
-
-        this.activeContracts = [
-          {
-            id: 'ct_pending_1',
-            userId: authStore.user?.id || 'usr_dev',
-            productId: motoProd.id,
-            product: motoProd,
-            planId: motoProd.plans[0]?.id || 'plan_1',
-            durationMonths: 80,
-            currentInstallment: 1,
-            totalInstallments: 80,
-            groupNumber: '104',
-            quotaNumber: '042',
-            creditValue: motoProd.price || 18500,
-            administrationFee: 0.15,
-            status: 'pending' as any,
-            isAdesaoPaid: false,
-            nextPaymentAmount: 289.90,
-            dueDate: 'Aguardando Pagamento da Adesão',
-            contractDate: new Date().toISOString(),
-            progressPercentage: 0,
-            paidInstallments: [],
-            installmentValues: instValues,
-            installmentIds: instIds,
-            installmentTokens: instTokens,
-            installmentDueDates: instDueDates
-          }
-        ]
-        return
-      }
-
-      if (type === 'active_12') {
-        const paidList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        const instValues: Record<number, number> = {}
-        const instIds: Record<number, string> = {}
-        const instTokens: Record<number, string> = {}
-        const instDueDates: Record<number, string> = {}
-
-        for (let i = 1; i <= 80; i++) {
-          instIds[i] = `inst_${i}`
-          instTokens[i] = `tok_${i}`
-          const date = new Date(2024, 0 + i, 15)
-          instDueDates[i] = date.toISOString()
-          if (i > 13) {
-            const monthsAhead = i - 13
-            const discountFactor = Math.max(0.7, 1 - (monthsAhead * 0.005))
-            instValues[i] = +(289.90 * discountFactor).toFixed(2)
-          } else {
-            instValues[i] = 289.90
-          }
-        }
-
-        this.activeContracts = [
-          {
-            id: 'ct_active_1',
-            userId: authStore.user?.id || 'usr_dev',
-            productId: motoProd.id,
-            product: motoProd,
-            planId: motoProd.plans[0]?.id || 'plan_1',
-            durationMonths: 80,
-            currentInstallment: 13,
-            totalInstallments: 80,
-            groupNumber: '104',
-            quotaNumber: '042',
-            creditValue: motoProd.price || 18500,
-            administrationFee: 0.10,
-            status: 'active',
-            isAdesaoPaid: true,
-            nextPaymentAmount: 289.90,
-            dueDate: '15/09/2026',
-            contractDate: '2024-01-15',
-            progressPercentage: 15,
-            paidInstallments: paidList,
-            installmentValues: instValues,
-            installmentIds: instIds,
-            installmentTokens: instTokens,
-            installmentDueDates: instDueDates
-          }
-        ]
-        return
-      }
-
-      if (type === 'multiple') {
-        const paidList = [1, 2, 3, 4, 5, 6]
-        const instValues: Record<number, number> = {}
-        const instIds: Record<number, string> = {}
-        const instTokens: Record<number, string> = {}
-        const instDueDates: Record<number, string> = {}
-
-        for (let i = 1; i <= 80; i++) {
-          instIds[i] = `inst_m_${i}`
-          instTokens[i] = `tok_m_${i}`
-          const date = new Date(2024, 0 + i, 15)
-          instDueDates[i] = date.toISOString()
-          instValues[i] = 289.90
-        }
-
-        this.activeContracts = [
-          {
-            id: 'ct_moto_active',
-            userId: authStore.user?.id || 'usr_dev',
-            productId: motoProd.id,
-            product: motoProd,
-            planId: motoProd.plans[0]?.id || 'plan_1',
-            durationMonths: 80,
-            currentInstallment: 7,
-            totalInstallments: 80,
-            groupNumber: '104',
-            quotaNumber: '042',
-            creditValue: motoProd.price || 18500,
-            administrationFee: 0.10,
-            status: 'active',
-            isAdesaoPaid: true,
-            nextPaymentAmount: 289.90,
-            dueDate: '15/09/2026',
-            contractDate: '2024-01-15',
-            progressPercentage: 8,
-            paidInstallments: paidList,
-            installmentValues: instValues,
-            installmentIds: instIds,
-            installmentTokens: instTokens,
-            installmentDueDates: instDueDates
-          },
-          {
-            id: 'ct_carro_pending',
-            userId: authStore.user?.id || 'usr_dev',
-            productId: carroProd.id,
-            product: carroProd,
-            planId: carroProd.plans[0]?.id || 'plan_car_1',
-            durationMonths: 100,
-            currentInstallment: 1,
-            totalInstallments: 100,
-            groupNumber: '205',
-            quotaNumber: '118',
-            creditValue: carroProd.price || 85000,
-            administrationFee: 0.12,
-            status: 'pending' as any,
-            isAdesaoPaid: false,
-            nextPaymentAmount: 980.50,
-            dueDate: 'Aguardando Pagamento da Adesão',
-            contractDate: new Date().toISOString(),
-            progressPercentage: 0,
-            paidInstallments: [],
-            installmentValues: { 1: 980.50 },
-            installmentIds: { 1: 'inst_car_1' },
-            installmentTokens: { 1: 'tok_car_1' },
-            installmentDueDates: { 1: new Date(Date.now() + 30 * 60 * 1000).toISOString() }
-          }
-        ]
-      }
     }
   }
 })
