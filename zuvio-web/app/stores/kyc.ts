@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import type { KycStatusType, KycStatusResponse } from '~~/shared/types/kyc'
-import { useApiClient } from '~/composables/useApiClient'
 import { useAuthStore } from './auth'
 
 export const useKycStore = defineStore('kyc', {
@@ -20,10 +19,10 @@ export const useKycStore = defineStore('kyc', {
       if (!authStore.user) return
 
       this.isLoading = true
-      const api = useApiClient()
-
       try {
-        const res = await api.kyc.getStatus()
+        const res = await $fetch<KycStatusResponse>('/api/kyc/status', {
+          headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+        })
         this.status = res.kycStatus
         this.rejectReason = res.rejectReason || null
         this.documentsUploaded = res.documentsUploaded
@@ -36,10 +35,17 @@ export const useKycStore = defineStore('kyc', {
 
     async uploadDocument(file: File, type: 'document' | 'document_back' | 'selfie'): Promise<string | null> {
       this.isLoading = true
-      const api = useApiClient()
-
+      const authStore = useAuthStore()
       try {
-        const res = await api.auth.uploadDocument(file, type)
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const res = await $fetch<{ message: string; url: string }>(`/api/auth/upload?type=${type}`, {
+          method: 'POST',
+          headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+          body: formData
+        })
+
         if (res.url) {
           if (type === 'document') this.documentFrontUrl = res.url
           if (type === 'document_back') this.documentBackUrl = res.url
@@ -60,15 +66,21 @@ export const useKycStore = defineStore('kyc', {
       }
 
       this.isLoading = true
-      const api = useApiClient()
       const authStore = useAuthStore()
 
       try {
-        const res = await api.kyc.submit({
-          documentFrontUrl: this.documentFrontUrl,
-          documentBackUrl: this.documentBackUrl,
-          selfieUrl: this.selfieUrl
-        })
+        const res = await $fetch<{ success: boolean; message: string; kycStatus: string }>(
+          '/api/kyc/submit',
+          {
+            method: 'POST',
+            headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+            body: {
+              documentFrontUrl: this.documentFrontUrl,
+              documentBackUrl: this.documentBackUrl,
+              selfieUrl: this.selfieUrl
+            }
+          }
+        )
 
         if (res.success) {
           this.status = 'SUBMITTED'

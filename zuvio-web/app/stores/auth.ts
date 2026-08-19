@@ -1,14 +1,11 @@
 import { defineStore } from 'pinia'
 import type { AuthState, LoginCredentials, LoginResponse } from '~~/shared/types/auth'
-import type { UserProfile, UserRole } from '~~/shared/types/user'
-import { getSecurityHeaders, signRequest } from '~~/shared/utils/security'
+import type { UserProfile } from '~~/shared/types/user'
 import { unmaskCpf } from '~~/shared/utils/cpf'
 
 const STORAGE_KEYS = {
   TOKEN: 'katari_jwt_token',
-  USER: 'katari_user_profile',
-  SIGNING_SECRET: 'katari_signing_secret',
-  PAYLOAD_SECRET: 'katari_payload_secret'
+  USER: 'katari_user_profile'
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -45,14 +42,10 @@ export const useAuthStore = defineStore('auth', {
       try {
         const savedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
         const savedUserStr = localStorage.getItem(STORAGE_KEYS.USER)
-        const savedSigningSecret = localStorage.getItem(STORAGE_KEYS.SIGNING_SECRET)
-        const savedPayloadSecret = localStorage.getItem(STORAGE_KEYS.PAYLOAD_SECRET)
 
         if (savedToken && savedUserStr) {
           this.token = savedToken
           this.user = JSON.parse(savedUserStr)
-          this.signingSecret = savedSigningSecret
-          this.payloadSecret = savedPayloadSecret
           this.isAuthenticated = true
         }
       } catch (err) {
@@ -62,52 +55,27 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
-     * Authenticate against the real Katari backend API
+     * Authenticate via Nuxt BFF → server-consorcio
      */
     async login(credentials: LoginCredentials): Promise<{ success: boolean; message?: string }> {
       this.isLoading = true
-      const config = useRuntimeConfig()
-      const apiBase = config.public.apiBase || 'http://localhost:3000'
-      const cleanCpf = unmaskCpf(credentials.cpf)
 
       try {
-        const path = '/api/auth/login'
-        const body = JSON.stringify({
-          cpf: cleanCpf,
-          password: credentials.password
-        })
-
-        // Sign request and gather headers
-        const securityHeaders = getSecurityHeaders()
-        const signHeaders = signRequest('POST', path, body)
-
-        const response = await $fetch<LoginResponse>(`${apiBase}${path}`, {
+        const response = await $fetch<LoginResponse>('/api/auth/login', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...securityHeaders,
-            ...signHeaders
-          },
-          body
+          body: {
+            cpf: unmaskCpf(credentials.cpf),
+            password: credentials.password
+          }
         })
 
-        if (response && response.token && response.user) {
-          this.setSession({
-            token: response.token,
-            user: response.user,
-            signingSecret: response.signingSecret || null,
-            payloadSecret: response.payloadSecret || null
-          })
+        if (response?.token && response?.user) {
+          this.setSession({ token: response.token, user: response.user })
           return { success: true }
         }
 
-        return {
-          success: false,
-          message: response.message || 'Falha ao autenticar com o servidor.'
-        }
+        return { success: false, message: response.message || 'Falha ao autenticar com o servidor.' }
       } catch (error: any) {
-        console.error('Login error:', error)
-
         let errorMessage = 'Erro de conexão com o servidor'
 
         if (typeof error?.data?.message === 'string' && error.data.message.trim()) {
@@ -122,10 +90,7 @@ export const useAuthStore = defineStore('auth', {
           errorMessage = 'CPF ou senha incorretos'
         }
 
-        return {
-          success: false,
-          message: errorMessage
-        }
+        return { success: false, message: errorMessage }
       } finally {
         this.isLoading = false
       }
@@ -134,23 +99,16 @@ export const useAuthStore = defineStore('auth', {
     /**
      * Store session state in memory and localStorage
      */
-    setSession(data: {
-      token: string
-      user: UserProfile
-      signingSecret?: string | null
-      payloadSecret?: string | null
-    }) {
+    setSession(data: { token: string; user: UserProfile }) {
       this.token = data.token
       this.user = data.user
-      this.signingSecret = data.signingSecret || null
-      this.payloadSecret = data.payloadSecret || null
+      this.signingSecret = null
+      this.payloadSecret = null
       this.isAuthenticated = true
 
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEYS.TOKEN, data.token)
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user))
-        if (data.signingSecret) localStorage.setItem(STORAGE_KEYS.SIGNING_SECRET, data.signingSecret)
-        if (data.payloadSecret) localStorage.setItem(STORAGE_KEYS.PAYLOAD_SECRET, data.payloadSecret)
       }
     },
 
@@ -158,26 +116,14 @@ export const useAuthStore = defineStore('auth', {
      * Clear all session data (Logout)
      */
     async logout() {
-      // If we have a real session, attempt to call server logout
       if (this.token) {
         try {
-          const config = useRuntimeConfig()
-          const apiBase = config.public.apiBase || 'http://localhost:3000'
-          const path = '/api/auth/logout'
-          const securityHeaders = getSecurityHeaders()
-          const signHeaders = signRequest('POST', path, undefined, this.signingSecret)
-
-          await $fetch(`${apiBase}${path}`, {
+          await $fetch('/api/auth/logout', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.token}`,
-              ...securityHeaders,
-              ...signHeaders
-            }
+            headers: { Authorization: `Bearer ${this.token}` }
           })
         } catch (e) {
-          console.warn('Server logout failed or network unreachable (local session cleared):', e)
+          console.warn('Server logout failed (local session cleared):', e)
         }
       }
 
@@ -195,8 +141,6 @@ export const useAuthStore = defineStore('auth', {
       if (typeof window !== 'undefined') {
         localStorage.removeItem(STORAGE_KEYS.TOKEN)
         localStorage.removeItem(STORAGE_KEYS.USER)
-        localStorage.removeItem(STORAGE_KEYS.SIGNING_SECRET)
-        localStorage.removeItem(STORAGE_KEYS.PAYLOAD_SECRET)
       }
     }
   }

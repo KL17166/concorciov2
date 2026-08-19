@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useConsortiumStore } from '~/stores/consortium'
 import { useAuthStore } from '~/stores/auth'
 import { useCheckoutStore } from '~/stores/checkout'
+import { usePaymentStore } from '~/stores/payment'
 import { useToast } from '~/composables/useToast'
 import { formatCurrency } from '~~/shared/utils/currency'
 import type { ActiveContract } from '~~/shared/types/catalog'
@@ -36,6 +37,7 @@ const route = useRoute()
 const consortiumStore = useConsortiumStore()
 const authStore = useAuthStore()
 const checkoutStore = useCheckoutStore()
+const paymentStore = usePaymentStore()
 const toast = useToast()
 
 const selectedMethod = ref<'PIX' | 'BOLETO'>('PIX')
@@ -70,29 +72,35 @@ const product = computed(() => {
 })
 
 const adhesionAmount = computed(() => {
-  if (contract.value) {
-    return contract.value.installmentValues?.[1] || contract.value.nextPaymentAmount || 289.90
-  }
-  return checkoutStore.paymentData?.amount || 289.90
+  // Prefer server-calculated value from the fetched subscription installments
+  const firstInst = paymentStore.installments?.[0]
+  if (firstInst?.valueToPay) return firstInst.valueToPay
+  if (firstInst?.amount) return firstInst.amount
+  // Fallback to auto-generated PIX amount from checkout flow
+  return checkoutStore.paymentData?.amount || 0
 })
 
 const pixCode = computed(() => {
-  return (
-    checkoutStore.paymentData?.copyPaste ||
-    '00020126360014BR.GOV.BCB.PIX0114+551199999999520400005303986540510.005802BR5913Katari Consorcios6008BRASILIA62070503***63041D3D'
-  )
+  return checkoutStore.paymentData?.copyPaste || ''
 })
 
 const boletoLine = computed(() => {
-  return (
-    checkoutStore.paymentData?.boletoLine ||
-    '34191.09008 61713.957308 71444.640008 2 92900000000000'
-  )
+  return checkoutStore.paymentData?.boletoLine || ''
 })
 
 onMounted(async () => {
+  // Always load fresh data from backend
   if (consortiumStore.activeContracts.length === 0) {
     await consortiumStore.loadHomeData()
+  }
+
+  // Fetch full subscription detail from backend (server calculates all values)
+  const subId = checkoutStore.createdSubscriptionId
+    || route.query.subscriptionId as string
+    || consortiumStore.activeContracts[0]?.id
+
+  if (subId) {
+    await paymentStore.fetchSubscription(subId)
   }
 
   // Check method from query if available
@@ -110,13 +118,11 @@ onMounted(async () => {
     }
   }, 1000)
 
-  // Start payment status polling
+  // Start payment status polling against backend
   pollInterval = setInterval(async () => {
     if (isPaymentConfirmed.value) return
     isVerifying.value = true
-    setTimeout(() => {
-      isVerifying.value = false
-    }, 1500)
+    setTimeout(() => { isVerifying.value = false }, 1500)
   }, 12000)
 })
 

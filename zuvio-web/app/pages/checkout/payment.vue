@@ -74,17 +74,11 @@ const paymentAmount = computed(() => {
 })
 
 const pixCode = computed(() => {
-  return (
-    checkoutStore.paymentData?.copyPaste ||
-    '00020126360014BR.GOV.BCB.PIX0114+551199999999520400005303986540510.005802BR5913Katari Consorcios6008BRASILIA62070503***63041D3D'
-  )
+  return checkoutStore.paymentData?.copyPaste || ''
 })
 
 const boletoLine = computed(() => {
-  return (
-    checkoutStore.paymentData?.boletoLine ||
-    '34191.09008 61713.957308 71444.640008 2 92900000000000'
-  )
+  return checkoutStore.paymentData?.boletoLine || ''
 })
 
 onMounted(() => {

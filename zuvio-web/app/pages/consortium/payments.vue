@@ -66,6 +66,12 @@ onMounted(async () => {
   if (consortiumStore.activeContracts.length === 0) {
     await consortiumStore.loadHomeData()
   }
+
+  // Fetch full subscription from backend — server recalculates all monetary values
+  const contractId = consortiumStore.activeContracts[0]?.id
+  if (contractId) {
+    await paymentStore.fetchSubscription(contractId)
+  }
 })
 
 // Counts and indicators matching Flutter

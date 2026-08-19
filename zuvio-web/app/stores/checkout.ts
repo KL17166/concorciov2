@@ -1,13 +1,12 @@
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
 import { useConsortiumStore } from './consortium'
-import { useApiClient } from '~/composables/useApiClient'
 import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
+import type { Installment } from '~~/shared/types/payment'
 
 export interface CheckoutPersonalData {
   name: string
   cpf: string
-
   phone: string
 }
 
@@ -33,7 +32,6 @@ export const useCheckoutStore = defineStore('checkout', {
     personal: {
       name: '',
       cpf: '',
-
       phone: ''
     } as CheckoutPersonalData,
     address: {
@@ -98,8 +96,6 @@ export const useCheckoutStore = defineStore('checkout', {
       }
     },
 
-
-
     setStep(step: number) {
       this.currentStep = step
     },
@@ -116,31 +112,62 @@ export const useCheckoutStore = defineStore('checkout', {
       this.documents[type] = pathOrBase64
     },
 
-    async finalizeCheckout(selectedProduct: Product, selectedPlan: ConsortiumPlan): Promise<{ success: boolean; subscriptionId?: string; message?: string }> {
+    async finalizeCheckout(
+      selectedProduct: Product,
+      selectedPlan: ConsortiumPlan
+    ): Promise<{ success: boolean; subscriptionId?: string; message?: string }> {
       this.isLoading = true
       const authStore = useAuthStore()
       const consortiumStore = useConsortiumStore()
-      const api = useApiClient()
 
       try {
-        const res = await api.subscriptions.create({
-          userId: authStore.user?.id || '',
-          productId: selectedProduct.id,
-          planId: selectedPlan.id,
-          termsAccepted: true,
-          documentFrontUrl: this.documents.front || undefined,
-          documentBackUrl: this.documents.back || undefined,
-          selfieUrl: this.documents.selfie || undefined
+        const res = await $fetch<{
+          success: boolean
+          subscriptionId: string
+          installments: Installment[]
+        }>('/api/subscriptions', {
+          method: 'POST',
+          headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+          body: {
+            userId: authStore.user?.id || '',
+            productId: selectedProduct.id,
+            planId: selectedPlan.id,
+            termsAccepted: true,
+            documentFrontUrl: this.documents.front || undefined,
+            documentBackUrl: this.documents.back || undefined,
+            selfieUrl: this.documents.selfie || undefined
+          }
         })
 
         if (res.success && res.subscriptionId) {
           this.createdSubscriptionId = res.subscriptionId
 
-          // Reload fresh contracts from backend server
-          await consortiumStore.loadHomeData()
+          // Auto-generate PIX for the first installment — backend calculates the value
+          const firstInst = res.installments?.[0]
+          if (firstInst?.id && firstInst?.idTokenPay) {
+            try {
+              const pixRes = await $fetch<any>(`/api/payments/${firstInst.id}/pix`, {
+                method: 'POST',
+                headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+                body: { idTokenPay: firstInst.idTokenPay }
+              })
+              if (pixRes?.success) {
+                this.paymentData = {
+                  amount: pixRes.amount,
+                  copyPaste: pixRes.copyPaste,
+                  qrCode: pixRes.qrCode,
+                  expirationDate: pixRes.expirationDate
+                }
+              }
+            } catch (pixErr) {
+              console.warn('Failed to auto-generate PIX:', pixErr)
+            }
+          }
 
+          await consortiumStore.loadHomeData()
           return { success: true, subscriptionId: res.subscriptionId }
         }
+
         return { success: false, message: 'Erro ao criar contratação' }
       } catch (err: any) {
         return { success: false, message: err?.data?.error || err?.message || 'Erro ao processar contratação' }

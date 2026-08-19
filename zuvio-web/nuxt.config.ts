@@ -53,8 +53,9 @@ export default defineNuxtConfig({
   ],
 
   runtimeConfig: {
+    // Server-only (not exposed to browser)
+    backendBase: process.env.NUXT_BACKEND_BASE || process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000',
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000',
       appName: 'Katari Consórcios',
       appSubtitle: 'Seu sonho em duas rodas'
     }
