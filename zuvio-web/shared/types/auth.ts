@@ -28,6 +28,5 @@ export interface AuthState {
   signingSecret: string | null
   payloadSecret: string | null
   isAuthenticated: boolean
-  isDevBypass: boolean
   isLoading: boolean
 }

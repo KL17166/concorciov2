@@ -3,6 +3,7 @@ import { env } from '../config/env';
 import { encryptPayload, decryptPayload } from '../utils/cryptoUtils';
 import { logger } from '../config/logger';
 import { redisClient } from '../config/redis';
+import { isAuthenticatedAdmin } from '../security/adminAuth';
 import jwt from 'jsonwebtoken';
 
 /**
@@ -36,8 +37,8 @@ async function resolvePayloadKey(req: Request): Promise<string | undefined> {
 }
 
 export const payloadObfuscationMiddleware = async (req: Request, res: Response, next: NextFunction) => {
-    const bypassHeader = req.headers['x-bypass-obfuscation'];
-    const isBypassed = bypassHeader === env.ENCRYPTION_BYPASS_SECRET;
+    // Only authenticated admins with valid signatures can bypass encryption
+    const isBypassed = isAuthenticatedAdmin(req);
 
     // 1. Decrypt incoming request body if it is encrypted
     if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {

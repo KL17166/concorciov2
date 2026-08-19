@@ -384,29 +384,6 @@ function handleContinue() {
     </div>
 
     <main class="checkout-content-container">
-      <!-- Dev Bypass Banner / Quick Action Bar -->
-      <div v-if="authStore.isDevBypass" class="dev-bypass-action-card">
-        <div class="dev-bypass-left">
-          <div class="dev-zap-circle">
-            <Zap :size="18" color="#FF6D00" />
-          </div>
-          <div class="dev-bypass-texts">
-            <span class="dev-bypass-title">Modo Dev Bypass Ativo</span>
-            <span class="dev-bypass-sub">Dados de teste pré-carregados automaticamente</span>
-          </div>
-        </div>
-        <div class="dev-bypass-buttons">
-          <button class="btn-dev-fill" @click="applyBypassAndFill(false)">
-            <Sparkles :size="14" />
-            <span>Recarregar Dados</span>
-          </button>
-          <button class="btn-dev-skip" @click="applyBypassAndFill(true)">
-            <span>Pular p/ Contrato</span>
-            <ArrowRight :size="14" />
-          </button>
-        </div>
-      </div>
-
       <!-- Error Message Banner -->
       <div v-if="formError" class="checkout-error-banner">
         <AlertCircle :size="18" color="#D32F2F" />

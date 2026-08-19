@@ -93,17 +93,7 @@ onMounted(() => {
   }, 300)
 
   if (!checkoutStore.personal.name) {
-    if (authStore.isDevBypass) {
-      checkoutStore.fillDevBypassData()
-      isAccepted.value = true
-      hasScrolledToBottom.value = true
-    } else {
-      router.replace('/checkout')
-    }
-  }
-
-  if (authStore.isDevBypass) {
-    hasScrolledToBottom.value = true
+    router.replace('/checkout')
   }
 })
 
@@ -200,24 +190,6 @@ async function handleSignContract() {
     </div>
 
     <main class="contract-content-container">
-      <!-- Dev Bypass Helper Banner -->
-      <div v-if="authStore.isDevBypass" class="dev-bypass-action-card">
-        <div class="dev-bypass-left">
-          <div class="dev-zap-circle">
-            <Zap :size="18" color="#FF6D00" />
-          </div>
-          <div class="dev-bypass-texts">
-            <span class="dev-bypass-title">Modo Dev Bypass Ativo</span>
-            <span class="dev-bypass-sub">Assinatura rápida e dados de teste liberados</span>
-          </div>
-        </div>
-        <button class="btn-dev-sign-quick" @click="isAccepted = true; hasScrolledToBottom = true; handleSignContract()">
-          <Sparkles :size="14" />
-          <span>Assinar e Pular p/ Pagamento</span>
-          <ArrowRight :size="14" />
-        </button>
-      </div>
-
       <!-- ── Papel do Contrato Oficial Katari ───────────────────────────── -->
       <section class="contract-paper-card">
         <!-- 1. Header Oficial Katari -->

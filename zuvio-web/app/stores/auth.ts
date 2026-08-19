@@ -8,8 +8,7 @@ const STORAGE_KEYS = {
   TOKEN: 'katari_jwt_token',
   USER: 'katari_user_profile',
   SIGNING_SECRET: 'katari_signing_secret',
-  PAYLOAD_SECRET: 'katari_payload_secret',
-  DEV_BYPASS: 'katari_dev_bypass'
+  PAYLOAD_SECRET: 'katari_payload_secret'
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -19,7 +18,6 @@ export const useAuthStore = defineStore('auth', {
     signingSecret: null,
     payloadSecret: null,
     isAuthenticated: false,
-    isDevBypass: false,
     isLoading: false
   }),
 
@@ -47,7 +45,6 @@ export const useAuthStore = defineStore('auth', {
       try {
         const savedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
         const savedUserStr = localStorage.getItem(STORAGE_KEYS.USER)
-        const isBypass = localStorage.getItem(STORAGE_KEYS.DEV_BYPASS) === 'true'
         const savedSigningSecret = localStorage.getItem(STORAGE_KEYS.SIGNING_SECRET)
         const savedPayloadSecret = localStorage.getItem(STORAGE_KEYS.PAYLOAD_SECRET)
 
@@ -56,7 +53,6 @@ export const useAuthStore = defineStore('auth', {
           this.user = JSON.parse(savedUserStr)
           this.signingSecret = savedSigningSecret
           this.payloadSecret = savedPayloadSecret
-          this.isDevBypass = isBypass
           this.isAuthenticated = true
         }
       } catch (err) {
@@ -100,8 +96,7 @@ export const useAuthStore = defineStore('auth', {
             token: response.token,
             user: response.user,
             signingSecret: response.signingSecret || null,
-            payloadSecret: response.payloadSecret || null,
-            isDevBypass: false
+            payloadSecret: response.payloadSecret || null
           })
           return { success: true }
         }
@@ -144,19 +139,16 @@ export const useAuthStore = defineStore('auth', {
       user: UserProfile
       signingSecret?: string | null
       payloadSecret?: string | null
-      isDevBypass?: boolean
     }) {
       this.token = data.token
       this.user = data.user
       this.signingSecret = data.signingSecret || null
       this.payloadSecret = data.payloadSecret || null
-      this.isDevBypass = false
       this.isAuthenticated = true
 
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEYS.TOKEN, data.token)
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user))
-        localStorage.setItem(STORAGE_KEYS.DEV_BYPASS, 'false')
         if (data.signingSecret) localStorage.setItem(STORAGE_KEYS.SIGNING_SECRET, data.signingSecret)
         if (data.payloadSecret) localStorage.setItem(STORAGE_KEYS.PAYLOAD_SECRET, data.payloadSecret)
       }
@@ -167,7 +159,7 @@ export const useAuthStore = defineStore('auth', {
      */
     async logout() {
       // If we have a real session, attempt to call server logout
-      if (this.token && !this.isDevBypass) {
+      if (this.token) {
         try {
           const config = useRuntimeConfig()
           const apiBase = config.public.apiBase || 'http://localhost:3000'
@@ -199,12 +191,10 @@ export const useAuthStore = defineStore('auth', {
       this.signingSecret = null
       this.payloadSecret = null
       this.isAuthenticated = false
-      this.isDevBypass = false
 
       if (typeof window !== 'undefined') {
         localStorage.removeItem(STORAGE_KEYS.TOKEN)
         localStorage.removeItem(STORAGE_KEYS.USER)
-        localStorage.removeItem(STORAGE_KEYS.DEV_BYPASS)
         localStorage.removeItem(STORAGE_KEYS.SIGNING_SECRET)
         localStorage.removeItem(STORAGE_KEYS.PAYLOAD_SECRET)
       }

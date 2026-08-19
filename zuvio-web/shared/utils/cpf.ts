@@ -23,11 +23,6 @@ export function isValidCpf(cpfRaw: string): boolean {
   // Must have 11 digits
   if (cpf.length !== 11) return false
 
-  // Known test CPFs for quick development bypass
-  if (cpf === '11111111111' || cpf === '00000000000' || cpf === '99999999999') {
-    return true
-  }
-
   // Reject all identical digits
   if (/^(\d)\1{10}$/.test(cpf)) return false
 
