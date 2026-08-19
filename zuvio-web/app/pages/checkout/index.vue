@@ -62,31 +62,6 @@ const docFront = ref<string | null>(null)
 const docBack = ref<string | null>(null)
 const selfie = ref<string | null>(null)
 
-function applyBypassAndFill(directToContract = false) {
-  formError.value = null
-  isAddressExpanded.value = true
-  checkoutStore.fillDevBypassData()
-  name.value = checkoutStore.personal.name
-  cpf.value = formatCpf(checkoutStore.personal.cpf)
-  phone.value = formatPhone(checkoutStore.personal.phone)
-
-  cep.value = formatCep(checkoutStore.address.cep)
-  street.value = checkoutStore.address.street
-  number.value = checkoutStore.address.number
-  district.value = checkoutStore.address.district
-  city.value = checkoutStore.address.city
-  state.value = checkoutStore.address.state
-  complement.value = checkoutStore.address.complement || ''
-
-  docFront.value = checkoutStore.documents.front
-  docBack.value = checkoutStore.documents.back
-  selfie.value = checkoutStore.documents.selfie
-
-  if (directToContract) {
-    router.push('/checkout/contract')
-  }
-}
-
 onMounted(() => {
   checkoutStore.initFromAuth()
 

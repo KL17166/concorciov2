@@ -101,9 +101,8 @@ export const useCheckoutStore = defineStore('checkout', {
     fillDevBypassData() {
       const authStore = useAuthStore()
       this.personal = {
-        name: authStore.user?.name || 'Consorciado Teste Katari',
+        name: authStore.user?.name || 'Carlos Alberto Silva',
         cpf: authStore.user?.cpf || '111.444.777-35',
-        birthDate: '15/05/1990',
         phone: authStore.user?.phone || '(11) 98765-4321'
       }
       this.address = {
@@ -115,15 +114,6 @@ export const useCheckoutStore = defineStore('checkout', {
         state: 'SP',
         complement: 'Apto 42'
       }
-      const mockDoc = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="130" viewBox="0 0 200 130"><rect width="200" height="130" fill="%23e0e0e0" rx="8"/><rect x="15" y="15" width="50" height="60" fill="%23bdbdbd" rx="4"/><rect x="75" y="20" width="110" height="10" fill="%23757575" rx="2"/><rect x="75" y="40" width="90" height="8" fill="%239e9e9e" rx="2"/><rect x="75" y="55" width="70" height="8" fill="%239e9e9e" rx="2"/><text x="100" y="105" font-family="sans-serif" font-size="11" font-weight="bold" fill="%23263238" text-anchor="middle">DOCUMENTO TESTE BYPASS</text></svg>'
-      const mockSelfie = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="%23e8f5e9" rx="100"/><circle cx="100" cy="80" r="40" fill="%2381c784"/><path d="M40 170c0-33 27-60 60-60s60 27 60 60" fill="%2381c784"/><text x="100" y="185" font-family="sans-serif" font-size="10" font-weight="bold" fill="%232e7d32" text-anchor="middle">SELFIE VERIFICADA</text></svg>'
-
-      this.documents = {
-        front: mockDoc,
-        back: mockDoc,
-        selfie: mockSelfie
-      }
-      this.contractAccepted = true
     },
 
     setStep(step: number) {
