@@ -7,7 +7,7 @@ import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
 export interface CheckoutPersonalData {
   name: string
   cpf: string
-  birthDate?: string
+
   phone: string
 }
 
@@ -33,7 +33,7 @@ export const useCheckoutStore = defineStore('checkout', {
     personal: {
       name: '',
       cpf: '',
-      birthDate: '',
+
       phone: ''
     } as CheckoutPersonalData,
     address: {

@@ -8,7 +8,7 @@ export interface UserProfile {
   email: string
   role: UserRole
   cpf: string
-  birthDate?: string
+
   phone?: string
   cep?: string
   street?: string

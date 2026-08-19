@@ -41,8 +41,7 @@ const registerSchema = z.object({
     email: z.string().email(),
     cpf: z.string().transform(cpf => cpf.replace(/\D/g, '')).refine(isValidCpf, "CPF inválido"),
     password: z.string().min(8, "Password must be at least 8 characters"),
-    phone: z.string().nullable().optional(),
-    birthDate: z.string().transform((str) => new Date(str)).optional().nullable(),
+    phone: z.string().nullable().optional()
 });
 
 const loginSchema = z.object({
@@ -72,7 +71,6 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
                 passwordHash,
                 phone: data.phone,
                 role: 'CLIENT', // Default
-                birthDate: data.birthDate ? (data.birthDate as any) : null,
             },
             select: { id: true, name: true, email: true, cpf: true, role: true, createdAt: true },
         });
@@ -179,7 +177,6 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
                 email: user.email,
                 role: user.role,
                 cpf: user.cpf,
-                birthDate: user.birthDate,
                 phone: user.phone,
                 kycStatus: user.kycStatus,
                 kycRejectReason: user.kycRejectReason,
@@ -346,7 +343,6 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
 const updateProfileSchema = z.object({
     name: z.string().min(3).optional(),
     phone: z.string().optional(),
-    birthDate: z.string().transform((str) => new Date(str)).optional(),
     // Address fields
     cep: z.string().optional(),
     street: z.string().optional(),
@@ -365,7 +361,7 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
         }
 
         const data = updateProfileSchema.parse(req.body);
-        const { name, phone, birthDate, ...addressData } = data as any;
+        const { name, phone, ...addressData } = data as any;
 
         // Build address JSON object
         let addressJson = null;
@@ -376,7 +372,6 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
         const updateData: any = {};
         if (name) updateData.name = name;
         if (phone) updateData.phone = phone;
-        if (birthDate) updateData.birthDate = birthDate;
         if (addressJson) updateData.address = addressJson;
 
         const user = await prisma.user.update({
@@ -404,7 +399,6 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
                 email: user.email,
                 role: user.role,
                 cpf: user.cpf,
-                birthDate: user.birthDate,
                 phone: user.phone,
                 documentFrontUrl: user.documentFrontUrl,
                 documentBackUrl: user.documentBackUrl,
@@ -518,7 +512,6 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
                 cpf: true,
                 role: true,
                 phone: true,
-                birthDate: true,
                 documentFrontUrl: true,
                 documentBackUrl: true,
                 selfieUrl: true,
@@ -549,7 +542,6 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
                 email: user.email,
                 role: user.role,
                 cpf: user.cpf,
-                birthDate: user.birthDate,
                 phone: user.phone,
                 documentFrontUrl: user.documentFrontUrl,
                 documentBackUrl: user.documentBackUrl,

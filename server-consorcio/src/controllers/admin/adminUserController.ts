@@ -47,7 +47,7 @@ export const newUserForm = (req: Request, res: Response) => {
 // POST /admin/users/new
 export const createUser = async (req: Request, res: Response) => {
     try {
-        const { name, email, cpf, phone, password, role, birthDate, address_cep, address_street, address_number, address_complement, address_neighborhood, address_city, address_state } = req.body;
+        const { name, email, cpf, phone, password, role, address_cep, address_street, address_number, address_complement, address_neighborhood, address_city, address_state } = req.body;
 
         // Check if email already exists
         const existingUser = await prisma.user.findFirst({
@@ -82,7 +82,6 @@ export const createUser = async (req: Request, res: Response) => {
                 phone: phone || null,
                 passwordHash: hashedPassword,
                 role: ALL_VALID_ROLES.includes(role) ? role : 'CLIENT',
-                birthDate: birthDate ? new Date(birthDate) : null,
                 address: formattedAddress
             }
         });
@@ -135,7 +134,7 @@ export const editUserForm = async (req: Request, res: Response) => {
 export const updateUser = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
-        const { name, email, phone, role, birthDate, password, address_cep, address_street, address_number, address_complement, address_neighborhood, address_city, address_state } = req.body;
+        const { name, email, phone, role, password, address_cep, address_street, address_number, address_complement, address_neighborhood, address_city, address_state } = req.body;
         
         let formattedAddress = null;
         if (address_street) {
@@ -155,7 +154,6 @@ export const updateUser = async (req: Request, res: Response) => {
             email,
             phone: phone || null,
             role: ALL_VALID_ROLES.includes(role) ? role : 'CLIENT',
-            birthDate: birthDate ? new Date(birthDate) : null,
             address: formattedAddress
         };
 

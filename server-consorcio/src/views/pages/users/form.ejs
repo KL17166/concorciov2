@@ -67,13 +67,6 @@
                                             </div>
 
                                             <div class="col-md-4">
-                                                <label class="form-label fw-bold">Nascimento *</label>
-                                                <input type="date" name="birthDate" class="form-control"
-                                                    value="<%= editUser.birthDate ? new Date(editUser.birthDate).toISOString().split('T')[0] : '' %>"
-                                                    required>
-                                            </div>
-
-                                            <div class="col-md-4">
                                                 <label class="form-label fw-bold">Telefone</label>
                                                 <input type="text" name="phone" class="form-control" value="<%= editUser.phone || '' %>"
                                                     placeholder="(00) 00000-0000">
