@@ -56,8 +56,7 @@ export default defineNuxtConfig({
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000',
       appName: 'Katari Consórcios',
-      appSubtitle: 'Seu sonho em duas rodas',
-      enableDevBypass: process.env.NODE_ENV !== 'production' || process.env.NUXT_PUBLIC_ENABLE_DEV_BYPASS === 'true'
+      appSubtitle: 'Seu sonho em duas rodas'
     }
   },
 

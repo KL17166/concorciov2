@@ -16,13 +16,10 @@ import {
   Hash,
   Home,
   Phone,
-  Calendar,
   AlertCircle,
   UploadCloud,
   CheckCircle2,
-  RefreshCw,
-  Zap,
-  Sparkles
+  RefreshCw
 } from 'lucide-vue-next'
 
 definePageMeta({
@@ -94,13 +91,6 @@ function formatCpf(v: string) {
   if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
   if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`
-}
-
-function formatDateMask(v: string) {
-  const digits = v.replace(/\D/g, '').slice(0, 8)
-  if (digits.length <= 2) return digits
-  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
-  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`
 }
 
 function formatPhone(v: string) {
@@ -776,101 +766,6 @@ function handleContinue() {
   width: 100%;
   margin: 0 auto;
   padding: 24px 20px 120px 20px;
-}
-
-/* ── Dev Bypass Action Card ─────────────────────────────────────────────── */
-.dev-bypass-action-card {
-  background: linear-gradient(135deg, #FFF8E1 0%, #FFF3E0 100%);
-  border: 1.5px dashed #FFB74D;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-@media (min-width: 480px) {
-  .dev-bypass-action-card {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-.dev-bypass-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.dev-zap-circle {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background-color: rgba(255, 109, 0, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.dev-bypass-texts {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dev-bypass-title {
-  font-size: 13.5px;
-  font-weight: 800;
-  color: #E65100;
-}
-
-.dev-bypass-sub {
-  font-size: 11.5px;
-  color: #8D6E63;
-}
-
-.dev-bypass-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-dev-fill {
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid #FFB74D;
-  background-color: #FFFFFF;
-  color: #E65100;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-dev-fill:hover {
-  background-color: #FFE082;
-}
-
-.btn-dev-skip {
-  padding: 8px 14px;
-  border-radius: 10px;
-  border: none;
-  background-color: #FF6D00;
-  color: #FFFFFF;
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.btn-dev-skip:hover {
-  background-color: #E65100;
 }
 
 .step-card-box {

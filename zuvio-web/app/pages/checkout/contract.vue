@@ -14,8 +14,6 @@ import {
   Calendar,
   Camera,
   Check,
-  Zap,
-  Sparkles,
   ShieldCheck,
   AlertCircle,
   Pencil,
@@ -721,81 +719,6 @@ async function handleSignContract() {
   width: 100%;
   margin: 0 auto;
   padding: 24px 20px 120px 20px;
-}
-
-/* ── Dev Bypass Action Card ─────────────────────────────────────────────── */
-.dev-bypass-action-card {
-  background: linear-gradient(135deg, #FFF8E1 0%, #FFF3E0 100%);
-  border: 1.5px dashed #FFB74D;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-@media (min-width: 480px) {
-  .dev-bypass-action-card {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-.dev-bypass-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.dev-zap-circle {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background-color: rgba(255, 109, 0, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.dev-bypass-texts {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dev-bypass-title {
-  font-size: 13.5px;
-  font-weight: 800;
-  color: #E65100;
-}
-
-.dev-bypass-sub {
-  font-size: 11.5px;
-  color: #8D6E63;
-}
-
-.btn-dev-sign-quick {
-  padding: 10px 16px;
-  border-radius: 12px;
-  border: none;
-  background-color: #FF6D00;
-  color: #FFFFFF;
-  font-size: 13px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(255, 109, 0, 0.25);
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.btn-dev-sign-quick:hover {
-  background-color: #E65100;
 }
 
 /* ── Papel do Contrato ─────────────────────────────────────────────────── */
