@@ -1,4 +1,14 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { defineNuxtConfig } from 'nuxt/config'
+import process from 'node:process'
+import type { PwaModuleOptions } from '@vite-pwa/nuxt'
+
+declare module '@nuxt/schema' {
+  interface NuxtConfig {
+    pwa?: PwaModuleOptions
+  }
+}
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
