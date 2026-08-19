@@ -79,7 +79,21 @@ async function directLoginPreset(cpf: string, pass: string = '123456') {
  * Preenche os dados do funil de checkout (Dados Pessoais + Endereço) como um cliente real
  */
 function fillCheckoutForm() {
-  checkoutStore.fillDevBypassData()
+  checkoutStore.personal = {
+    name: authStore.user?.name || 'Carlos Alberto Silva',
+    cpf: authStore.user?.cpf || '111.444.777-35',
+    phone: authStore.user?.phone || '(11) 98765-4321'
+  }
+  checkoutStore.address = {
+    cep: '01001-000',
+    street: 'Praça da Sé',
+    number: '100',
+    district: 'Sé',
+    city: 'São Paulo',
+    state: 'SP',
+    complement: 'Apto 42'
+  }
+
   isOpen.value = false
   if (route.path !== '/checkout') {
     router.push('/checkout')

@@ -98,23 +98,7 @@ export const useCheckoutStore = defineStore('checkout', {
       }
     },
 
-    fillDevBypassData() {
-      const authStore = useAuthStore()
-      this.personal = {
-        name: authStore.user?.name || 'Carlos Alberto Silva',
-        cpf: authStore.user?.cpf || '111.444.777-35',
-        phone: authStore.user?.phone || '(11) 98765-4321'
-      }
-      this.address = {
-        cep: '01001-000',
-        street: 'Praça da Sé',
-        number: '100',
-        district: 'Sé',
-        city: 'São Paulo',
-        state: 'SP',
-        complement: 'Apto 42'
-      }
-    },
+
 
     setStep(step: number) {
       this.currentStep = step
