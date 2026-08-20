@@ -25,7 +25,7 @@ import { redisClient } from '../config/redis';
 if (env.NODE_ENV === 'production' && !env.REQUEST_SIGNING_SECRET) {
     throw new Error('❌ FATAL: REQUEST_SIGNING_SECRET must be set in production. Server cannot start without it.');
 }
-const SIGNING_SECRET = env.REQUEST_SIGNING_SECRET ?? 'katari-hmac-secret-change-in-prod';
+const SIGNING_SECRET = env.REQUEST_SIGNING_SECRET || (env.NODE_ENV === 'production' ? '' : 'dev-hmac-signing-secret-32-chars-ok!');
 
 const MAX_AGE_MS = 30_000; // 30 seconds — reject stale requests
 

@@ -8,6 +8,7 @@ export interface ProcessWebhookInput {
     paidAmount?: number;
     paymentMethod: string;
     eventSignature: string;
+    providerEventId?: string;
     rawPayload: any;
 }
 
@@ -22,14 +23,14 @@ export interface ProcessWebhookResult {
  * Idempotent use case to process payment webhooks from gateways.
  */
 export async function processPaymentWebhook(input: ProcessWebhookInput): Promise<ProcessWebhookResult> {
-    const { provider, installmentId, paidAmount, paymentMethod, eventSignature, rawPayload } = input;
+    const { provider, installmentId, paidAmount, paymentMethod, eventSignature, providerEventId, rawPayload } = input;
 
     // 1. Check idempotency / replay log
     const existingLog = await prisma.webhookLog.findUnique({
         where: { signature: eventSignature }
     });
 
-    if (existingLog) {
+    if (existingLog && existingLog.status === 'PROCESSED') {
         logger.warn(`[Webhook] Event ${eventSignature} already processed for ${provider}. Skipping.`);
         return {
             success: true,
@@ -58,11 +59,18 @@ export async function processPaymentWebhook(input: ProcessWebhookInput): Promise
     if (installment.status === 'PAID') {
         logger.info(`[Webhook] Installment ${installmentId} is already PAID. Acknowledging webhook.`);
         try {
-            await prisma.webhookLog.create({
-                data: {
+            await prisma.webhookLog.upsert({
+                where: { signature: eventSignature },
+                create: {
                     signature: eventSignature,
                     provider,
+                    providerEventId,
+                    status: 'PROCESSED',
                     payload: JSON.stringify(rawPayload).substring(0, 1000)
+                },
+                update: {
+                    status: 'PROCESSED',
+                    processedAt: new Date()
                 }
             });
         } catch { /* ignore race log insert */ }
@@ -97,7 +105,26 @@ export async function processPaymentWebhook(input: ProcessWebhookInput): Promise
 
     if (!settleResult.success) {
         logger.error(`[Webhook] markInstallmentAsPaid failed for ${installmentId}: ${settleResult.message}`);
-        // If failed due to a database/concurrency error, return 500 to allow gateway retry
+        // Record failed attempt in WebhookLog
+        try {
+            await prisma.webhookLog.upsert({
+                where: { signature: eventSignature },
+                create: {
+                    signature: eventSignature,
+                    provider,
+                    providerEventId,
+                    status: 'FAILED',
+                    errorMessage: settleResult.message,
+                    payload: JSON.stringify(rawPayload).substring(0, 1000)
+                },
+                update: {
+                    status: 'FAILED',
+                    errorMessage: settleResult.message,
+                    attempts: { increment: 1 }
+                }
+            });
+        } catch { /* ignore */ }
+
         return {
             success: false,
             message: settleResult.message || 'Falha ao liquidar parcela.',
@@ -105,13 +132,20 @@ export async function processPaymentWebhook(input: ProcessWebhookInput): Promise
         };
     }
 
-    // 4. Record successful webhook log
+    // 4. Record/update successful webhook log
     try {
-        await prisma.webhookLog.create({
-            data: {
+        await prisma.webhookLog.upsert({
+            where: { signature: eventSignature },
+            create: {
                 signature: eventSignature,
                 provider,
+                providerEventId,
+                status: 'PROCESSED',
                 payload: JSON.stringify(rawPayload).substring(0, 1000)
+            },
+            update: {
+                status: 'PROCESSED',
+                processedAt: new Date()
             }
         });
     } catch (logErr) {

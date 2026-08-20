@@ -123,7 +123,7 @@ model Subscription {
   installments      Installment[]
   bids              Bid[]
 
-  @@index([groupNumber, quotaNumber])
+  @@unique([groupNumber, quotaNumber], name: "subscription_group_quota_unique")
   @@index([userId, status])
   @@map("subscriptions")
 }
@@ -257,11 +257,16 @@ model GatewayConfig {
 }
 
 model WebhookLog {
-  id          String   @id @default(uuid())
-  signature   String   @unique
-  provider    String   // "pixgo", "sigilopay"
-  payload     String?  // Optional payload dump for debug
-  processedAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  signature       String   @unique
+  provider        String   // "pixgo", "sigilopay"
+  providerEventId String?
+  status          String   @default("PROCESSED") // "RECEIVED", "PROCESSED", "FAILED"
+  payload         String?  // Optional payload dump for debug
+  errorMessage    String?
+  attempts        Int      @default(1)
+  receivedAt      DateTime @default(now())
+  processedAt     DateTime @default(now())
 
   @@map("webhook_logs")
 }

@@ -10,7 +10,8 @@ jest.mock('../config/database', () => ({
     prisma: {
         webhookLog: {
             findUnique: jest.fn(),
-            create: jest.fn()
+            create: jest.fn(),
+            upsert: jest.fn()
         },
         installment: {
             findUnique: jest.fn()
@@ -77,7 +78,8 @@ describe('Security & Webhook Integrity Tests', () => {
             (prisma.webhookLog.findUnique as jest.Mock).mockResolvedValue({
                 id: 'log-1',
                 signature: 'sig-abc-123',
-                provider: 'pixgo'
+                provider: 'pixgo',
+                status: 'PROCESSED'
             });
 
             const result = await processPaymentWebhook({
@@ -198,7 +200,7 @@ describe('Security & Webhook Integrity Tests', () => {
 
             expect(result.success).toBe(true);
             expect(result.statusCode).toBe(200);
-            expect(prisma.webhookLog.create).toHaveBeenCalled();
+            expect(prisma.webhookLog.upsert).toHaveBeenCalled();
         });
     });
 

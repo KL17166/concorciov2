@@ -7,6 +7,10 @@ export const sessionStore = redisClient
     ? new RedisStore({ client: redisClient, prefix: 'consorcio:sess:', ttl: 86400 })
     : undefined;
 
+if (env.NODE_ENV === 'production' && !sessionStore) {
+    console.warn('⚠️ [CRITICAL] Redis is required for distributed production sessions. Running in single-instance memory mode.');
+}
+
 export const sessionMiddleware = session({
     store: sessionStore, // Redis store (undefined = in-memory fallback)
     secret: env.SESSION_SECRET,

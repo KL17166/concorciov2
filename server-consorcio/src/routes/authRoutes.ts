@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middlewares/authMiddleware';
-import { upload } from '../middlewares/uploadMiddleware';
+import { upload, verifyUploadedMagicBytes } from '../middlewares/uploadMiddleware';
 import { authRateLimiter } from '../middlewares/rateLimitMiddleware';
 import { login, register, updateProfile, uploadDocument, getProfile, logout, changePassword } from '../controllers/api/authController';
 
@@ -12,6 +12,6 @@ router.post('/logout', authenticate, logout);
 router.get('/profile', authenticate, getProfile);
 router.put('/profile', authenticate, updateProfile);
 router.put('/password', authenticate, changePassword);
-router.post('/upload', authenticate, upload.single('file'), uploadDocument);
+router.post('/upload', authenticate, upload.single('file'), verifyUploadedMagicBytes, uploadDocument);
 
 export default router;

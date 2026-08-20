@@ -68,16 +68,19 @@ export const getContracts = async (req: Request, res: Response) => {
             status,
             search,
             pagination,
-            buildPageUrl: (p: number) => buildPageUrl('/admin/contracts', req.query as Record<string, any>, p)
+            buildPageUrl: (p: number) => buildPageUrl('/admin/contracts', req.query, p),
+            // @ts-ignore
+            csrfToken: req.csrfToken ? req.csrfToken() : ''
         });
     } catch (error) {
-        logger.error(error);
-        res.status(500).send('Erro ao carregar contratos');
+        logger.error('Contracts page error:', error);
+        req.flash('error_msg', 'Erro ao carregar contratos');
+        res.redirect('/admin/dashboard');
     }
 };
 
 // GET /admin/contracts/:id - Detalhes do contrato
-export const getContractDetails = async (req: Request, res: Response) => {
+export const getContract = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
 
@@ -104,38 +107,37 @@ export const getContractDetails = async (req: Request, res: Response) => {
             return res.redirect('/admin/contracts');
         }
 
-        // Calculate progress from actual installment records
-        const paidInstallments = contract.installments.filter((i: any) => i.status === 'PAID').length;
-
+        // Estatísticas do contrato
+        const paidInstallments = contract.installments.filter(i => i.status === 'PAID').length;
         const totalPaid = contract.installments
-            .filter((i: any) => i.status === 'PAID')
-            .reduce((sum: number, i: any) => sum + Number(i.amount), 0);
+            .filter(i => i.status === 'PAID')
+            .reduce((acc, i) => acc + Number(i.amount), 0);
+        const progress = (paidInstallments / contract.totalInstallments) * 100;
 
-        const progress = contract.totalInstallments > 0
-            ? (paidInstallments / contract.totalInstallments) * 100
-            : 0;
-
-        res.render('pages/contracts/details', {
+        res.render('pages/contracts/show', {
             path: '/contracts',
             contract,
             stats: {
                 paidInstallments,
                 totalPaid,
                 progress: progress.toFixed(1)
-            }
+            },
+            // @ts-ignore
+            csrfToken: req.csrfToken ? req.csrfToken() : ''
         });
     } catch (error) {
-        logger.error(error);
+        logger.error('Contract detail error:', error);
         req.flash('error_msg', 'Erro ao carregar contrato');
         res.redirect('/admin/contracts');
     }
 };
 
+export const getContractDetails = getContract;
+
 // GET /admin/contracts/new - Formulário de novo contrato
 export const getNewContract = async (req: Request, res: Response) => {
     try {
         const clientId = (req.query.clientId as string)?.trim() || '';
-        logger.info('Pre-selecting client via URL:', clientId);
 
         const clients = await prisma.user.findMany({
             where: { role: 'CLIENT' },
@@ -155,10 +157,12 @@ export const getNewContract = async (req: Request, res: Response) => {
             editing: false,
             clients,
             clientId,
-            plans
+            plans,
+            // @ts-ignore
+            csrfToken: req.csrfToken ? req.csrfToken() : ''
         });
     } catch (error) {
-        logger.error(error);
+        logger.error('New contract form error:', error);
         res.status(500).send('Erro ao carregar formulário');
     }
 };
@@ -187,7 +191,8 @@ export const createContract = async (req: Request, res: Response) => {
         res.redirect(`/admin/contracts/${result.subscription.id}`);
     } catch (error: any) {
         logger.error('Error creating contract via admin:', error);
-        req.flash('error_msg', error.message || 'Erro ao criar contrato');
+        const userMsg = (error.statusCode && error.statusCode < 500) ? error.message : 'Erro ao criar contrato. Verifique os dados e tente novamente.';
+        req.flash('error_msg', userMsg);
         res.redirect('/admin/contracts/new');
     }
 };
@@ -207,7 +212,8 @@ export const contemplateContract = async (req: Request, res: Response) => {
         res.redirect(`/admin/contracts/${id}`);
     } catch (error: any) {
         logger.error('Error contemplating contract via admin:', error);
-        req.flash('error_msg', error.message || 'Erro ao contemplar contrato');
+        const userMsg = (error.statusCode && error.statusCode < 500) ? error.message : 'Erro ao contemplar contrato.';
+        req.flash('error_msg', userMsg);
         res.redirect(`/admin/contracts/${id}`);
     }
 };
@@ -227,7 +233,8 @@ export const cancelContract = async (req: Request, res: Response) => {
         res.redirect(`/admin/contracts/${id}`);
     } catch (error: any) {
         logger.error('Error cancelling contract via admin:', error);
-        req.flash('error_msg', error.message || 'Erro ao cancelar contrato');
+        const userMsg = (error.statusCode && error.statusCode < 500) ? error.message : 'Erro ao cancelar contrato.';
+        req.flash('error_msg', userMsg);
         res.redirect(`/admin/contracts/${id}`);
     }
 };

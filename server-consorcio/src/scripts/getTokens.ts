@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-import * as fs from 'fs';
 import { guardDevEnvironment } from './guard';
 
 const prisma = new PrismaClient();
@@ -20,19 +19,11 @@ async function main() {
             { expiresIn: '1h' }
         );
         tokens[u.cpf] = token;
-        console.log(`${u.cpf}_ID=${u.id}`);
-        console.log(`${u.cpf}_TOKEN=${token}`);
+        const maskedCpf = u.cpf.replace(/(\d{3})\d{5}(\d{3})/, '$1*****$2');
+        console.log(`[Token Generated] User CPF: ${maskedCpf} | Token: ${token.substring(0, 10)}...[MASKED]`);
     });
 
-    // Save to file for use in tests
-    fs.writeFileSync('test_tokens.json', JSON.stringify({
-        victimId: users.find(u => u.cpf === '11111111111')?.id,
-        victimToken: tokens['11111111111'],
-        attackerId: users.find(u => u.cpf === '22222222222')?.id,
-        attackerToken: tokens['22222222222']
-    }, null, 2));
-
-    console.log('\n✅ Tokens saved to test_tokens.json');
+    console.log('\n✅ Tokens gerados com sucesso no ambiente de desenvolvimento.');
     await prisma.$disconnect();
 }
 

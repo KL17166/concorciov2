@@ -67,6 +67,7 @@ router.post('/pixgo', async (req: Request, res: Response) => {
         if (event === 'payment.completed') {
             const installmentId = data?.external_id;
             const paidAmount = data?.amount ? parseFloat(data.amount) : undefined;
+            const providerEventId = data?.id || data?.payment_id || undefined;
 
             if (!installmentId) {
                 return res.status(400).json({
@@ -81,6 +82,7 @@ router.post('/pixgo', async (req: Request, res: Response) => {
                 paidAmount,
                 paymentMethod: 'PIX-PIXGO',
                 eventSignature: signature,
+                providerEventId,
                 rawPayload: req.body
             });
 
@@ -132,16 +134,17 @@ router.post('/sigilopay', async (req: Request, res: Response) => {
             return res.status(401).json({ error: 'Unauthorized' });
         }
 
-        const { status, reference, amount } = req.body;
-        logger.info(`[SigiloPay Webhook] Status=${status}, Ref=${reference}`);
+        const { status, reference, amount, id: transactionId } = req.body;
+        logger.info(`[SigiloPay Webhook] Status=${status}, Ref=${reference}, ID=${transactionId || 'none'}`);
 
         if (!reference || !status || typeof reference !== 'string' || typeof status !== 'string') {
             return res.status(400).json({ error: 'Campos obrigatórios ausentes: reference, status' });
         }
 
+        const providerEventId = transactionId || `${reference}:${status}`;
         const sigiloReplayKey = crypto
             .createHash('sha256')
-            .update(`sigilopay:${reference}:${status}`)
+            .update(`sigilopay:${providerEventId}:${status}`)
             .digest('hex');
 
         if (status === 'completed' || status === 'paid' || status === 'approved') {
@@ -153,6 +156,7 @@ router.post('/sigilopay', async (req: Request, res: Response) => {
                 paidAmount,
                 paymentMethod: 'PIX-SIGILOPAY',
                 eventSignature: sigiloReplayKey,
+                providerEventId: String(providerEventId),
                 rawPayload: req.body
             });
 
