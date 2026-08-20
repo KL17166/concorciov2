@@ -21,9 +21,15 @@ function param(v: string | string[]): string {
 
 function readSidecar(userId: string, filename: string): Record<string, unknown> | null {
     try {
-        const p = path.join(process.cwd(), 'public', 'uploads', 'documents', userId, filename);
-        if (!fs.existsSync(p)) return null;
-        return JSON.parse(fs.readFileSync(p, 'utf-8')) as Record<string, unknown>;
+        const primary = path.join(process.cwd(), 'storage', 'kyc', userId, filename);
+        if (fs.existsSync(primary)) {
+            return JSON.parse(fs.readFileSync(primary, 'utf-8')) as Record<string, unknown>;
+        }
+        const legacy = path.join(process.cwd(), 'public', 'uploads', 'documents', userId, filename);
+        if (fs.existsSync(legacy)) {
+            return JSON.parse(fs.readFileSync(legacy, 'utf-8')) as Record<string, unknown>;
+        }
+        return null;
     } catch {
         return null;
     }
@@ -36,6 +42,34 @@ function adminRole(req: Request): string {
 function canViewFullData(role: string): boolean {
     return role === AdminRoles.MASTER || role === AdminRoles.MANAGER;
 }
+
+export const getAdminKycDocument = async (req: Request, res: Response) => {
+    const userId = param(req.params.userId);
+    const rawFileName = param(req.params.fileName);
+    const safeFileName = path.basename(rawFileName);
+
+    if (safeFileName !== rawFileName || safeFileName.includes('..')) {
+        return res.status(400).send('Nome de arquivo inválido.');
+    }
+
+    const primaryPath = path.join(process.cwd(), 'storage', 'kyc', userId, safeFileName);
+    const legacyPath = path.join(process.cwd(), 'public', 'uploads', 'documents', userId, safeFileName);
+
+    let filePathToServe: string | null = null;
+    if (fs.existsSync(primaryPath)) {
+        filePathToServe = primaryPath;
+    } else if (fs.existsSync(legacyPath)) {
+        filePathToServe = legacyPath;
+    }
+
+    if (!filePathToServe) {
+        return res.status(404).send('Documento não encontrado.');
+    }
+
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+    res.sendFile(path.resolve(filePathToServe));
+};
 
 // ── GET /admin/kyc — Queue ─────────────────────────────────────────────────────
 

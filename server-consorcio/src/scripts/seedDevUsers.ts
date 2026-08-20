@@ -6,10 +6,12 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import { hashPassword } from '../security/password';
+import { guardDevEnvironment } from './guard';
 
 const prisma = new PrismaClient();
 
 async function main() {
+  guardDevEnvironment('seedDevUsers');
   console.log('🚀 Semeando usuários e dados de desenvolvimento no PostgreSQL...');
 
   const defaultPassword = await hashPassword('123456');

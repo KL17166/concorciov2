@@ -3,18 +3,22 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const isProd = process.env.NODE_ENV === 'production';
+
 const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.string().default('3000').transform(Number),
     DATABASE_URL: z.string().url(),
     JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
     SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
+    PASSWORD_PEPPER: z.string().min(16, "PASSWORD_PEPPER deve ter no mínimo 16 caracteres")
+        .default(process.env.PASSWORD_PEPPER || (isProd ? '' : 'dev-pepper-secret-minimum-16-chars!')),
     ALLOWED_ORIGINS: z.string().optional(),
     REDIS_URL: z.string().default('redis://localhost:6379'),
     PIXGO_WEBHOOK_SECRET: z.string().min(16, "PIXGO_WEBHOOK_SECRET deve ter pelo menos 16 caracteres em producao").optional()
         .refine(
-            (val) => process.env.NODE_ENV !== 'production' || (val && val.length >= 16),
-            { message: "PIXGO_WEBHOOK_SECRET e OBRIGATORIO em producao. Sem ele, qualquer pessoa pode simular webhooks e marcar parcelas como pagas." }
+            (val) => !isProd || (val && val.length >= 16),
+            { message: "PIXGO_WEBHOOK_SECRET é OBRIGATÓRIO em produção. Sem ele, qualquer pessoa pode simular webhooks." }
         ),
 
     // SigiloPay Credentials (fallback if not in DB)
@@ -35,25 +39,24 @@ const envSchema = z.object({
     KYC_STORAGE_URL: z.string().url().optional(),
     KYC_STORAGE_SECRET: z.string().optional(),
 
-    // HMAC Request Signing — must match Flutter request_signer.dart
+    // HMAC Request Signing
     REQUEST_SIGNING_SECRET: z.string().min(32, 'REQUEST_SIGNING_SECRET must be at least 32 characters')
         .refine(
-            (val) => process.env.NODE_ENV !== 'production' || (val && val.length >= 32),
-            { message: 'REQUEST_SIGNING_SECRET is REQUIRED in production. Without it all API requests use a well-known fallback secret.' }
+            (val) => !isProd || (val && val.length >= 32),
+            { message: 'REQUEST_SIGNING_SECRET é OBRIGATÓRIO em produção.' }
         )
         .optional(),
 
     // Payload Encryption (AES-256)
-    PAYLOAD_ENCRYPTION_SECRET: z.string().min(32, 'PAYLOAD_ENCRYPTION_SECRET must be at least 32 characters').default('super-secret-payload-encryption-key!'),
-    ENCRYPTION_BYPASS_SECRET: z.string().default('admin-bypass-123'),
+    PAYLOAD_ENCRYPTION_SECRET: z.string().min(32, 'PAYLOAD_ENCRYPTION_SECRET must be at least 32 characters')
+        .default(process.env.PAYLOAD_ENCRYPTION_SECRET || (isProd ? '' : 'dev-secret-payload-encryption-32ch!')),
+    ENCRYPTION_BYPASS_SECRET: z.string()
+        .default(process.env.ENCRYPTION_BYPASS_SECRET || (isProd ? '' : 'dev-admin-bypass-secret-123')),
 
     // Bootstrap payload key for pre-auth requests (login/register).
-    // Must match PAYLOAD_BOOTSTRAP_KEY in Flutter --dart-define at build time.
-    // 64 hex characters (= 32 bytes).
     PAYLOAD_BOOTSTRAP_KEY: z.string().length(64, 'PAYLOAD_BOOTSTRAP_KEY must be 64 hex chars').optional(),
 
-    // Cloudflare Tunnel URL — exact origin allowed by CORS (e.g. https://xxx.trycloudflare.com).
-    // Never uses a wildcard pattern. Leave empty in production if not using a tunnel.
+    // Cloudflare Tunnel URL
     CLOUDFLARE_TUNNEL_URL: z.string().url().optional(),
 });
 

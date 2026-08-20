@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { authenticate } from '../../middlewares/authMiddleware';
-import { submitClientKyc, getClientKycStatus } from '../../controllers/api/kycApiController';
+import {
+    submitClientKyc,
+    getClientKycStatus,
+    getKycDocument
+} from '../../controllers/api/kycApiController';
 
 const router = Router();
 
@@ -9,5 +13,8 @@ router.post('/kyc/submit', authenticate, submitClientKyc);
 
 // GET /api/kyc/status — Check KYC status
 router.get('/kyc/status', authenticate, getClientKycStatus);
+
+// GET /api/kyc/documents/:userId/:fileName — Secure authorized document retrieval
+router.get('/kyc/documents/:userId/:fileName', authenticate, getKycDocument);
 
 export default router;

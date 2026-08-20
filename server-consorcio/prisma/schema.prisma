@@ -123,6 +123,8 @@ model Subscription {
   installments      Installment[]
   bids              Bid[]
 
+  @@index([groupNumber, quotaNumber])
+  @@index([userId, status])
   @@map("subscriptions")
 }
 

@@ -7,6 +7,7 @@ const router = Router();
 
 router.get('/kyc', isAdmin, requireRoles(['MASTER', 'MANAGER', 'SUPPORT']), kycController.getKycQueue);
 router.get('/kyc/:userId', isAdmin, requireRoles(['MASTER', 'MANAGER', 'SUPPORT']), kycController.getKycDetail);
+router.get('/kyc/:userId/documents/:fileName', isAdmin, requireRoles(['MASTER', 'MANAGER', 'SUPPORT']), kycController.getAdminKycDocument);
 router.post('/kyc/:userId/approve', isAdmin, requireRoles(['MASTER', 'MANAGER']), kycController.approveKyc);
 router.post('/kyc/:userId/reject', isAdmin, requireRoles(['MASTER', 'MANAGER']), kycController.rejectKyc);
 router.post('/kyc/:userId/override', isAdmin, requireRoles(['MASTER', 'MANAGER']), kycController.overrideKyc);

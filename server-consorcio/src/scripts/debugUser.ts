@@ -1,10 +1,12 @@
 
 import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../security/password';
+import { guardDevEnvironment } from './guard';
 
 const prisma = new PrismaClient();
 
 async function main() {
+    guardDevEnvironment('debugUser');
     console.log('Listando usuários:');
     const users = await prisma.user.findMany();
 

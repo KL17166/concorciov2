@@ -1,9 +1,11 @@
 
 import { PrismaClient } from '@prisma/client';
+import { guardDevEnvironment } from './guard';
 
 const prisma = new PrismaClient();
 
 async function main() {
+    guardDevEnvironment('resetClients');
     console.log('🗑️  Starting FULL CLIENT RESET...');
 
     // 1. Delete all Bids

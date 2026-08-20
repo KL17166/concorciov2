@@ -1,10 +1,12 @@
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import * as fs from 'fs';
+import { guardDevEnvironment } from './guard';
 
 const prisma = new PrismaClient();
 
 async function main() {
+    guardDevEnvironment('getTokens');
     const users = await prisma.user.findMany({
         where: { cpf: { in: ['11111111111', '22222222222'] } }
     });

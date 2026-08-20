@@ -197,7 +197,7 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
         }
 
         const userId = req.user?.userId || 'unknown';
-        const fileUrl = `/public/uploads/documents/${userId}/${req.file.filename}`;
+        const fileUrl = `/api/kyc/documents/${userId}/${req.file.filename}`;
 
         const user = await prisma.user.findUnique({
             where: { id: userId },

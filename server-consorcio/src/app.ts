@@ -1,19 +1,14 @@
 import express from 'express';
-import compression from 'compression';
-import hpp from 'hpp';
+import helmet from 'helmet';
+import cors from 'cors';
 import path from 'path';
 import ejs from 'ejs';
 import flash from 'connect-flash';
-
-import { env } from './config/env';
 import { prisma } from './config/database';
-import { redisClient } from './config/redis';
+import { env } from './config/env';
 import { logger } from './config/logger';
-
-// Modular Configurations
-import { helmetMiddleware, permissionsPolicyMiddleware } from './config/securityHeaders';
-import { corsMiddleware } from './config/cors';
 import { sessionMiddleware } from './config/session';
+import { redisClient } from './config/redis';
 import {
     generalLimiter,
     apiAuthLimiter,
@@ -26,66 +21,61 @@ import {
     adminAuthLimiter,
     sessionLimiter
 } from './config/rateLimits';
-
-// Middlewares
-import { errorHandler } from './middlewares/errorHandler';
 import { securityMiddleware, honeypotHandler, HONEYPOT_ROUTES } from './middlewares/securityMiddleware';
+import { errorHandler } from './middlewares/errorHandler';
 
-// Routers
+// Route imports
 import routes from './routes';
-import adminRoutes from './routes/adminRoutes';
+import adminRoutes from './routes/admin';
 import webhookRoutes from './routes/webhookRoutes';
+
+const app = express();
 
 export { redisClient };
 
-const app = express();
+// Trust proxy for rate limiting behind reverse proxy / Cloudflare
+app.set('trust proxy', 1);
 
 // ========================================
 // SECURITY & HEADERS
 // ========================================
-app.use(helmetMiddleware);
-app.use(permissionsPolicyMiddleware);
-app.disable('x-powered-by');
-
-// Block access to hidden files (.env, .git, etc.)
-app.use((req, res, next) => {
-    if (req.path.includes('/.') || req.path.includes('\\.')) {
-        logger.warn(`Blocked attempt to access hidden file: ${req.path} from ${req.ip}`);
-        return res.status(403).send('Forbidden');
-    }
-    next();
-});
-
-app.use(hpp());
-
-// Compression (60-80% response size reduction)
-app.use(compression({
-    level: 6,
-    threshold: 1024,
-    filter: (req, res) => {
-        if (req.headers['x-no-compression']) return false;
-        return compression.filter(req, res);
-    }
+app.use(helmet({
+    contentSecurityPolicy: false, // Customized per view if needed
+    crossOriginEmbedderPolicy: false
 }));
 
-app.set('trust proxy', 1);
+// CORS Configuration
+const allowedOrigins = env.ALLOWED_ORIGINS
+    ? env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : ['http://localhost:3000', 'http://localhost:5173'];
 
-// ========================================
-// CORS & BODY PARSERS
-// ========================================
-app.use(corsMiddleware);
+if (env.CLOUDFLARE_TUNNEL_URL) {
+    allowedOrigins.push(env.CLOUDFLARE_TUNNEL_URL);
+}
 
-app.use(express.json({
-    limit: '1mb',
-    reviver: (key, value) => {
-        // Prototype pollution protection during JSON parsing
-        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
-            return undefined;
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Bloqueado por CORS'));
         }
-        return value;
     },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-pixgo-signature', 'x-pixgo-timestamp', 'x-client-device-id']
+}));
+
+// ========================================
+// BODY PARSERS
+// ========================================
+app.use(express.json({
+    limit: '2mb',
     verify: (req: any, _res, buf) => {
-        req.rawBody = buf;
+        // Save raw body for webhook HMAC signature verification
+        if (req.originalUrl.includes('/webhooks/')) {
+            req.rawBody = buf;
+        }
     }
 }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -158,29 +148,61 @@ app.use('/api', routes);
 app.use('/admin', adminRoutes);
 app.get('/admin', (_req, res) => res.redirect('/admin/login'));
 
+// Block direct static access to sensitive KYC documents
+app.use(['/public/uploads/documents', '/uploads/documents'], (_req, res) => {
+    res.status(403).json({
+        success: false,
+        error: 'FORBIDDEN',
+        message: 'Acesso direto a documentos desativado. Utilize a rota autenticada /api/kyc/documents/.'
+    });
+});
+
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
-// Health Check
+// ========================================
+// HEALTH CHECKS & OBSERVABILITY
+// ========================================
+// Liveness probe (Lightweight ping)
+app.get('/livez', (_req, res) => {
+    res.status(200).json({ status: 'OK' });
+});
+
+// Readiness probe (Checks database connection)
+app.get('/readyz', async (_req, res) => {
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        res.status(200).json({ status: 'READY', database: 'connected' });
+    } catch (err) {
+        logger.error('Readiness probe failed:', err);
+        res.status(503).json({ status: 'NOT_READY', database: 'disconnected' });
+    }
+});
+
+// Public health check endpoint
 app.get('/health', async (_req, res) => {
-    const memUsage = process.memoryUsage();
     let dbStatus = 'ok';
     try {
         await prisma.$queryRaw`SELECT 1`;
     } catch {
         dbStatus = 'error';
     }
+
+    const isProduction = env.NODE_ENV === 'production';
+    const memUsage = process.memoryUsage();
+
     res.status(dbStatus === 'ok' ? 200 : 503).json({
         status: dbStatus === 'ok' ? 'OK' : 'DEGRADED',
         uptime: Math.floor(process.uptime()) + 's',
-        memory: {
-            rss: Math.round(memUsage.rss / 1024 / 1024) + 'MB',
-            heap: Math.round(memUsage.heapUsed / 1024 / 1024) + 'MB',
-            heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + 'MB',
-        },
         database: dbStatus,
         timestamp: new Date().toISOString(),
+        ...(!isProduction && {
+            memory: {
+                rss: Math.round(memUsage.rss / 1024 / 1024) + 'MB',
+                heap: Math.round(memUsage.heapUsed / 1024 / 1024) + 'MB',
+            }
+        })
     });
 });
 

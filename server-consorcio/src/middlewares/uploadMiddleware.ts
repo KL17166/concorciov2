@@ -1,11 +1,12 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { validateMagicBytes } from '../security/magicBytes';
 
-// Ensure upload directory exists
-const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'documents');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+// Ensure private KYC storage directory exists (OUTSIDE of public web root)
+export const KYC_STORAGE_DIR = path.join(process.cwd(), 'storage', 'kyc');
+if (!fs.existsSync(KYC_STORAGE_DIR)) {
+    fs.mkdirSync(KYC_STORAGE_DIR, { recursive: true });
 }
 
 // Allowed file types: images + PDF
@@ -20,20 +21,20 @@ const ALLOWED_MIME_TYPES = [
 
 // Dangerous extensions that should NEVER be accepted
 const BLOCKED_EXTENSIONS = [
-    '.exe', '.bat', '.cmd', '.com', '.msi', '.scr', '.pif',  // Windows executables
-    '.sh', '.bash', '.csh',                                     // Shell scripts
-    '.php', '.php3', '.php4', '.php5', '.phtml',               // PHP
-    '.asp', '.aspx', '.jsp', '.jspx', '.cgi',                 // Server-side
-    '.js', '.ts', '.py', '.rb', '.pl',                         // Script languages
-    '.html', '.htm', '.svg', '.xml',                           // Could contain XSS
-    '.dll', '.so', '.dylib',                                   // Libraries
-    '.zip', '.tar', '.gz', '.rar', '.7z',                      // Archives
+    '.exe', '.bat', '.cmd', '.com', '.msi', '.scr', '.pif',
+    '.sh', '.bash', '.csh',
+    '.php', '.php3', '.php4', '.php5', '.phtml',
+    '.asp', '.aspx', '.jsp', '.jspx', '.cgi',
+    '.js', '.ts', '.py', '.rb', '.pl',
+    '.html', '.htm', '.svg', '.xml',
+    '.dll', '.so', '.dylib',
+    '.zip', '.tar', '.gz', '.rar', '.7z',
 ];
 
 const storage = multer.diskStorage({
     destination: (req: any, file, cb) => {
-        const userId = req.user?.userId || 'unknown';
-        const userUploadDir = path.join(uploadDir, userId);
+        const userId = req.user?.userId || 'anonymous';
+        const userUploadDir = path.join(KYC_STORAGE_DIR, userId);
         
         if (!fs.existsSync(userUploadDir)) {
             fs.mkdirSync(userUploadDir, { recursive: true });
@@ -43,7 +44,6 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        // Sanitize original name - remove anything except alphanumeric, dash, underscore, dot
         const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
         const ext = path.extname(sanitizedName).toLowerCase();
         cb(null, file.fieldname + '-' + uniqueSuffix + ext);
@@ -55,17 +55,17 @@ const fileFilter = (req: any, file: any, cb: any) => {
 
     // 1. Block dangerous extensions explicitly
     if (BLOCKED_EXTENSIONS.includes(ext)) {
-        return cb(new Error(`Tipo de arquivo bloqueado: ${ext}. Apenas imagens (JPG, PNG, GIF, WebP) e PDF sao aceitos.`), false);
+        return cb(new Error(`Tipo de arquivo bloqueado: ${ext}. Apenas imagens (JPG, PNG, GIF, WebP) e PDF são aceitos.`), false);
     }
 
     // 2. Check allowed extension
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
-        return cb(new Error(`Extensao nao permitida: ${ext}. Apenas imagens (JPG, PNG, GIF, WebP) e PDF sao aceitos.`), false);
+        return cb(new Error(`Extensão não permitida: ${ext}. Apenas imagens (JPG, PNG, GIF, WebP) e PDF são aceitos.`), false);
     }
 
     // 3. Check MIME type
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-        return cb(new Error(`Tipo MIME nao permitido: ${file.mimetype}. O arquivo pode estar disfarçado.`), false);
+        return cb(new Error(`Tipo MIME não permitido: ${file.mimetype}. O arquivo pode estar disfarçado.`), false);
     }
 
     // 4. Cross-validate extension vs MIME type
@@ -79,7 +79,7 @@ const fileFilter = (req: any, file: any, cb: any) => {
 
     const validExtsForMime = mimeExtMap[file.mimetype];
     if (validExtsForMime && !validExtsForMime.includes(ext)) {
-        return cb(new Error(`A extensao ${ext} nao corresponde ao tipo do arquivo (${file.mimetype}). Upload bloqueado por seguranca.`), false);
+        return cb(new Error(`A extensão ${ext} não corresponde ao tipo do arquivo (${file.mimetype}). Upload bloqueado por segurança.`), false);
     }
 
     cb(null, true);
@@ -93,3 +93,22 @@ export const upload = multer({
         files: 1 // Only 1 file per request
     }
 });
+
+/**
+ * Express middleware to verify magic bytes of the uploaded file after multer disk write.
+ */
+export const verifyUploadedMagicBytes = (req: any, res: any, next: any) => {
+    if (req.file && req.file.path) {
+        const isValid = validateMagicBytes(req.file.path);
+        if (!isValid) {
+            // Delete corrupt or disguised file
+            try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+            return res.status(400).json({
+                success: false,
+                error: 'INVALID_FILE_CONTENT',
+                message: 'O conteúdo do arquivo não corresponde a uma imagem válida ou documento PDF.'
+            });
+        }
+    }
+    next();
+};
