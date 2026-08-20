@@ -1,6 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { validateMagicBytes } from '../security/magicBytes';
 
 // Ensure private KYC storage directory exists (OUTSIDE of public web root)
@@ -43,7 +44,7 @@ const storage = multer.diskStorage({
         cb(null, userUploadDir);
     },
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(8).toString('hex');
         const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
         const ext = path.extname(sanitizedName).toLowerCase();
         cb(null, file.fieldname + '-' + uniqueSuffix + ext);

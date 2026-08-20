@@ -1,5 +1,7 @@
 import { validateMagicBytes } from '../security/magicBytes';
 import { processPaymentWebhook } from '../application/payments/processPaymentWebhook';
+import { getSubscriptionDetails } from '../application/subscriptions/getSubscriptionDetails';
+import { markInstallmentAsPaid } from '../services/installmentService';
 import { prisma } from '../config/database';
 import fs from 'fs';
 import path from 'path';
@@ -151,6 +153,32 @@ describe('Security & Webhook Integrity Tests', () => {
             expect(result.message).toContain('Valor pago divergente');
         });
 
+        it('should return 500 on transient database failure to allow gateway retry', async () => {
+            (prisma.webhookLog.findUnique as jest.Mock).mockResolvedValue(null);
+            (prisma.installment.findUnique as jest.Mock).mockResolvedValue({
+                id: 'inst-transient-fail',
+                status: 'PENDING',
+                amount: 500
+            });
+
+            (markInstallmentAsPaid as jest.Mock).mockResolvedValueOnce({
+                success: false,
+                message: 'Erro temporário de conexão com o banco'
+            });
+
+            const result = await processPaymentWebhook({
+                provider: 'pixgo',
+                installmentId: 'inst-transient-fail',
+                paidAmount: 500,
+                paymentMethod: 'PIX-PIXGO',
+                eventSignature: 'sig-fail-retry',
+                rawPayload: { event: 'payment.completed' }
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.statusCode).toBe(500);
+        });
+
         it('should process payment and record webhook log on valid payload', async () => {
             (prisma.webhookLog.findUnique as jest.Mock).mockResolvedValue(null);
             (prisma.installment.findUnique as jest.Mock).mockResolvedValue({
@@ -171,6 +199,62 @@ describe('Security & Webhook Integrity Tests', () => {
             expect(result.success).toBe(true);
             expect(result.statusCode).toBe(200);
             expect(prisma.webhookLog.create).toHaveBeenCalled();
+        });
+    });
+
+    describe('IDOR & Ownership Defense on Subscriptions', () => {
+        it('should reject when user tries to access another users subscription details', async () => {
+            (prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
+                id: 'sub-victim',
+                userId: 'victim-user-123',
+                groupNumber: '1001',
+                quotaNumber: '001',
+                creditValue: 30000,
+                balanceDue: 30000,
+                status: 'ACTIVE',
+                totalInstallments: 36,
+                plan: {
+                    id: 'plan-1',
+                    name: 'Plano Moto',
+                    durationMonths: 36,
+                    adminFeeRate: 0.15,
+                    fundRate: 0.05,
+                    product: { id: 'prod-1', name: 'Honda CG 160', price: 15000, category: 'MOTO' }
+                },
+                installments: [],
+                bids: []
+            });
+
+            await expect(getSubscriptionDetails('sub-victim', 'attacker-user-999'))
+                .rejects
+                .toMatchObject({ message: 'Acesso negado', statusCode: 403 });
+        });
+
+        it('should allow user to access their own subscription details', async () => {
+            (prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
+                id: 'sub-owner',
+                userId: 'legit-user-123',
+                groupNumber: '1001',
+                quotaNumber: '001',
+                creditValue: 30000,
+                balanceDue: 30000,
+                status: 'ACTIVE',
+                totalInstallments: 36,
+                plan: {
+                    id: 'plan-1',
+                    name: 'Plano Moto',
+                    durationMonths: 36,
+                    adminFeeRate: 0.15,
+                    fundRate: 0.05,
+                    product: { id: 'prod-1', name: 'Honda CG 160', price: 15000, category: 'MOTO' }
+                },
+                installments: [],
+                bids: []
+            });
+
+            const result = await getSubscriptionDetails('sub-owner', 'legit-user-123');
+            expect(result.id).toBe('sub-owner');
+            expect(result.groupNumber).toBe('1001');
         });
     });
 });

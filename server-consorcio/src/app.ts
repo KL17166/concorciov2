@@ -120,9 +120,10 @@ app.use((req, res, next) => {
     next();
 });
 
-// Request Logger
+// Request Logger with URL Query Redaction
 app.use((req, res, next) => {
-    logger.info(`${req.method} ${req.url}`);
+    const sanitizedUrl = req.url.replace(/(token|secret|password|cpf|key|apiKey)=([^&]+)/gi, '$1=[REDACTED]');
+    logger.info(`${req.method} ${sanitizedUrl}`);
     next();
 });
 

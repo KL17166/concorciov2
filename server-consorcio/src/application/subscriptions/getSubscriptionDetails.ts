@@ -1,6 +1,7 @@
 import { SubscriptionRepository } from '../../repositories/subscriptionRepository';
 import { safeParseImageUrls } from '../../mappers/productMapper';
 import { calculateInstallmentValue } from '../../domain/calculations/installmentCalculator';
+import { Installment, Bid } from '@prisma/client';
 
 export async function getSubscriptionDetails(subscriptionId: string, requesterUserId?: string) {
     const sub = await SubscriptionRepository.findById(subscriptionId);
@@ -15,8 +16,8 @@ export async function getSubscriptionDetails(subscriptionId: string, requesterUs
 
     const paidIndices = new Set(
         sub.installments
-            .filter((i: any) => i.status === 'PAID')
-            .map((i: any) => i.number)
+            .filter((i: Installment) => i.status === 'PAID')
+            .map((i: Installment) => i.number)
     );
 
     let nextIndex = sub.totalInstallments + 1;
@@ -56,7 +57,7 @@ export async function getSubscriptionDetails(subscriptionId: string, requesterUs
             price: Number(sub.plan.product.price),
             category: sub.plan.product.category
         },
-        installments: sub.installments.map((inst: any) => ({
+        installments: sub.installments.map((inst: Installment) => ({
             id: inst.id,
             idTokenPay: inst.idTokenPay,
             number: inst.number,
@@ -67,7 +68,7 @@ export async function getSubscriptionDetails(subscriptionId: string, requesterUs
             paymentDate: inst.paymentDate,
             paymentMethod: inst.paymentMethod
         })),
-        bids: sub.bids.map((bid: any) => ({
+        bids: sub.bids.map((bid: Bid) => ({
             id: bid.id,
             type: bid.type,
             percentage: Number(bid.percentage),
