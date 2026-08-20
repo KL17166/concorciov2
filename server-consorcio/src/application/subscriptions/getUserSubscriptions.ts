@@ -1,25 +1,13 @@
 import { SubscriptionRepository } from '../../repositories/subscriptionRepository';
 import { safeParseImageUrls } from '../../mappers/productMapper';
 import { calculateInstallmentValue } from '../../domain/calculations/installmentCalculator';
-import { logger } from '../../config/logger';
 
 export async function getUserSubscriptions(userId: string) {
-    // 1. Auto-cancel pending subscriptions older than 3 days
-    await SubscriptionRepository.autoCancelPendingOlderThan(3, userId);
-
-    // 2. Fetch active subscriptions with all relations
+    // Fetch active subscriptions with all relations as a pure read query
     const subscriptions = await SubscriptionRepository.findUserSubscriptions(userId);
 
-    const orphanIds: string[] = [];
-
-    const formattedSubscriptions = subscriptions
-        .filter((sub: any) => {
-            if (!sub.plan?.product) {
-                orphanIds.push(sub.id);
-                return false;
-            }
-            return true;
-        })
+    return subscriptions
+        .filter((sub: any) => sub.plan?.product)
         .map((sub: any) => {
             // Next unpaid installment index
             const paidIndices = new Set(
@@ -87,12 +75,4 @@ export async function getUserSubscriptions(userId: string) {
                 }))
             };
         });
-
-    // Auto-cancel orphan subscriptions in background
-    if (orphanIds.length > 0) {
-        logger.warn(`Auto-cancelling ${orphanIds.length} orphan subscription(s): ${orphanIds.join(', ')}`);
-        await SubscriptionRepository.autoCancelOrphans(orphanIds);
-    }
-
-    return formattedSubscriptions;
 }

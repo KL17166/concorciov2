@@ -5,6 +5,7 @@ import { paginate, paginationMeta, buildPageUrl } from '../../utils/pagination';
 import { createSubscription } from '../../application/subscriptions/createSubscription';
 import { contemplateSubscription as contemplateSubUseCase } from '../../application/subscriptions/contemplateSubscription';
 import { cancelSubscription as cancelSubUseCase } from '../../application/subscriptions/cancelSubscription';
+import { CreateAdminSubscriptionSchema } from '../../schemas/subscriptionSchema';
 
 // GET /admin/contracts - Lista todos os contratos
 export const getContracts = async (req: Request, res: Response) => {
@@ -165,13 +166,20 @@ export const getNewContract = async (req: Request, res: Response) => {
 // POST /admin/contracts/new - Criar contrato
 export const createContract = async (req: Request, res: Response) => {
     try {
-        const { userId, planId, groupNumber, quotaNumber } = req.body;
+        const validation = CreateAdminSubscriptionSchema.safeParse(req.body);
+        if (!validation.success) {
+            const firstError = validation.error.issues[0]?.message || 'Dados inválidos para criação do contrato';
+            req.flash('error_msg', firstError);
+            return res.redirect('/admin/contracts/new');
+        }
+
+        const { userId, planId, groupNumber, quotaNumber } = validation.data;
 
         const result = await createSubscription({
             userId,
             planId,
-            groupNumber,
-            quotaNumber,
+            groupNumber: groupNumber || undefined,
+            quotaNumber: quotaNumber || undefined,
             channel: 'ADMIN_PANEL'
         });
 

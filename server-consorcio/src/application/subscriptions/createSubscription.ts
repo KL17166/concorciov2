@@ -1,7 +1,9 @@
+import { Subscription, Installment, ConsortiumPlan, Product } from '@prisma/client';
 import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 import { generatePaymentToken } from '../../security/paymentToken';
 import { calculatePlanFinancials } from '../../domain/calculations/installmentCalculator';
+import { allocateGroupAndQuota } from '../../domain/calculations/groupQuotaAllocator';
 
 export interface CreateSubscriptionInput {
     userId: string;
@@ -19,9 +21,9 @@ export interface CreateSubscriptionInput {
 
 export interface CreateSubscriptionResult {
     success: boolean;
-    subscription: any;
-    installments: any[];
-    plan: any;
+    subscription: Subscription;
+    installments: Installment[];
+    plan: ConsortiumPlan & { product: Product };
 }
 
 export async function createSubscription(input: CreateSubscriptionInput): Promise<CreateSubscriptionResult> {
@@ -88,10 +90,7 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
         durationMonths: plan.durationMonths
     });
 
-    const group = input.groupNumber || ('APP-' + Math.floor(Math.random() * 1000));
-    const quota = input.quotaNumber || Math.floor(Math.random() * 1000).toString();
-
-    // 5. Atomic Creation Transaction
+    // 5. Atomic Creation Transaction with Sequential Group/Quota Allocation
     const { subscription, createdInstallments } = await prisma.$transaction(async (tx) => {
         // Re-check KYC inside transaction to eliminate TOCTOU race
         const latestUser = await tx.user.findUnique({
@@ -102,12 +101,20 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
             throw Object.assign(new Error('KYC_REJECTED'), { statusCode: 403 });
         }
 
+        // Allocate group and quota atomically
+        const { groupNumber, quotaNumber } = await allocateGroupAndQuota(
+            tx,
+            planId,
+            input.groupNumber,
+            input.quotaNumber
+        );
+
         const sub = await tx.subscription.create({
             data: {
                 userId,
                 planId,
-                groupNumber: group,
-                quotaNumber: quota,
+                groupNumber,
+                quotaNumber,
                 creditValue: financials.creditValue,
                 balanceDue: financials.creditValue,
                 totalInstallments: financials.totalInstallments,
@@ -173,7 +180,7 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
         return { subscription: sub, createdInstallments: instList };
     }, { isolationLevel: 'Serializable', timeout: 15000 });
 
-    logger.info(`Subscription ${subscription.id} created successfully via ${channel}`);
+    logger.info(`Subscription ${subscription.id} created successfully via ${channel} (Group: ${subscription.groupNumber}, Quota: ${subscription.quotaNumber})`);
 
     return {
         success: true,

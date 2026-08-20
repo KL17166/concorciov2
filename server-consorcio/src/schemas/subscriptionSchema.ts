@@ -18,8 +18,8 @@ export type CreateClientSubscriptionDTO = z.infer<typeof CreateClientSubscriptio
 export const CreateAdminSubscriptionSchema = z.object({
     userId: z.string().uuid('ID de usuário inválido'),
     planId: z.string().uuid('ID de plano inválido'),
-    groupNumber: z.string().min(1, 'Número do grupo é obrigatório'),
-    quotaNumber: z.string().min(1, 'Número da cota é obrigatório')
+    groupNumber: z.string().optional().nullable(),
+    quotaNumber: z.string().optional().nullable()
 });
 
 export type CreateAdminSubscriptionDTO = z.infer<typeof CreateAdminSubscriptionSchema>;
