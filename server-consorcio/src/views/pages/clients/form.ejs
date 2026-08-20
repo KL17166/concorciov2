@@ -85,142 +85,29 @@
                             <form action="/admin/clients/<%= editing ? client.id + '/edit' : '' %>" method="POST" id="clientForm">
                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-                                <!-- Dados Pessoais -->
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold">
-                                            <i class="bi bi-person me-1 text-primary"></i>Nome Completo *
-                                        </label>
-                                        <input type="text" name="name" class="form-control"
-                                            value="<%= editing ? client.name : '' %>" required
-                                            placeholder="Nome completo">
-                                    </div>
+                                <!-- Dados Pessoais Reutilizáveis -->
+                                <%- include('../../partials/forms/person-fields', { person: editing ? client : {}, editing }) %>
 
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold">
-                                            <i class="bi bi-envelope me-1 text-primary"></i>Email *
-                                        </label>
-                                        <input type="email" name="email" class="form-control"
-                                            value="<%= editing ? client.email : '' %>" required
-                                            placeholder="email@exemplo.com">
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">
-                                            <i class="bi bi-credit-card me-1 text-primary"></i>CPF *
-                                        </label>
-                                        <% if (editing) { %>
-                                            <input type="text" class="form-control" style="opacity: 0.7;"
-                                                value="<%= client.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') %>"
-                                                readonly>
-                                            <small class="text-muted">
-                                                <i class="bi bi-lock me-1"></i>CPF não pode ser alterado
-                                            </small>
-                                        <% } else { %>
-                                            <input type="text" name="cpf" class="form-control cpf-mask"
-                                                placeholder="000.000.000-00" required maxlength="14">
-                                        <% } %>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">
-                                            <i class="bi bi-phone me-1 text-primary"></i>Telefone
-                                        </label>
-                                        <input type="text" name="phone" class="form-control phone-mask"
-                                            value="<%= editing ? (client.phone || '') : '' %>"
-                                            placeholder="(00) 00000-0000">
-                                    </div>
-
-
-                                </div>
-
-                                <!-- Endereço -->
+                                <!-- Endereço Reutilizável -->
                                 <%
                                     let parsedAddr = {};
-                                    if (editing) {
+                                    if (editing && client.address) {
                                         try {
-                                            if (client.address) {
-                                                if (client.address.startsWith('{')) {
-                                                    parsedAddr = JSON.parse(client.address);
-                                                } else {
-                                                    parsedAddr = { street: client.address };
-                                                }
-                                            }
+                                            parsedAddr = client.address.startsWith('{') ? JSON.parse(client.address) : { street: client.address };
                                         } catch (e) {
                                             parsedAddr = { street: client.address };
                                         }
                                     }
                                 %>
-
-                                <div class="mt-4 mb-3 d-flex align-items-center">
-                                    <div style="width: 35px; height: 35px; border-radius: 10px;
-                                                background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
-                                                display: flex; align-items: center; justify-content: center; margin-right: 12px;">
-                                        <i class="bi bi-geo-alt" style="color: var(--success-color); font-size: 1.1rem;"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0" style="color: var(--text-primary);">Endereço</h6>
-                                        <small class="text-muted">Preencha o CEP para autocompletar</small>
-                                    </div>
-                                </div>
-
-                                <div class="row g-3">
-                                    <div class="col-md-3">
-                                        <label class="form-label">CEP</label>
-                                        <div class="input-group">
-                                            <input type="text" name="address_cep" id="cep" class="form-control"
-                                                value="<%= parsedAddr.cep || '' %>" placeholder="00000-000" maxlength="9">
-                                            <span class="input-group-text" id="cepSpinner" style="display:none;">
-                                                <i class="bi bi-arrow-clockwise spin"></i>
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-7">
-                                        <label class="form-label">Rua / Logradouro</label>
-                                        <input type="text" name="address_street" id="logradouro" class="form-control"
-                                            value="<%= parsedAddr.street || '' %>" placeholder="Rua, Avenida...">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">Número</label>
-                                        <input type="text" name="address_number" id="addressNumber" class="form-control"
-                                            value="<%= parsedAddr.number || '' %>" placeholder="Nº">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Complemento</label>
-                                        <input type="text" name="address_complement" class="form-control"
-                                            value="<%= parsedAddr.complement || '' %>" placeholder="Apto, Bloco...">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Bairro</label>
-                                        <input type="text" name="address_neighborhood" id="bairro" class="form-control"
-                                            value="<%= parsedAddr.neighborhood || '' %>">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Cidade</label>
-                                        <input type="text" name="address_city" id="cidade" class="form-control"
-                                            value="<%= parsedAddr.city || '' %>">
-                                    </div>
-                                    <div class="col-md-1">
-                                        <label class="form-label">UF</label>
-                                        <input type="text" name="address_state" id="uf" class="form-control text-center"
-                                            value="<%= parsedAddr.state || '' %>" maxlength="2"
-                                            style="text-transform: uppercase;">
-                                    </div>
-                                </div>
+                                <%- include('../../partials/forms/address-fields', { address: parsedAddr }) %>
 
                                 <hr class="my-4" style="border-color: var(--border-color); opacity: 0.3;">
 
                                 <!-- Actions -->
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <% if (editing) { %>
-                                        <a href="/admin/clients/<%= client.id %>" class="btn btn-outline-secondary">
-                                            <i class="bi bi-x-lg me-2"></i>Cancelar
-                                        </a>
-                                    <% } else { %>
-                                        <a href="/admin/clients" class="btn btn-outline-secondary">
-                                            <i class="bi bi-x-lg me-2"></i>Cancelar
-                                        </a>
-                                    <% } %>
+                                    <a href="/admin/clients<%= editing ? '/' + client.id : '' %>" class="btn btn-outline-secondary">
+                                        <i class="bi bi-x-lg me-2"></i>Cancelar
+                                    </a>
                                     <button type="submit" class="btn btn-primary" style="min-width: 200px;">
                                         <i class="bi bi-check-lg me-2"></i>
                                         <%= editing ? 'Salvar Alterações' : 'Cadastrar Cliente' %>

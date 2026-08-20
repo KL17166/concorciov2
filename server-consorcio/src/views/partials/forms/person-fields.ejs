@@ -1,0 +1,47 @@
+<!-- Dados Pessoais Reutilizáveis -->
+<div class="row g-3">
+    <div class="col-md-6">
+        <label class="form-label fw-bold">
+            <i class="bi bi-person me-1 text-primary"></i>Nome Completo *
+        </label>
+        <input type="text" name="name" class="form-control"
+            value="<%= (typeof person !== 'undefined' && person.name) ? person.name : '' %>" required
+            placeholder="Nome completo">
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label fw-bold">
+            <i class="bi bi-envelope me-1 text-primary"></i>Email *
+        </label>
+        <input type="email" name="email" class="form-control"
+            value="<%= (typeof person !== 'undefined' && person.email) ? person.email : '' %>" required
+            placeholder="email@exemplo.com">
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label fw-bold">
+            <i class="bi bi-credit-card me-1 text-primary"></i>CPF *
+        </label>
+        <% if (typeof editing !== 'undefined' && editing && typeof person !== 'undefined' && person.cpf) { %>
+            <input type="text" class="form-control" style="opacity: 0.7;"
+                value="<%= person.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') %>"
+                readonly>
+            <small class="text-muted">
+                <i class="bi bi-lock me-1"></i>CPF não pode ser alterado
+            </small>
+        <% } else { %>
+            <input type="text" name="cpf" class="form-control cpf-mask"
+                value="<%= (typeof person !== 'undefined' && person.cpf) ? person.cpf : '' %>"
+                placeholder="000.000.000-00" required maxlength="14">
+        <% } %>
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label fw-bold">
+            <i class="bi bi-phone me-1 text-primary"></i>Telefone
+        </label>
+        <input type="text" name="phone" class="form-control phone-mask"
+            value="<%= (typeof person !== 'undefined' && person.phone) ? person.phone : '' %>"
+            placeholder="(00) 00000-0000">
+    </div>
+</div>

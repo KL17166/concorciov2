@@ -1,8 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './authRoutes';
 import productRoutes from './productRoutes';
-import apiRoutes from './apiRoutes';
-// webhookRoutes are mounted directly in app.ts (before securityMiddleware)
+import apiRoutes from './api';
 
 const router = Router();
 

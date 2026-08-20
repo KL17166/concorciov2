@@ -76,7 +76,8 @@ describe('markInstallmentAsPaid', () => {
             });
         mockInstallmentUpdate.mockResolvedValue({});
         mockSubscriptionUpdate.mockResolvedValue({});
-        mockInstallmentCount.mockResolvedValue(2); // 2 unpaid remaining
+        // 1st count (prior unpaid) = 0, 2nd count (remaining unpaid for completion check) = 2
+        mockInstallmentCount.mockResolvedValueOnce(0).mockResolvedValueOnce(2);
 
         const result = await markInstallmentAsPaid('1');
 
@@ -208,7 +209,8 @@ describe('markInstallmentAsPaid', () => {
             });
         mockInstallmentUpdate.mockResolvedValue({});
         mockSubscriptionUpdate.mockResolvedValue({});
-        mockInstallmentCount.mockResolvedValue(3);
+        // 1st count (prior unpaid) = 0, 2nd count (remaining unpaid) = 3
+        mockInstallmentCount.mockResolvedValueOnce(0).mockResolvedValueOnce(3);
 
         await markInstallmentAsPaid('1', {
             paymentMethod: 'PIX',

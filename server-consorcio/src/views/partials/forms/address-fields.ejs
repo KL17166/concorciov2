@@ -1,0 +1,58 @@
+<!-- Campos de Endereço Reutilizáveis -->
+<div class="mt-4 mb-3 d-flex align-items-center">
+    <div style="width: 35px; height: 35px; border-radius: 10px;
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+                display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+        <i class="bi bi-geo-alt" style="color: var(--success-color); font-size: 1.1rem;"></i>
+    </div>
+    <div>
+        <h6 class="mb-0" style="color: var(--text-primary);">Endereço</h6>
+        <small class="text-muted">Preencha o CEP para autocompletar</small>
+    </div>
+</div>
+
+<% const addr = (typeof address !== 'undefined' && address) ? address : {}; %>
+
+<div class="row g-3">
+    <div class="col-md-3">
+        <label class="form-label fw-bold">CEP</label>
+        <div class="input-group">
+            <input type="text" name="address_cep" id="cep" class="form-control"
+                value="<%= addr.cep || '' %>" placeholder="00000-000" maxlength="9">
+            <span class="input-group-text" id="cepSpinner" style="display:none;">
+                <i class="bi bi-arrow-clockwise spin"></i>
+            </span>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <label class="form-label fw-bold">Rua / Logradouro</label>
+        <input type="text" name="address_street" id="logradouro" class="form-control"
+            value="<%= addr.street || '' %>" placeholder="Rua, Avenida...">
+    </div>
+    <div class="col-md-2">
+        <label class="form-label fw-bold">Número</label>
+        <input type="text" name="address_number" id="addressNumber" class="form-control"
+            value="<%= addr.number || '' %>" placeholder="Nº">
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Complemento</label>
+        <input type="text" name="address_complement" class="form-control"
+            value="<%= addr.complement || '' %>" placeholder="Apto, Bloco...">
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Bairro</label>
+        <input type="text" name="address_neighborhood" id="bairro" class="form-control"
+            value="<%= addr.neighborhood || '' %>">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-bold">Cidade</label>
+        <input type="text" name="address_city" id="cidade" class="form-control"
+            value="<%= addr.city || '' %>">
+    </div>
+    <div class="col-md-1">
+        <label class="form-label fw-bold">UF</label>
+        <input type="text" name="address_state" id="uf" class="form-control text-center"
+            value="<%= addr.state || '' %>" maxlength="2"
+            style="text-transform: uppercase;">
+    </div>
+</div>

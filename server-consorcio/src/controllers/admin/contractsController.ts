@@ -2,7 +2,9 @@ import { Request, Response } from 'express';
 import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 import { paginate, paginationMeta, buildPageUrl } from '../../utils/pagination';
-import { generatePaymentToken } from '../../security/paymentToken';
+import { createSubscription } from '../../application/subscriptions/createSubscription';
+import { contemplateSubscription as contemplateSubUseCase } from '../../application/subscriptions/contemplateSubscription';
+import { cancelSubscription as cancelSubUseCase } from '../../application/subscriptions/cancelSubscription';
 
 // GET /admin/contracts - Lista todos os contratos
 export const getContracts = async (req: Request, res: Response) => {
@@ -151,7 +153,7 @@ export const getNewContract = async (req: Request, res: Response) => {
             path: '/contracts',
             editing: false,
             clients,
-            clientId, // Pass it to view
+            clientId,
             plans
         });
     } catch (error) {
@@ -165,152 +167,59 @@ export const createContract = async (req: Request, res: Response) => {
     try {
         const { userId, planId, groupNumber, quotaNumber } = req.body;
 
-        const plan = await prisma.consortiumPlan.findUnique({
-            where: { id: planId },
-            include: { product: true }
-        });
-
-        if (!plan) {
-            req.flash('error_msg', 'Plano não encontrado');
-            return res.redirect('/admin/contracts/new');
-        }
-
-        // Calculate credit value with fees
-        const productPrice = Number(plan.product.price);
-        const totalRate = Number(plan.adminFeeRate) + Number(plan.fundRate);
-        const creditValue = productPrice * (1 + totalRate / 100);
-        const monthlyInstallment = creditValue / plan.durationMonths;
-
-        // Total installments = durationMonths (adesão é a 1ª parcela)
-        const totalInstallments = plan.durationMonths;
-
-        // Create subscription + all installments atomically so a partial failure
-        // never leaves a subscription record with no installments.
-        const subscription = await prisma.$transaction(async (tx) => {
-            const sub = await tx.subscription.create({
-                data: {
-                    userId,
-                    planId,
-                    groupNumber,
-                    quotaNumber,
-                    creditValue,
-                    balanceDue: creditValue,
-                    totalInstallments,
-                    status: 'PENDING'
-                }
-            });
-
-            const today = new Date();
-            const installmentsData: any[] = [];
-
-            // Adesão (installment #1) — due today
-            installmentsData.push({
-                subscriptionId: sub.id,
-                idTokenPay: generatePaymentToken(sub.id, 1, userId),
-                number: 1,
-                amount: monthlyInstallment,
-                dueDate: today,
-                status: 'PENDING'
-            });
-
-            // Regular installments (2 to N)
-            for (let i = 2; i <= plan.durationMonths; i++) {
-                const dueDate = new Date(today);
-                dueDate.setMonth(dueDate.getMonth() + (i - 1));
-                dueDate.setDate(10);
-                installmentsData.push({
-                    subscriptionId: sub.id,
-                    idTokenPay: generatePaymentToken(sub.id, i, userId),
-                    number: i,
-                    amount: monthlyInstallment,
-                    dueDate,
-                    status: 'PENDING'
-                });
-            }
-
-            await tx.installment.createMany({ data: installmentsData });
-            return sub;
+        const result = await createSubscription({
+            userId,
+            planId,
+            groupNumber,
+            quotaNumber,
+            channel: 'ADMIN_PANEL'
         });
 
         req.flash('success_msg', 'Contrato criado com sucesso!');
-        res.redirect(`/admin/contracts/${subscription.id}`);
-    } catch (error) {
-        logger.error(error);
-        req.flash('error_msg', 'Erro ao criar contrato');
+        res.redirect(`/admin/contracts/${result.subscription.id}`);
+    } catch (error: any) {
+        logger.error('Error creating contract via admin:', error);
+        req.flash('error_msg', error.message || 'Erro ao criar contrato');
         res.redirect('/admin/contracts/new');
     }
 };
 
 // POST /admin/contracts/:id/contemplate - Contemplar contrato
 export const contemplateContract = async (req: Request, res: Response) => {
+    const id = req.params.id as string;
     try {
-        const id = req.params.id as string;
         const { contemplationType } = req.body;
 
-        // Validate contract is ACTIVE before contemplating
-        const contract = await prisma.subscription.findUnique({ where: { id } });
-        if (!contract || contract.status !== 'ACTIVE') {
-            req.flash('error_msg', 'Contrato deve estar ativo para ser contemplado');
-            return res.redirect(`/admin/contracts/${id}`);
-        }
-
-        // Fix 11: Block re-contemplation.
-        // The status guard above already rejects CONTEMPLATED status; this catches the edge
-        // case where status is ACTIVE but the contemplated flag is true due to a data inconsistency.
-        if (contract.contemplated) {
-            req.flash('error_msg', 'Este contrato já foi contemplado anteriormente e não pode ser contemplado novamente');
-            return res.redirect(`/admin/contracts/${id}`);
-        }
-
-        await prisma.subscription.update({
-            where: { id },
-            data: {
-                contemplated: true,
-                contemplationDate: new Date(),
-                contemplationType: contemplationType || 'DIRECT',
-                status: 'CONTEMPLATED'
-            }
+        await contemplateSubUseCase({
+            subscriptionId: id,
+            contemplationType: contemplationType || 'DIRECT'
         });
 
         req.flash('success_msg', 'Contrato contemplado com sucesso!');
         res.redirect(`/admin/contracts/${id}`);
-    } catch (error) {
-        logger.error(error);
-        req.flash('error_msg', 'Erro ao contemplar contrato');
-        res.redirect(`/admin/contracts/${req.params.id}`);
+    } catch (error: any) {
+        logger.error('Error contemplating contract via admin:', error);
+        req.flash('error_msg', error.message || 'Erro ao contemplar contrato');
+        res.redirect(`/admin/contracts/${id}`);
     }
 };
 
 // POST /admin/contracts/:id/cancel - Cancelar contrato
 export const cancelContract = async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+    const sessionUser = (req as any).session?.user;
     try {
-        const id = req.params.id as string;
-
-        // Cancel subscription and zero out balance
-        await prisma.subscription.update({
-            where: { id },
-            data: {
-                status: 'CANCELLED',
-                balanceDue: 0
-            }
+        const result = await cancelSubUseCase({
+            subscriptionId: id,
+            requesterUserId: sessionUser?.id || 'admin',
+            requesterRole: (sessionUser?.role as any) || 'MASTER'
         });
 
-        // Cancel pending and overdue installments
-        await prisma.installment.updateMany({
-            where: {
-                subscriptionId: id,
-                status: { in: ['PENDING', 'OVERDUE'] }
-            },
-            data: {
-                status: 'CANCELLED'
-            }
-        });
-
-        req.flash('success_msg', 'Contrato cancelado');
+        req.flash('success_msg', result.message || 'Contrato cancelado');
         res.redirect(`/admin/contracts/${id}`);
-    } catch (error) {
-        logger.error(error);
-        req.flash('error_msg', 'Erro ao cancelar contrato');
-        res.redirect(`/admin/contracts/${req.params.id}`);
+    } catch (error: any) {
+        logger.error('Error cancelling contract via admin:', error);
+        req.flash('error_msg', error.message || 'Erro ao cancelar contrato');
+        res.redirect(`/admin/contracts/${id}`);
     }
 };
