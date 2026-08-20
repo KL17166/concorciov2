@@ -10,10 +10,12 @@
 import { PrismaClient as PgPrismaClient } from '@prisma/client';
 import Database from 'better-sqlite3';
 import path from 'path';
+import { guardDevEnvironment } from './guard';
 
 const SQLITE_PATH = path.join(__dirname, '../../prisma/dev.db');
 
 async function migrate() {
+    guardDevEnvironment('migrate-data');
     console.log('🔄 Starting SQLite → PostgreSQL migration...\n');
 
     // Connect to PostgreSQL (uses current DATABASE_URL from .env)

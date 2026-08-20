@@ -1,8 +1,10 @@
 import { PrismaClient } from '@prisma/client';
+import { guardDevEnvironment } from './guard';
 
 const prisma = new PrismaClient();
 
 async function main() {
+    guardDevEnvironment('unblockAll');
     console.log('Unlock device script started...');
 
     // Find blocked devices

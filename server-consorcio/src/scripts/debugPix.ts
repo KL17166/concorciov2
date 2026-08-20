@@ -1,9 +1,11 @@
 import { prisma } from '../config/database';
 import { PixGoService } from '../services/gateways/pixGoService';
+import { guardDevEnvironment } from './guard';
 
 const installmentId = '08793e8a-c5a8-4748-a1d4-afff92a407a9';
 
 async function debugPix() {
+    guardDevEnvironment('debugPix');
     try {
         console.log('--- DEBUGGING PIX GENERATION ---');
         const installment = await prisma.installment.findUnique({

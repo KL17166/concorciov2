@@ -1,9 +1,11 @@
 
 import { PrismaClient } from '@prisma/client';
+import { guardDevEnvironment } from './guard';
 
 const prisma = new PrismaClient();
 
 async function main() {
+    guardDevEnvironment('fixCpfs');
     console.log('Starting CPF fix...');
 
     const users = await prisma.user.findMany();

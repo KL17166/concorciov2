@@ -1,9 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../security/password';
+import { guardDevEnvironment } from './guard';
 
 const prisma = new PrismaClient();
 
 async function main() {
+    guardDevEnvironment('createGabriella');
     console.log('👤 Creating User Gabriella...');
 
     const email = 'gabriella@teste.com';
