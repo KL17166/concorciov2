@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 import { SigiloPayService } from '../../services/gateways/sigiloPayService';
+import { handleApiError } from '../../utils/errors';
 
 // Default gateway configurations to seed on first load
 const DEFAULT_GATEWAYS = [
@@ -181,11 +182,7 @@ export const getSigiloPayBalance = async (req: Request, res: Response) => {
         const balance = await SigiloPayService.getBalance();
         res.json(balance);
     } catch (error: any) {
-        logger.error('SigiloPay balance error:', error.message);
-        res.status(500).json({ 
-            error: 'Erro ao consultar saldo',
-            details: error.message 
-        });
+        handleApiError(res, error, 'Erro ao consultar saldo do gateway SigiloPay', req);
     }
 };
 
@@ -195,19 +192,32 @@ export const requestSigiloPayWithdraw = async (req: Request, res: Response) => {
         const { amount, pixKey, pixKeyType, description } = req.body;
 
         if (!amount || !pixKey || !pixKeyType) {
-            return res.status(400).json({
-                error: 'Campos obrigatórios: amount, pixKey, pixKeyType'
+            res.status(400).json({
+                success: false,
+                error: 'BAD_REQUEST',
+                message: 'Campos obrigatórios: amount, pixKey, pixKeyType'
             });
+            return;
         }
 
         const numAmount = parseFloat(amount);
         if (isNaN(numAmount) || numAmount <= 0) {
-            return res.status(400).json({ error: 'Valor de saque inválido' });
+            res.status(400).json({
+                success: false,
+                error: 'BAD_REQUEST',
+                message: 'Valor de saque inválido'
+            });
+            return;
         }
 
         const validTypes = ['cpf', 'cnpj', 'email', 'phone', 'random'];
         if (!validTypes.includes(pixKeyType)) {
-            return res.status(400).json({ error: 'Tipo de chave PIX inválido' });
+            res.status(400).json({
+                success: false,
+                error: 'BAD_REQUEST',
+                message: 'Tipo de chave PIX inválido'
+            });
+            return;
         }
 
         const result = await SigiloPayService.requestWithdraw({
@@ -225,10 +235,6 @@ export const requestSigiloPayWithdraw = async (req: Request, res: Response) => {
             data: result
         });
     } catch (error: any) {
-        logger.error('SigiloPay withdraw error:', error.message);
-        res.status(500).json({
-            error: 'Erro ao solicitar saque',
-            details: error.message
-        });
+        handleApiError(res, error, 'Erro ao solicitar saque no gateway SigiloPay', req);
     }
 };

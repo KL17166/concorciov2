@@ -6,12 +6,14 @@ import { redisClient } from './app';
 import { logger } from './config/logger';
 import { disconnectPrisma } from './config/database';
 import { startWebhookCleanupTask } from './services/cronService';
+import { startSubscriptionCleanupJob, stopSubscriptionCleanupJob } from './jobs/subscriptionCleanupJob';
 
 const PORT = process.env.PORT || 3000;
 
 const server = app.listen(PORT, () => {
     logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
     startWebhookCleanupTask(); // Start background jobs
+    startSubscriptionCleanupJob(); // Start subscription cleanup job
 });
 
 // Slowloris DoS protection: limit how long a client can take to send headers/body
@@ -28,6 +30,9 @@ async function gracefulShutdown(signal: string) {
     isShuttingDown = true;
 
     logger.info(`${signal} received. Starting graceful shutdown...`);
+
+    // Stop background jobs
+    stopSubscriptionCleanupJob();
 
     // 1. Stop accepting new connections
     server.close(async () => {

@@ -90,102 +90,128 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
         durationMonths: plan.durationMonths
     });
 
-    // 5. Atomic Creation Transaction with Sequential Group/Quota Allocation
-    const { subscription, createdInstallments } = await prisma.$transaction(async (tx) => {
-        // Re-check KYC inside transaction to eliminate TOCTOU race
-        const latestUser = await tx.user.findUnique({
-            where: { id: userId },
-            select: { kycStatus: true }
-        });
-        if (latestUser?.kycStatus === 'REJECTED') {
-            throw Object.assign(new Error('KYC_REJECTED'), { statusCode: 403 });
-        }
+    // 5. Atomic Creation Transaction with Retry on Concurrency Collisions
+    const MAX_RETRIES = 3;
+    let attempt = 0;
+    let lastError: any = null;
 
-        // Allocate group and quota atomically
-        const { groupNumber, quotaNumber } = await allocateGroupAndQuota(
-            tx,
-            planId,
-            input.groupNumber,
-            input.quotaNumber
-        );
-
-        const sub = await tx.subscription.create({
-            data: {
-                userId,
-                planId,
-                groupNumber,
-                quotaNumber,
-                creditValue: financials.creditValue,
-                balanceDue: financials.creditValue,
-                totalInstallments: financials.totalInstallments,
-                status: 'PENDING',
-                paidInstallments: 0,
-                contemplated: false,
-                termsAccepted: input.termsAccepted === true,
-                termsAcceptedAt: input.termsAccepted ? new Date() : null,
-                termsIpAddress: input.termsIpAddress || null
-            }
-        });
-
-        // Auto-submit KYC if docs provided
-        if (input.documentFrontUrl && input.documentBackUrl && input.selfieUrl) {
-            await tx.user.update({
-                where: { id: userId },
-                data: {
-                    documentFrontUrl: input.documentFrontUrl,
-                    documentBackUrl: input.documentBackUrl,
-                    selfieUrl: input.selfieUrl,
-                    kycStatus: 'SUBMITTED'
+    while (attempt < MAX_RETRIES) {
+        try {
+            const { subscription, createdInstallments } = await prisma.$transaction(async (tx) => {
+                // Re-check KYC inside transaction to eliminate TOCTOU race
+                const latestUser = await tx.user.findUnique({
+                    where: { id: userId },
+                    select: { kycStatus: true }
+                });
+                if (latestUser?.kycStatus === 'REJECTED') {
+                    throw Object.assign(new Error('KYC_REJECTED'), { statusCode: 403 });
                 }
-            });
-            logger.info(`KYC auto-submitted with contract creation: user ${userId}`);
+
+                // Allocate group and quota atomically
+                const { groupNumber, quotaNumber } = await allocateGroupAndQuota(
+                    tx,
+                    planId,
+                    input.groupNumber,
+                    input.quotaNumber
+                );
+
+                const sub = await tx.subscription.create({
+                    data: {
+                        userId,
+                        planId,
+                        groupNumber,
+                        quotaNumber,
+                        creditValue: financials.creditValue,
+                        balanceDue: financials.creditValue,
+                        totalInstallments: financials.totalInstallments,
+                        status: 'PENDING',
+                        paidInstallments: 0,
+                        contemplated: false,
+                        termsAccepted: input.termsAccepted === true,
+                        termsAcceptedAt: input.termsAccepted ? new Date() : null,
+                        termsIpAddress: input.termsIpAddress || null
+                    }
+                });
+
+                // Auto-submit KYC if docs provided
+                if (input.documentFrontUrl && input.documentBackUrl && input.selfieUrl) {
+                    await tx.user.update({
+                        where: { id: userId },
+                        data: {
+                            documentFrontUrl: input.documentFrontUrl,
+                            documentBackUrl: input.documentBackUrl,
+                            selfieUrl: input.selfieUrl,
+                            kycStatus: 'SUBMITTED'
+                        }
+                    });
+                    logger.info(`KYC auto-submitted with contract creation: user ${userId}`);
+                }
+
+                const today = new Date();
+                const installmentsData: any[] = [];
+
+                // Installment #1 (Adesão)
+                installmentsData.push({
+                    subscriptionId: sub.id,
+                    idTokenPay: generatePaymentToken(sub.id, 1, userId),
+                    number: 1,
+                    amount: financials.monthlyInstallment,
+                    dueDate: today,
+                    status: 'PENDING'
+                });
+
+                // Installments #2 to #N
+                for (let i = 2; i <= plan.durationMonths; i++) {
+                    const dueDate = new Date(today);
+                    dueDate.setMonth(dueDate.getMonth() + (i - 1));
+                    dueDate.setDate(10);
+
+                    installmentsData.push({
+                        subscriptionId: sub.id,
+                        idTokenPay: generatePaymentToken(sub.id, i, userId),
+                        number: i,
+                        amount: financials.monthlyInstallment,
+                        dueDate,
+                        status: 'PENDING'
+                    });
+                }
+
+                await tx.installment.createMany({ data: installmentsData });
+
+                const instList = await tx.installment.findMany({
+                    where: { subscriptionId: sub.id },
+                    orderBy: { number: 'asc' }
+                });
+
+                return { subscription: sub, createdInstallments: instList };
+            }, { isolationLevel: 'Serializable', timeout: 15000 });
+
+            logger.info(`Subscription ${subscription.id} created successfully via ${channel} (Group: ${subscription.groupNumber}, Quota: ${subscription.quotaNumber})`);
+
+            return {
+                success: true,
+                subscription,
+                installments: createdInstallments,
+                plan
+            };
+        } catch (error: any) {
+            lastError = error;
+            attempt++;
+
+            // If a specific group/quota was manually requested by admin or if error is business validation (KYC, etc.), do not retry
+            if ((input.groupNumber && input.quotaNumber) || error.statusCode === 403 || error.statusCode === 400 || error.statusCode === 404) {
+                throw error;
+            }
+
+            if (attempt >= MAX_RETRIES) {
+                logger.error(`[createSubscription] Failed after ${MAX_RETRIES} attempts. Error:`, error);
+                throw error;
+            }
+
+            logger.warn(`[createSubscription] Serialization/allocation conflict on attempt ${attempt}. Retrying in ${attempt * 50}ms...`);
+            await new Promise((resolve) => setTimeout(resolve, attempt * 50));
         }
+    }
 
-        const today = new Date();
-        const installmentsData: any[] = [];
-
-        // Installment #1 (Adesão)
-        installmentsData.push({
-            subscriptionId: sub.id,
-            idTokenPay: generatePaymentToken(sub.id, 1, userId),
-            number: 1,
-            amount: financials.monthlyInstallment,
-            dueDate: today,
-            status: 'PENDING'
-        });
-
-        // Installments #2 to #N
-        for (let i = 2; i <= plan.durationMonths; i++) {
-            const dueDate = new Date(today);
-            dueDate.setMonth(dueDate.getMonth() + (i - 1));
-            dueDate.setDate(10);
-
-            installmentsData.push({
-                subscriptionId: sub.id,
-                idTokenPay: generatePaymentToken(sub.id, i, userId),
-                number: i,
-                amount: financials.monthlyInstallment,
-                dueDate,
-                status: 'PENDING'
-            });
-        }
-
-        await tx.installment.createMany({ data: installmentsData });
-
-        const instList = await tx.installment.findMany({
-            where: { subscriptionId: sub.id },
-            orderBy: { number: 'asc' }
-        });
-
-        return { subscription: sub, createdInstallments: instList };
-    }, { isolationLevel: 'Serializable', timeout: 15000 });
-
-    logger.info(`Subscription ${subscription.id} created successfully via ${channel} (Group: ${subscription.groupNumber}, Quota: ${subscription.quotaNumber})`);
-
-    return {
-        success: true,
-        subscription,
-        installments: createdInstallments,
-        plan
-    };
+    throw lastError;
 }

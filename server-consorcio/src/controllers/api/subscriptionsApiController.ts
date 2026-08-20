@@ -5,6 +5,7 @@ import { cancelSubscription } from '../../application/subscriptions/cancelSubscr
 import { getUserSubscriptions } from '../../application/subscriptions/getUserSubscriptions';
 import { getSubscriptionDetails } from '../../application/subscriptions/getSubscriptionDetails';
 import { CreateClientSubscriptionSchema } from '../../schemas/subscriptionSchema';
+import { handleApiError } from '../../utils/errors';
 import { logger } from '../../config/logger';
 
 export const listUserSubscriptions = async (req: Request, res: Response): Promise<void> => {
@@ -13,8 +14,7 @@ export const listUserSubscriptions = async (req: Request, res: Response): Promis
         const subscriptions = await getUserSubscriptions(userId);
         res.json(subscriptions);
     } catch (error: any) {
-        logger.error('Error fetching subscriptions:', error);
-        res.status(error.statusCode || 500).json({ error: error.message || 'Erro ao buscar contratos' });
+        handleApiError(res, error, 'Erro ao buscar contratos', req);
     }
 };
 
@@ -25,8 +25,7 @@ export const getSingleSubscription = async (req: Request, res: Response): Promis
         const sub = await getSubscriptionDetails(subscriptionId, user.userId);
         res.json(sub);
     } catch (error: any) {
-        logger.error('Error fetching subscription detail:', error);
-        res.status(error.statusCode || 500).json({ error: error.message || 'Erro ao buscar contrato' });
+        handleApiError(res, error, 'Erro ao buscar contrato', req);
     }
 };
 
@@ -40,14 +39,22 @@ export const createClientSubscription = async (req: Request, res: Response): Pro
 
         if (!bodyToken || bodyToken !== headerToken) {
             logger.warn(`[Security] Token mismatch or missing in body. User: ${user.userId}`);
-            res.status(401).json({ error: 'Token de autenticação inválido ou ausente no corpo da requisição' });
+            res.status(401).json({
+                success: false,
+                error: 'UNAUTHORIZED',
+                message: 'Token de autenticação inválido ou ausente no corpo da requisição'
+            });
             return;
         }
 
         const validation = CreateClientSubscriptionSchema.safeParse(req.body);
         if (!validation.success) {
             const firstError = validation.error.issues[0]?.message || 'Dados incompletos';
-            res.status(400).json({ error: firstError });
+            res.status(400).json({
+                success: false,
+                error: 'BAD_REQUEST',
+                message: firstError
+            });
             return;
         }
 
@@ -56,7 +63,11 @@ export const createClientSubscription = async (req: Request, res: Response): Pro
         // Validate ownership
         if (data.userId !== user.userId) {
             logger.warn(`Ownership mismatch: requested=${data.userId}, actual=${user.userId}`);
-            res.status(403).json({ error: 'Acesso negado: você só pode criar contratos para si mesmo' });
+            res.status(403).json({
+                success: false,
+                error: 'FORBIDDEN',
+                message: 'Acesso negado: você só pode criar contratos para si mesmo'
+            });
             return;
         }
 
@@ -72,7 +83,7 @@ export const createClientSubscription = async (req: Request, res: Response): Pro
             channel: 'CLIENT_APP'
         });
 
-        const formattedInstallments = result.installments.map((inst: any) => ({
+        const formattedInstallments = result.installments.map((inst) => ({
             ...inst,
             amount: Number(inst.amount)
         }));
@@ -90,12 +101,7 @@ export const createClientSubscription = async (req: Request, res: Response): Pro
             installments: formattedInstallments
         });
     } catch (error: any) {
-        if (error?.message === 'KYC_REJECTED') {
-            res.status(403).json({ error: 'Seu cadastro foi reprovado. Entre em contato com o suporte para regularizar sua situação.' });
-            return;
-        }
-        logger.error('Error creating subscription:', error);
-        res.status(error.statusCode || 500).json({ error: error.message || 'Erro interno ao processar solicitação de contrato' });
+        handleApiError(res, error, 'Erro interno ao processar solicitação de contrato', req);
     }
 };
 
@@ -111,7 +117,6 @@ export const cancelClientSubscription = async (req: Request, res: Response): Pro
 
         res.json({ success: true, message: result.message });
     } catch (error: any) {
-        logger.error('Error cancelling subscription:', error);
-        res.status(error.statusCode || 500).json({ error: error.message || 'Erro ao cancelar contrato' });
+        handleApiError(res, error, 'Erro ao cancelar contrato', req);
     }
 };

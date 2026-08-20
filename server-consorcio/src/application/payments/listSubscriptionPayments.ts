@@ -1,4 +1,5 @@
-import { prisma } from '../../config/database';
+import { SubscriptionRepository } from '../../repositories/subscriptionRepository';
+import { InstallmentRepository } from '../../repositories/installmentRepository';
 import { calculateInstallmentValue } from '../../domain/calculations/installmentCalculator';
 
 export interface ListSubscriptionPaymentsInput {
@@ -24,9 +25,7 @@ export async function listSubscriptionPayments(
 ): Promise<InstallmentPaymentDTO[]> {
     const { subscriptionId, requesterUserId, isAdmin } = input;
 
-    const subscription = await prisma.subscription.findUnique({
-        where: { id: subscriptionId }
-    });
+    const subscription = await SubscriptionRepository.findById(subscriptionId);
 
     if (!subscription) {
         throw Object.assign(new Error('Contrato não encontrado'), { statusCode: 404 });
@@ -36,10 +35,7 @@ export async function listSubscriptionPayments(
         throw Object.assign(new Error('Acesso negado'), { statusCode: 403 });
     }
 
-    const installments = await prisma.installment.findMany({
-        where: { subscriptionId },
-        orderBy: { number: 'asc' }
-    });
+    const installments = await InstallmentRepository.findSubscriptionInstallments(subscriptionId);
 
     const paidIndices = new Set(
         installments.filter((i) => i.status === 'PAID').map((i) => i.number)
