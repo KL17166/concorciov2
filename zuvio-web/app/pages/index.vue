@@ -105,7 +105,7 @@ function handlePayAdhesion(contract: ActiveContract) {
                   :class="{ 'is-pending': !contract.isAdesaoPaid }"
                 />
                 <span class="status-label" :class="{ 'is-pending': !contract.isAdesaoPaid }">
-                  {{ contract.isAdesaoPaid ? (contract.status === 'active' ? 'Contrato Ativo' : 'Aguardando Pagamento') : 'Aguardando Adesão' }}
+                  {{ contract.isAdesaoPaid ? (contract.status?.toLowerCase() === 'active' ? 'Contrato Ativo' : 'Aguardando Pagamento') : 'Aguardando Adesão' }}
                 </span>
               </div>
 

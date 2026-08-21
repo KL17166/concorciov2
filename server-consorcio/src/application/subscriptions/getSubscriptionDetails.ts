@@ -28,18 +28,56 @@ export async function getSubscriptionDetails(subscriptionId: string, requesterUs
         }
     }
 
+    const isAdesaoPaid = sub.status === 'ACTIVE' || (sub.installments.find((i: Installment) => i.number === 1)?.status === 'PAID');
+    const nextInstallment = sub.installments.find((i: Installment) => i.number === nextIndex);
+    const nextPaymentAmount = nextInstallment ? Number(nextInstallment.amount) : 0;
+    const dueDate = nextInstallment?.dueDate
+        ? new Date(nextInstallment.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+        : '15/09/2026';
+    const progressPercentage = sub.totalInstallments > 0
+        ? Math.round((sub.paidInstallments / sub.totalInstallments) * 100)
+        : 0;
+
+    const installmentValues: Record<number, number> = {};
+    const installmentIds: Record<number, string> = {};
+    const installmentDueDates: Record<number, string> = {};
+    const installmentTokens: Record<number, string> = {};
+
+    for (const inst of sub.installments) {
+        installmentValues[inst.number] = Number(inst.amount);
+        installmentIds[inst.number] = inst.id;
+        if (inst.dueDate) {
+            installmentDueDates[inst.number] = new Date(inst.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+        }
+        if (inst.idTokenPay) {
+            installmentTokens[inst.number] = inst.idTokenPay;
+        }
+    }
+
     return {
         id: sub.id,
+        userId: sub.userId,
+        productId: sub.plan.product.id,
+        planId: sub.plan.id,
         groupNumber: sub.groupNumber,
         quotaNumber: sub.quotaNumber,
         creditValue: Number(sub.creditValue),
         balanceDue: Number(sub.balanceDue),
-        status: sub.status,
+        status: sub.status.toLowerCase(),
+        isAdesaoPaid: Boolean(isAdesaoPaid),
+        currentInstallment: nextIndex,
+        totalInstallments: sub.totalInstallments,
+        paidInstallments: Array.from(paidIndices),
+        nextPaymentAmount,
+        dueDate,
+        progressPercentage,
+        installmentValues,
+        installmentIds,
+        installmentDueDates,
+        installmentTokens,
         contemplated: sub.contemplated,
         contemplationDate: sub.contemplationDate,
         contemplationType: sub.contemplationType,
-        paidInstallments: sub.paidInstallments,
-        totalInstallments: sub.totalInstallments,
         createdAt: sub.createdAt,
         plan: {
             id: sub.plan.id,
