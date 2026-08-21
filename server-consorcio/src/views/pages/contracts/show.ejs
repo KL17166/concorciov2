@@ -123,7 +123,7 @@
                 </dl>
                 <div class="d-flex justify-content-between align-items-center mb-2"><span class="admin-muted">Progresso</span><strong><%= progressValue.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) %>%</strong></div>
                 <div class="progress" role="progressbar" aria-label="Progresso de pagamento" aria-valuenow="<%= progressValue %>" aria-valuemin="0" aria-valuemax="100" style="height: 10px;">
-                    <div class="progress-bar bg-primary" style="width: <%= progressValue %>%"></div>
+                    <div class="progress-bar bg-primary" style="width: <%= progressValue + '%' %>;"></div>
                 </div>
             </div>
         </section>

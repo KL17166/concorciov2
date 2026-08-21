@@ -316,7 +316,7 @@
                                                                     <% const progress=(sub.paidInstallments /
                                                                         sub.totalInstallments) * 100; %>
                                                                         <div class="progress" style="height: 8px;">
-                                                                            <div class="progress-bar bg-success" style="--p: <%= Math.round(progress) %>%; width: var(--p);">
+                                                                            <div class="progress-bar bg-success" style="width: <%= Math.round(progress) + '%' %>;">
                                                                             </div>
                                                                         </div>
                                                                         <small class="text-muted">
