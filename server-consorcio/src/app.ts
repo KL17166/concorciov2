@@ -47,7 +47,7 @@ app.use(helmet({
 // CORS Configuration
 const allowedOrigins = env.ALLOWED_ORIGINS
     ? env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-    : ['http://localhost:3000', 'http://localhost:5173'];
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'];
 
 if (env.CLOUDFLARE_TUNNEL_URL) {
     allowedOrigins.push(env.CLOUDFLARE_TUNNEL_URL);
@@ -55,9 +55,11 @@ if (env.CLOUDFLARE_TUNNEL_URL) {
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        // No origin or "null" (same-origin form submissions, privacy redirects, mobile webviews)
+        if (!origin || origin === 'null' || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            logger.warn(`[CORS] Blocked origin: "${origin}" | Allowed: ${allowedOrigins.join(', ')}`);
             callback(new Error('Bloqueado por CORS'));
         }
     },
