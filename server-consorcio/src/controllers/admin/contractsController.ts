@@ -5,6 +5,7 @@ import { paginate, paginationMeta, buildPageUrl } from '../../utils/pagination';
 import { createSubscription } from '../../application/subscriptions/createSubscription';
 import { contemplateSubscription as contemplateSubUseCase } from '../../application/subscriptions/contemplateSubscription';
 import { cancelSubscription as cancelSubUseCase } from '../../application/subscriptions/cancelSubscription';
+import { markInstallmentAsPaid } from '../../services/installmentService';
 import { CreateAdminSubscriptionSchema } from '../../schemas/subscriptionSchema';
 
 // GET /admin/contracts - Lista todos os contratos
@@ -235,6 +236,31 @@ export const cancelContract = async (req: Request, res: Response) => {
         logger.error('Error cancelling contract via admin:', error);
         const userMsg = (error.statusCode && error.statusCode < 500) ? error.message : 'Erro ao cancelar contrato.';
         req.flash('error_msg', userMsg);
+        res.redirect(`/admin/contracts/${id}`);
+    }
+};
+
+// POST /admin/contracts/:id/installments/:installmentId/pay - Dar baixa manual em parcela
+export const markInstallmentPaid = async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+    const installmentId = req.params.installmentId as string;
+    const { paymentMethod, paymentDate } = req.body;
+
+    try {
+        const result = await markInstallmentAsPaid(installmentId, {
+            paymentMethod: paymentMethod || 'MANUAL',
+            paymentDate: paymentDate ? new Date(paymentDate) : new Date()
+        });
+
+        if (!result.success) {
+            req.flash('error_msg', result.message);
+        } else {
+            req.flash('success_msg', result.message || 'Parcela baixada com sucesso!');
+        }
+        res.redirect(`/admin/contracts/${id}`);
+    } catch (error: any) {
+        logger.error('Error marking installment as paid via admin:', error);
+        req.flash('error_msg', 'Erro ao dar baixa na parcela.');
         res.redirect(`/admin/contracts/${id}`);
     }
 };

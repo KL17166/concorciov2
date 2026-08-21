@@ -123,7 +123,7 @@
                 </dl>
                 <div class="d-flex justify-content-between align-items-center mb-2"><span class="admin-muted">Progresso</span><strong><%= progressValue.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) %>%</strong></div>
                 <div class="progress" role="progressbar" aria-label="Progresso de pagamento" aria-valuenow="<%= progressValue %>" aria-valuemin="0" aria-valuemax="100" style="height: 10px;">
-                    <div class="progress-bar bg-primary" style="width: <%= progressValue + '%' %>;"></div>
+                    <div class="progress-bar bg-primary" <%- `style="width: ${progressValue}%"` %>></div>
                 </div>
             </div>
         </section>
@@ -158,18 +158,17 @@
         const pendingCount = contract.installments.filter(i => i.status === 'PENDING').length;
         const overdueCount = contract.installments.filter(i => i.status === 'OVERDUE').length;
     %>
-    <section class="admin-card admin-card--accordion mt-3" id="card-contract-installments">
-        <div class="admin-card__header" onclick="toggleAdminAccordion(this)">
+    <section class="admin-card mt-3" id="card-contract-installments">
+        <div class="admin-card__header">
             <div>
                 <div class="d-flex align-items-center gap-2">
                     <h2>Parcelas</h2>
                     <span class="badge bg-primary rounded-pill" style="font-size: 0.72rem;"><i class="bi bi-layers me-1"></i>Modo Sanduíche</span>
                 </div>
-                <div class="admin-muted mt-1">Histórico de vencimentos, pagamentos e filtros instantâneos.</div>
+                <div class="admin-muted mt-1">Histórico de vencimentos, pagamentos e controle de baixa manual.</div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="admin-pill admin-pill--muted"><%= contract.installments.length %> registros</span>
-                <span class="admin-accordion-toggle"><i class="bi bi-chevron-down"></i></span>
+                <span class="admin-pill admin-pill--muted"><%= contract.installments.length %> parcelas</span>
             </div>
         </div>
 
@@ -198,7 +197,7 @@
                 </div>
             </div>
 
-            <div class="admin-table-wrap admin-table-sandwich" id="installments-sandwich-container">
+            <div class="admin-table-wrap admin-table-sandwich" id="installments-sandwich-container" style="max-height: 420px;">
                 <table class="table admin-table mb-0" id="installments-table">
                     <thead>
                         <tr>
@@ -208,6 +207,7 @@
                             <th>Status</th>
                             <th>Pagamento</th>
                             <th>Método</th>
+                            <th class="text-end" style="width: 140px;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -219,6 +219,22 @@
                                 <td><span class="admin-pill admin-pill--<%= installment.status === 'PAID' ? 'success' : installment.status === 'OVERDUE' ? 'danger' : 'muted' %>"><%= displayStatus(installment.status, installmentStatusLabels) %></span></td>
                                 <td><%= formatDate(installment.paymentDate) %></td>
                                 <td><%= installment.paymentMethod || '—' %></td>
+                                <td class="text-end">
+                                    <% if (installment.status === 'PAID') { %>
+                                        <span class="text-success small fw-bold"><i class="bi bi-check2-all me-1"></i>Liquidada</span>
+                                    <% } else if (canManageContracts && contract.status !== 'CANCELLED') { %>
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-outline-success admin-btn"
+                                            style="padding: 3px 10px; font-size: 0.78rem;"
+                                            onclick="openPayInstallmentModal('<%= installment.id %>', '<%= installment.number %>', '<%= formatCurrency(installment.amount) %>')"
+                                        >
+                                            <i class="bi bi-check2-circle me-1"></i>Dar baixa
+                                        </button>
+                                    <% } else { %>
+                                        <span class="text-muted small">—</span>
+                                    <% } %>
+                                </td>
                             </tr>
                         <% }) %>
                     </tbody>
@@ -236,6 +252,64 @@
             <div class="admin-empty"><i class="bi bi-calendar2-x fs-1 d-block mb-3"></i>Nenhuma parcela vinculada.</div>
         <% } %>
     </section>
+
+    <!-- Modal de Baixa Manual de Parcela -->
+    <div class="modal fade" id="modalPayInstallment" tabindex="-1" aria-labelledby="modalPayInstallmentLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content admin-card">
+                <form id="formPayInstallment" method="POST" action="">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold" id="modalPayInstallmentLabel">
+                            <i class="bi bi-cash-coin text-success me-2"></i>Dar Baixa na Parcela
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body py-3">
+                        <div class="alert alert-info py-2 small mb-3">
+                            <i class="bi bi-info-circle me-1"></i>Ao dar baixa, o contrato e saldo do cliente serão atualizados atomicamente.
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label admin-muted small mb-1">Parcela Selecionada</label>
+                            <div class="form-control-plaintext fw-bold fs-5 text-primary" id="modalInstallmentLabel">
+                                Parcela #1
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label admin-muted small mb-1">Valor</label>
+                            <div class="form-control-plaintext fw-bold text-success fs-5" id="modalInstallmentAmount">
+                                R$ 0,00
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="paymentMethodSelect" class="form-label admin-muted small mb-1">Método de Pagamento</label>
+                            <select class="form-select" id="paymentMethodSelect" name="paymentMethod" required>
+                                <option value="PIX" selected>PIX (Comprovante / QR Code)</option>
+                                <option value="BOLETO">Boleto Bancário</option>
+                                <option value="TRANSFERENCIA">Transferência / TED</option>
+                                <option value="DINHEIRO">Dinheiro em Espécie</option>
+                                <option value="MANUAL">Baixa Manual / Administrativa</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="paymentDateInput" class="form-label admin-muted small mb-1">Data do Pagamento</label>
+                            <input type="date" class="form-control" id="paymentDateInput" name="paymentDate" value="<%= new Date().toISOString().split('T')[0] %>" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-outline-secondary admin-btn" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success admin-btn">
+                            <i class="bi bi-check-lg me-1"></i>Confirmar Baixa
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <section class="admin-card admin-card--accordion mt-3" id="card-contract-bids">
         <div class="admin-card__header" onclick="toggleAdminAccordion(this)">
@@ -298,5 +372,29 @@
         </section>
     <% } %>
 </div>
+
+<script>
+function openPayInstallmentModal(installmentId, installmentNumber, formattedAmount) {
+    const form = document.getElementById('formPayInstallment');
+    const label = document.getElementById('modalInstallmentLabel');
+    const amount = document.getElementById('modalInstallmentAmount');
+    
+    if (form) {
+        form.action = '/admin/contracts/<%= contract.id %>/installments/' + installmentId + '/pay';
+    }
+    if (label) {
+        label.textContent = 'Parcela #' + installmentNumber;
+    }
+    if (amount) {
+        amount.textContent = formattedAmount;
+    }
+    
+    const modalEl = document.getElementById('modalPayInstallment');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+}
+</script>
 
 <%- include('../../partials/footer') %>
