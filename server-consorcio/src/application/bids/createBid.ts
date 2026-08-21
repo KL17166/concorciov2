@@ -13,7 +13,13 @@ export async function createBid(input: CreateBidInput) {
     const { subscriptionId, requesterUserId, type, percentage, amount } = input;
 
     const subscription = await prisma.subscription.findUnique({
-        where: { id: subscriptionId }
+        where: { id: subscriptionId },
+        include: {
+            installments: {
+                where: { number: 1 },
+                select: { status: true }
+            }
+        }
     });
 
     if (!subscription) {
@@ -24,8 +30,9 @@ export async function createBid(input: CreateBidInput) {
         throw Object.assign(new Error('Acesso negado: você só pode criar lances para seus próprios contratos'), { statusCode: 403 });
     }
 
-    if (subscription.status !== 'ACTIVE') {
-        throw Object.assign(new Error('Lances só podem ser realizados em contratos ativos.'), { statusCode: 400 });
+    const isAdesaoPaid = subscription.status === 'ACTIVE' && subscription.installments[0]?.status === 'PAID';
+    if (!isAdesaoPaid) {
+        throw Object.assign(new Error('É necessário realizar o pagamento da taxa de adesão para poder ofertar lances neste consórcio.'), { statusCode: 403 });
     }
 
     const expectedAmount = Number(subscription.creditValue) * percentage / 100;
@@ -35,17 +42,20 @@ export async function createBid(input: CreateBidInput) {
         ), { statusCode: 400 });
     }
 
-    // Atomic creation with Serializable isolation to prevent duplicate pending bids
+    // Atomic creation with Serializable isolation to prevent duplicate pending or approved bids
     const bid = await prisma.$transaction(async (tx) => {
         const existing = await tx.bid.findFirst({
             where: {
                 subscriptionId,
-                status: 'PENDING'
+                status: { in: ['PENDING', 'APPROVED'] }
             }
         });
 
         if (existing) {
-            throw Object.assign(new Error('Já existe um lance pendente para este contrato'), { statusCode: 400 });
+            if (existing.status === 'APPROVED') {
+                throw Object.assign(new Error('Você já possui um lance aprovado para este contrato. Realize o pagamento ou cancele-o para ofertar outro.'), { statusCode: 400 });
+            }
+            throw Object.assign(new Error('Já existe um lance pendente aguardando a assembleia para este contrato.'), { statusCode: 400 });
         }
 
         return tx.bid.create({

@@ -104,9 +104,9 @@ function handleGoToBids() {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(10, 20, 30, 0.82);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -116,26 +116,26 @@ function handleGoToBids() {
 .bid-modal-card {
   position: relative;
   width: 100%;
-  max-width: 440px;
-  background: linear-gradient(180deg, #1E293B 0%, #0F172A 100%);
-  border: 1px solid rgba(255, 183, 3, 0.3);
+  max-width: 420px;
+  background: #FFFFFF;
+  border: 1px solid var(--color-border, #E2E8F0);
   border-radius: 28px;
   padding: 36px 24px 28px;
   text-align: center;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(255, 109, 0, 0.2);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
   overflow: hidden;
 }
 
 .btn-close-modal {
   position: absolute;
-  top: 18px;
-  right: 18px;
+  top: 16px;
+  right: 16px;
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #94A3B8;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  color: #64748B;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -144,15 +144,15 @@ function handleGoToBids() {
 }
 
 .btn-close-modal:hover {
-  background: rgba(255, 255, 255, 0.18);
-  color: #FFFFFF;
+  background: #E2E8F0;
+  color: #1E293B;
   transform: scale(1.08);
 }
 
 .trophy-wrapper {
   position: relative;
-  width: 90px;
-  height: 90px;
+  width: 84px;
+  height: 84px;
   margin: 0 auto 16px;
   display: flex;
   align-items: center;
@@ -161,23 +161,23 @@ function handleGoToBids() {
 
 .trophy-glow {
   position: absolute;
-  inset: -12px;
-  background: radial-gradient(circle, rgba(255, 183, 3, 0.5) 0%, transparent 70%);
+  inset: -10px;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.35) 0%, transparent 70%);
   border-radius: 50%;
-  filter: blur(14px);
+  filter: blur(10px);
   animation: pulseGlow 2.5s infinite alternate;
 }
 
 .trophy-circle {
   position: relative;
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #FFB703 0%, #FB8500 100%);
+  width: 76px;
+  height: 76px;
+  background: linear-gradient(135deg, #FBBF24 0%, #D97706 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 25px rgba(251, 133, 0, 0.4);
+  box-shadow: 0 10px 20px rgba(217, 119, 6, 0.3);
 }
 
 .trophy-icon {
@@ -186,7 +186,7 @@ function handleGoToBids() {
 
 .sparkle-decoration {
   position: absolute;
-  color: #FFD166;
+  color: #F59E0B;
   pointer-events: none;
   animation: floatSparkle 2s infinite ease-in-out alternate;
 }
@@ -206,10 +206,10 @@ function handleGoToBids() {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  color: #34D399;
+  padding: 6px 14px;
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  color: #047857;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 800;
@@ -218,23 +218,23 @@ function handleGoToBids() {
 }
 
 .modal-title {
-  font-size: 24px;
-  font-weight: 900;
-  color: #FFFFFF;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-text, #1E293B);
   margin-bottom: 6px;
   line-height: 1.2;
 }
 
 .modal-subtitle {
   font-size: 14px;
-  color: #94A3B8;
-  margin-bottom: 20px;
+  color: #64748B;
+  margin-bottom: 18px;
   line-height: 1.4;
 }
 
 .bid-highlight-box {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
   border-radius: 18px;
   padding: 16px;
   margin-bottom: 16px;
@@ -249,35 +249,37 @@ function handleGoToBids() {
 .highlight-row.sub {
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid #E2E8F0;
 }
 
 .highlight-label {
   font-size: 13px;
-  color: #94A3B8;
+  color: #64748B;
+  font-weight: 600;
 }
 
 .highlight-amount {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 900;
-  color: #10B981;
+  color: #059669;
 }
 
 .highlight-sublabel {
   font-size: 12px;
-  color: #64748B;
+  color: #94A3B8;
 }
 
 .highlight-subval {
   font-size: 12px;
   font-weight: 700;
-  color: #E2E8F0;
+  color: #334155;
 }
 
 .modal-tip {
   font-size: 12px;
   color: #64748B;
-  margin-bottom: 24px;
+  line-height: 1.4;
+  margin-bottom: 22px;
 }
 
 .modal-actions {
@@ -287,25 +289,26 @@ function handleGoToBids() {
 }
 
 .btn-primary-action {
-  height: 48px;
+  height: 50px;
   background: linear-gradient(135deg, #FF6D00 0%, #E65100 100%);
   border: none;
   border-radius: 14px;
   color: #FFFFFF;
   font-size: 15px;
   font-weight: 800;
+  letter-spacing: 0.5px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(255, 109, 0, 0.35);
+  box-shadow: 0 6px 18px rgba(255, 109, 0, 0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-primary-action:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 25px rgba(255, 109, 0, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 109, 0, 0.45);
 }
 
 .btn-secondary-action {
@@ -320,7 +323,7 @@ function handleGoToBids() {
 }
 
 .btn-secondary-action:hover {
-  color: #FFFFFF;
+  color: #475569;
 }
 
 @keyframes pulseGlow {

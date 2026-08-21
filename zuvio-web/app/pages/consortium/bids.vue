@@ -303,144 +303,255 @@ async function handleConfirmCancelBid(bidId: string) {
     </header>
 
     <div v-if="contract" class="bids-main-container">
-      <!-- 0. APPROVED BID HIGHLIGHT CARD -->
-      <div v-if="bidStore.hasApprovedBid" class="approved-bid-action-card">
-        <div class="approved-badge-top">
-          <Trophy :size="15" class="trophy-sparkle" />
-          <span>LANCE APROVADO NA ASSEMBLEIA</span>
+      <!-- ── ESTADO 1: LANCE JÁ APROVADO (Tela Exclusiva de Pagamento / Cancelamento) ── -->
+      <div v-if="bidStore.hasApprovedBid" class="approved-settlement-screen">
+        <!-- 1. Header Card with Product & Contract Info -->
+        <div class="bid-header-card">
+          <div class="bid-product-meta-row">
+            <img
+              v-if="contract.product?.imageUrl"
+              :src="contract.product.imageUrl"
+              :alt="contract.product.name"
+              class="bid-product-thumb"
+            />
+            <div v-else class="bid-product-thumb placeholder">
+              <Package :size="24" color="#9E9E9E" />
+            </div>
+
+            <div class="bid-product-details">
+              <div class="bid-product-name">{{ contract.product?.name || 'Consórcio' }}</div>
+              <div class="bid-contract-badges">
+                <span class="bid-group-badge">Grupo {{ contract.groupNumber }}</span>
+                <span class="bid-quota-badge">Cota {{ contract.quotaNumber }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bid-credit-summary-row">
+            <div class="credit-col">
+              <span class="bid-credit-label">Saldo Crédito Total</span>
+              <span class="bid-credit-amount">{{ formatCurrency(creditValue) }}</span>
+            </div>
+            <div class="adhesion-info-pill success">
+              <CheckCircle2 :size="15" color="#10B981" />
+              <span>Contrato Ativo</span>
+            </div>
+          </div>
         </div>
 
-        <div class="approved-main-info">
-          <div class="approved-text-col">
-            <span class="approved-subtitle">Valor a pagar do seu lance</span>
-            <div class="approved-amount-val">{{ formatCurrency(bidStore.approvedBid?.amount || 0) }}</div>
-            <span class="approved-meta-tag">{{ bidStore.approvedBid?.percentage }}% de lance • {{ bidStore.approvedBid?.type === 'FREE' ? 'Lance Livre' : 'Lance Fixo' }}</span>
+        <!-- 2. Main Approved Bid Action Card (Design Limpo e Coerente com o App) -->
+        <div class="approved-card-clean">
+          <div class="approved-badge-clean">
+            <Trophy :size="16" class="trophy-gold" />
+            <span>LANCE APROVADO NA ASSEMBLEIA</span>
           </div>
-          <div class="approved-icon-circle">
-            <CheckCircle2 :size="30" color="#10B981" />
+
+          <div class="approved-headline-clean">
+            <h2 class="approved-title-clean">Parabéns! Sua cota foi contemplada</h2>
+            <p class="approved-desc-clean">
+              Efetue o pagamento do valor do seu lance para liberar a carta de crédito e faturar seu bem.
+            </p>
+          </div>
+
+          <!-- Price Highlight Box -->
+          <div class="approved-price-box-clean">
+            <span class="approved-price-label">Valor do Lance a Pagar</span>
+            <div class="approved-price-val">{{ formatCurrency(bidStore.approvedBid?.amount || 0) }}</div>
+            <div class="approved-price-meta">
+              <span>{{ bidStore.approvedBid?.percentage }}% do crédito</span>
+              <span class="dot-sep">•</span>
+              <span>{{ bidStore.approvedBid?.type === 'FREE' ? 'Lance Livre' : 'Lance Fixo' }}</span>
+            </div>
+          </div>
+
+          <!-- Explanatory Timeline -->
+          <div class="approved-timeline-box">
+            <div class="timeline-item">
+              <div class="timeline-number">1</div>
+              <div class="timeline-text">
+                <strong>Pague via PIX</strong>
+                <span>Instantâneo, seguro e sem taxas bancárias</span>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-number">2</div>
+              <div class="timeline-text">
+                <strong>Confirmação Automática</strong>
+                <span>Seu lance é liquidado em poucos minutos</span>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-number">3</div>
+              <div class="timeline-text">
+                <strong>Retire seu Bem</strong>
+                <span>Sua carta de crédito fica pronta para faturamento</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="approved-buttons-col">
+            <button
+              type="button"
+              class="btn-pay-bid-primary"
+              :disabled="isGeneratingPix"
+              @click="handleOpenPix(bidStore.approvedBid!.id)"
+            >
+              <Loader2 v-if="isGeneratingPix" :size="20" class="animate-spin" />
+              <QrCode v-else :size="20" />
+              <span>PAGAR LANCE VIA PIX</span>
+            </button>
+
+            <button
+              type="button"
+              class="btn-cancel-bid-secondary"
+              @click="isCancelConfirmOpen = true"
+            >
+              <Trash2 :size="16" />
+              <span>Cancelar este Lance</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ESTADO 2: ADESÃO PENDENTE (Bloqueio Total de Lances) ── -->
+      <div v-else-if="!contract.isAdesaoPaid" class="adesao-required-screen">
+        <div class="bid-header-card">
+          <div class="bid-product-meta-row">
+            <img
+              v-if="contract.product?.imageUrl"
+              :src="contract.product.imageUrl"
+              :alt="contract.product.name"
+              class="bid-product-thumb"
+            />
+            <div class="bid-product-details">
+              <div class="bid-product-name">{{ contract.product?.name || 'Consórcio' }}</div>
+              <div class="bid-contract-badges">
+                <span class="bid-group-badge">Grupo {{ contract.groupNumber }}</span>
+                <span class="bid-quota-badge">Cota {{ contract.quotaNumber }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="approved-actions-row">
+        <div class="locked-bid-card">
+          <div class="locked-icon-wrapper">
+            <Lock :size="36" color="#FF6D00" />
+          </div>
+          <h2 class="locked-title">Taxa de Adesão Pendente</h2>
+          <p class="locked-desc">
+            Para poder ofertar lances e participar das assembleias mensais deste grupo, é necessário realizar primeiro o pagamento da sua taxa de adesão.
+          </p>
           <button
             type="button"
-            class="btn-pay-bid-pix"
-            :disabled="isGeneratingPix"
-            @click="handleOpenPix(bidStore.approvedBid!.id)"
+            class="btn-pay-adhesion-direct"
+            @click="router.push('/consortium/adhesion')"
           >
-            <Loader2 v-if="isGeneratingPix" :size="18" class="animate-spin" />
-            <QrCode v-else :size="18" />
-            <span>Pagar Lance via PIX</span>
+            <span>PAGAR TAXA DE ADESÃO</span>
+            <ArrowRight :size="18" />
           </button>
+        </div>
+      </div>
 
+      <!-- ── ESTADO 3: SIMULADOR DE LANCES NORMAL (Adesão Paga & Sem Lance Aprovado) ── -->
+      <div v-else class="normal-bidding-screen">
+        <!-- 0.1 PENDING BID ALERT -->
+        <div v-if="bidStore.hasPendingBid" class="pending-bid-alert-card">
+          <div class="pending-icon-wrap">
+            <AlertCircle :size="20" color="#F59E0B" />
+          </div>
+          <div class="pending-text-col">
+            <strong>Lance em Análise para a Assembleia</strong>
+            <span>Você ofertou {{ formatCurrency(bidStore.pendingBid?.amount || 0) }} ({{ bidStore.pendingBid?.percentage }}%).</span>
+          </div>
           <button
             type="button"
-            class="btn-cancel-bid-action"
+            class="btn-cancel-pending-inline"
             @click="isCancelConfirmOpen = true"
           >
-            <Trash2 :size="16" />
-            <span>Cancelar Lance</span>
+            Cancelar
           </button>
         </div>
-      </div>
 
-      <!-- 0.1 PENDING BID ALERT -->
-      <div v-else-if="bidStore.hasPendingBid" class="pending-bid-alert-card">
-        <div class="pending-icon-wrap">
-          <AlertCircle :size="20" color="#F59E0B" />
-        </div>
-        <div class="pending-text-col">
-          <strong>Lance em Análise para a Assembleia</strong>
-          <span>Você ofertou {{ formatCurrency(bidStore.pendingBid?.amount || 0) }} ({{ bidStore.pendingBid?.percentage }}%).</span>
-        </div>
-        <button
-          type="button"
-          class="btn-cancel-pending-inline"
-          @click="isCancelConfirmOpen = true"
-        >
-          Cancelar
-        </button>
-      </div>
+        <!-- 1. Header Card with Product & Contract Info (Fiel ao Flutter) -->
+        <div class="bid-header-card">
+          <div class="bid-product-meta-row">
+            <img
+              v-if="contract.product?.imageUrl"
+              :src="contract.product.imageUrl"
+              :alt="contract.product.name"
+              class="bid-product-thumb"
+            />
+            <div v-else class="bid-product-thumb placeholder">
+              <Package :size="24" color="#9E9E9E" />
+            </div>
 
-      <!-- 1. Header Card with Product & Contract Info (Fiel ao Flutter) -->
-      <div class="bid-header-card">
-        <div class="bid-product-meta-row">
-          <img
-            v-if="contract.product?.imageUrl"
-            :src="contract.product.imageUrl"
-            :alt="contract.product.name"
-            class="bid-product-thumb"
-          />
-          <div v-else class="bid-product-thumb placeholder">
-            <Package :size="24" color="#9E9E9E" />
+            <div class="bid-product-details">
+              <div class="bid-product-name">{{ contract.product?.name || 'Consórcio' }}</div>
+              <div class="bid-contract-badges">
+                <span class="bid-group-badge">Grupo {{ contract.groupNumber }}</span>
+                <span class="bid-quota-badge">Cota {{ contract.quotaNumber }}</span>
+              </div>
+            </div>
           </div>
 
-          <div class="bid-product-details">
-            <div class="bid-product-name">{{ contract.product?.name || 'Consórcio Moto' }}</div>
-            <div class="bid-contract-badges">
-              <span class="bid-group-badge">Grupo {{ contract.groupNumber }}</span>
-              <span class="bid-quota-badge">Cota {{ contract.quotaNumber }}</span>
+          <div class="bid-credit-summary-row">
+            <div class="credit-col">
+              <span class="bid-credit-label">Saldo Crédito</span>
+              <span class="bid-credit-amount">{{ formatCurrency(creditValue) }}</span>
+            </div>
+
+            <div class="adhesion-info-pill">
+              <Info :size="15" color="#FF6D00" />
+              <span>Lance antecipa parcelas</span>
             </div>
           </div>
         </div>
 
-        <div class="bid-credit-summary-row">
-          <div class="credit-col">
-            <span class="bid-credit-label">Saldo Crédito</span>
-            <span class="bid-credit-amount">{{ formatCurrency(creditValue) }}</span>
-          </div>
+        <!-- 2. Modalidade Selection Cards (Fiel ao Flutter com tema Laranja vibrante no ativo) -->
+        <div class="section-container">
+          <h2 class="section-title">Selecione a Modalidade</h2>
+          <div class="bid-modalities-carousel">
+            <!-- Livre -->
+            <div
+              class="modality-card"
+              :class="{ active: selectedBidType === 0 }"
+              @click="selectedBidType = 0"
+            >
+              <div class="modality-icon-circle" :class="{ active: selectedBidType === 0 }">
+                <Edit3 :size="20" :color="selectedBidType === 0 ? '#FFFFFF' : '#757575'" />
+              </div>
+              <span class="modality-title">Lance Livre</span>
+              <span class="modality-subtitle">Escolha o valor</span>
+            </div>
 
-          <div class="adhesion-info-pill">
-            <Info :size="15" color="#FF6D00" />
-            <span>Lance antecipa parcelas</span>
+            <!-- Fixo 25% -->
+            <div
+              class="modality-card"
+              :class="{ active: selectedBidType === 1 }"
+              @click="selectedBidType = 1"
+            >
+              <div class="modality-icon-circle" :class="{ active: selectedBidType === 1 }">
+                <Lock :size="20" :color="selectedBidType === 1 ? '#FFFFFF' : '#757575'" />
+              </div>
+              <span class="modality-title">Lance Fixo</span>
+              <span class="modality-subtitle">25% do crédito</span>
+            </div>
+
+            <!-- Embutido 25% -->
+            <div
+              class="modality-card"
+              :class="{ active: selectedBidType === 2 }"
+              @click="selectedBidType = 2"
+            >
+              <div class="modality-icon-circle" :class="{ active: selectedBidType === 2 }">
+                <CreditCard :size="20" :color="selectedBidType === 2 ? '#FFFFFF' : '#757575'" />
+              </div>
+              <span class="modality-title">Embutido</span>
+              <span class="modality-subtitle">Até 25% do crédito</span>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- 2. Modalidade Selection Cards (Fiel ao Flutter com tema Laranja vibrante no ativo) -->
-      <div class="section-container">
-        <h2 class="section-title">Selecione a Modalidade</h2>
-        <div class="bid-modalities-carousel">
-          <!-- Livre -->
-          <div
-            class="modality-card"
-            :class="{ active: selectedBidType === 0 }"
-            @click="selectedBidType = 0"
-          >
-            <div class="modality-icon-circle" :class="{ active: selectedBidType === 0 }">
-              <Edit3 :size="20" :color="selectedBidType === 0 ? '#FFFFFF' : '#757575'" />
-            </div>
-            <span class="modality-title">Lance Livre</span>
-            <span class="modality-subtitle">Escolha o valor</span>
-          </div>
-
-          <!-- Fixo 25% -->
-          <div
-            class="modality-card"
-            :class="{ active: selectedBidType === 1 }"
-            @click="selectedBidType = 1"
-          >
-            <div class="modality-icon-circle" :class="{ active: selectedBidType === 1 }">
-              <Lock :size="20" :color="selectedBidType === 1 ? '#FFFFFF' : '#757575'" />
-            </div>
-            <span class="modality-title">Lance Fixo</span>
-            <span class="modality-subtitle">25% do crédito</span>
-          </div>
-
-          <!-- Embutido 25% -->
-          <div
-            class="modality-card"
-            :class="{ active: selectedBidType === 2 }"
-            @click="selectedBidType = 2"
-          >
-            <div class="modality-icon-circle" :class="{ active: selectedBidType === 2 }">
-              <CreditCard :size="20" :color="selectedBidType === 2 ? '#FFFFFF' : '#757575'" />
-            </div>
-            <span class="modality-title">Embutido</span>
-            <span class="modality-subtitle">Até 25% do crédito</span>
-          </div>
-        </div>
-      </div>
 
       <!-- 3. Calculator & Range Card (Fiel ao Flutter) -->
       <div class="bid-calc-card">
@@ -632,7 +743,8 @@ async function handleConfirmCancelBid(bidId: string) {
       >
         <span>CONFIRMAR OFERTA</span>
       </button>
-    </div>
+      </div> <!-- /normal-bidding-screen -->
+    </div> <!-- /bids-main-container -->
 
     <!-- ── Confirmation Bottom Sheet Modal ──────────────────────────────── -->
     <div v-if="isConfirmModalOpen" class="modal-overlay" @click.self="isConfirmModalOpen = false">
@@ -829,123 +941,275 @@ async function handleConfirmCancelBid(bidId: string) {
 
 <style scoped>
 /* ── Approved & Pending Bid Styles ──────────────────────────────────────── */
-.approved-bid-action-card {
-  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-  border: 1px solid rgba(255, 183, 3, 0.35);
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 0 20px rgba(255, 109, 0, 0.12);
-  color: #FFFFFF;
+/* ── Approved Bid Settlement Screen ── */
+.approved-settlement-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.approved-badge-top {
+.approved-card-clean {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: 24px;
+  padding: 24px 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.approved-badge-clean {
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #34D399;
+  padding: 6px 14px;
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  color: #047857;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.5px;
-  margin-bottom: 12px;
 }
 
-.trophy-sparkle {
-  color: #FBBF24;
+.trophy-gold {
+  color: #F59E0B;
 }
 
-.approved-main-info {
+.approved-headline-clean {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.approved-text-col {
+.approved-title-clean {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text, #1E293B);
+  line-height: 1.3;
+  margin: 0;
+}
+
+.approved-desc-clean {
+  font-size: 13px;
+  color: #64748B;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.approved-price-box-clean {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+}
+
+.approved-price-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.approved-price-val {
+  font-size: 32px;
+  font-weight: 900;
+  color: #059669;
+  line-height: 1.2;
+}
+
+.approved-price-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-top: 6px;
+}
+
+.dot-sep {
+  color: #CBD5E1;
+}
+
+.approved-timeline-box {
+  background: #FFFFFF;
+  border: 1px dashed #CBD5E1;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.timeline-number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #FFF7ED;
+  border: 1px solid #FFEDD5;
+  color: #EA580C;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.timeline-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.approved-subtitle {
+.timeline-text strong {
   font-size: 13px;
-  color: #94A3B8;
+  font-weight: 700;
+  color: #1E293B;
 }
 
-.approved-amount-val {
-  font-size: 24px;
-  font-weight: 900;
-  color: #10B981;
-  line-height: 1.2;
-}
-
-.approved-meta-tag {
+.timeline-text span {
   font-size: 12px;
-  color: #CBD5E1;
+  color: #64748B;
 }
 
-.approved-icon-circle {
-  width: 52px;
+.approved-buttons-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.btn-pay-bid-primary {
+  width: 100%;
   height: 52px;
-  border-radius: 50%;
-  background: rgba(16, 185, 129, 0.1);
+  background: linear-gradient(135deg, #FF6D00 0%, #E65100 100%);
+  border: none;
+  border-radius: 16px;
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.approved-actions-row {
-  display: flex;
   gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(255, 109, 0, 0.35);
+  transition: all 0.2s ease;
 }
 
-.btn-pay-bid-pix {
-  flex: 1;
+.btn-pay-bid-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 109, 0, 0.45);
+}
+
+.btn-cancel-bid-secondary {
+  width: 100%;
   height: 44px;
-  background: linear-gradient(135deg, #FF6D00 0%, #E65100 100%);
-  border: none;
-  border-radius: 12px;
-  color: #FFFFFF;
-  font-size: 14px;
+  background: transparent;
+  border: 1px solid #FCA5A5;
+  border-radius: 14px;
+  color: #DC2626;
+  font-size: 13px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(255, 109, 0, 0.3);
-  transition: transform 0.15s ease;
+  transition: all 0.2s ease;
 }
 
-.btn-pay-bid-pix:hover {
-  transform: translateY(-1px);
+.btn-cancel-bid-secondary:hover {
+  background: #FEF2F2;
+  border-color: #EF4444;
 }
 
-.btn-cancel-bid-action {
-  height: 44px;
-  padding: 0 16px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-radius: 12px;
-  color: #EF4444;
-  font-size: 13px;
-  font-weight: 700;
+/* ── Adesão Pendente (Bloqueio) ── */
+.adesao-required-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.locked-bid-card {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: 24px;
+  padding: 36px 20px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.locked-icon-wrapper {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #FFF7ED;
+  border: 2px solid #FFEDD5;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  margin-bottom: 8px;
 }
 
-.btn-cancel-bid-action:hover {
-  background: rgba(239, 68, 68, 0.2);
+.locked-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text, #1E293B);
+  margin: 0;
+}
+
+.locked-desc {
+  font-size: 13px;
+  color: #64748B;
+  line-height: 1.5;
+  max-width: 340px;
+  margin: 0 0 12px;
+}
+
+.btn-pay-adhesion-direct {
+  width: 100%;
+  max-width: 320px;
+  height: 50px;
+  background: linear-gradient(135deg, #FF6D00 0%, #E65100 100%);
+  border: none;
+  border-radius: 14px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(255, 109, 0, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-pay-adhesion-direct:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 109, 0, 0.45);
 }
 
 /* Pending Banner */
