@@ -56,13 +56,57 @@
         </section>
     </div>
 
-    <section class="admin-card mt-3">
-        <div class="admin-card__header"><div><h2>Contratos vinculados</h2><div class="admin-muted mt-1">Histórico resumido deste cadastro.</div></div><span class="admin-pill admin-pill--muted"><%= person.subscriptions.length %> registros</span></div>
+    <section class="admin-card admin-card--accordion mt-3" id="card-person-subscriptions">
+        <div class="admin-card__header" onclick="toggleAdminAccordion(this)">
+            <div><h2>Contratos vinculados</h2><div class="admin-muted mt-1">Histórico resumido deste cadastro.</div></div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="admin-pill admin-pill--muted"><%= person.subscriptions.length %> registros</span>
+                <span class="admin-accordion-toggle"><i class="bi bi-chevron-down"></i></span>
+            </div>
+        </div>
         <% if (person.subscriptions.length) { %>
-            <div class="admin-table-wrap"><table class="table admin-table mb-0"><thead><tr><th>Contrato</th><th>Produto</th><th>Status</th><th>Parcelas</th><th>Criado em</th></tr></thead><tbody>
-                <% person.subscriptions.forEach(subscription => { %><tr><td><strong><%= subscription.contractNumber || subscription.id %></strong></td><td><%= subscription.plan?.product?.name || subscription.plan?.name || 'Plano' %></td><td><span class="admin-pill admin-pill--<%= ['ACTIVE', 'CONTEMPLATED'].includes(subscription.status) ? 'success' : subscription.status === 'CANCELLED' ? 'danger' : 'muted' %>"><%= ({ PENDING: 'Pendente', ACTIVE: 'Ativo', CONTEMPLATED: 'Contemplado', CANCELLED: 'Cancelado', PENDING_KYC: 'Pendente de KYC' }[subscription.status] || subscription.status) %></span></td><td><%= subscription._count.installments %></td><td class="admin-muted"><%= new Date(subscription.createdAt).toLocaleDateString('pt-BR') %></td></tr><% }) %>
-            </tbody></table></div>
-        <% } else { %><div class="admin-empty"><i class="bi bi-file-earmark-text fs-1 d-block mb-3"></i>Nenhum contrato vinculado.</div><% } %>
+            <div class="admin-table-wrap admin-table-sandwich" id="person-subscriptions-container" style="max-height: 320px;">
+                <table class="table admin-table mb-0" id="person-subscriptions-table">
+                    <thead>
+                        <tr>
+                            <th>Contrato</th>
+                            <th>Produto</th>
+                            <th>Status</th>
+                            <th>Parcelas</th>
+                            <th>Criado em</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% person.subscriptions.forEach(subscription => { %>
+                            <tr>
+                                <td><strong><%= subscription.contractNumber || subscription.id %></strong></td>
+                                <td><%= subscription.plan?.product?.name || subscription.plan?.name || 'Plano' %></td>
+                                <td><span class="admin-pill admin-pill--<%= ['ACTIVE', 'CONTEMPLATED'].includes(subscription.status) ? 'success' : subscription.status === 'CANCELLED' ? 'danger' : 'muted' %>"><%= ({ PENDING: 'Pendente', ACTIVE: 'Ativo', CONTEMPLATED: 'Contemplado', CANCELLED: 'Cancelado', PENDING_KYC: 'Pendente de KYC' }[subscription.status] || subscription.status) %></span></td>
+                                <td><%= subscription._count.installments %></td>
+                                <td class="admin-muted"><%= new Date(subscription.createdAt).toLocaleDateString('pt-BR') %></td>
+                                <td>
+                                    <a href="/admin/contracts/<%= subscription.id %>" class="btn btn-sm btn-outline-primary admin-btn">
+                                        <i class="bi bi-eye"></i> Detalhes
+                                    </a>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <% if (person.subscriptions.length > 5) { %>
+                <div class="admin-sandwich-footer">
+                    <span><%= person.subscriptions.length %> contratos</span>
+                    <button type="button" class="admin-sandwich-btn-expand" onclick="toggleSandwichExpansion(this, 'person-subscriptions-container')">
+                        <i class="bi bi-arrows-angle-expand"></i>
+                        <span class="sandwich-btn-text">Expandir todos</span>
+                    </button>
+                </div>
+            <% } %>
+        <% } else { %>
+            <div class="admin-empty"><i class="bi bi-file-earmark-text fs-1 d-block mb-3"></i>Nenhum contrato vinculado.</div>
+        <% } %>
     </section>
 
     <% if (hasCapability('people.delete')) { %>

@@ -129,10 +129,13 @@
         </section>
     </div>
 
-    <section class="admin-card mt-3">
-        <div class="admin-card__header">
+    <section class="admin-card admin-card--accordion mt-3" id="card-contract-data">
+        <div class="admin-card__header" onclick="toggleAdminAccordion(this)">
             <div><h2>Dados do contrato</h2><div class="admin-muted mt-1">Assinatura digital e situação de contemplação.</div></div>
-            <span class="admin-pill admin-pill--<%= contract.termsAccepted ? 'success' : 'muted' %>"><%= contract.termsAccepted ? 'Termos aceitos' : 'Termos pendentes' %></span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="admin-pill admin-pill--<%= contract.termsAccepted ? 'success' : 'muted' %>"><%= contract.termsAccepted ? 'Termos aceitos' : 'Termos pendentes' %></span>
+                <span class="admin-accordion-toggle"><i class="bi bi-chevron-down"></i></span>
+            </div>
         </div>
         <div class="admin-card__body">
             <div class="admin-detail-grid">
@@ -150,47 +153,134 @@
         </div>
     </section>
 
-    <section class="admin-card mt-3">
-        <div class="admin-card__header">
-            <div><h2>Parcelas</h2><div class="admin-muted mt-1">Histórico de vencimentos e pagamentos.</div></div>
-            <span class="admin-pill admin-pill--muted"><%= contract.installments.length %> registros</span>
+    <%
+        const paidCount = contract.installments.filter(i => i.status === 'PAID').length;
+        const pendingCount = contract.installments.filter(i => i.status === 'PENDING').length;
+        const overdueCount = contract.installments.filter(i => i.status === 'OVERDUE').length;
+    %>
+    <section class="admin-card admin-card--accordion mt-3" id="card-contract-installments">
+        <div class="admin-card__header" onclick="toggleAdminAccordion(this)">
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h2>Parcelas</h2>
+                    <span class="badge bg-primary rounded-pill" style="font-size: 0.72rem;"><i class="bi bi-layers me-1"></i>Modo Sanduíche</span>
+                </div>
+                <div class="admin-muted mt-1">Histórico de vencimentos, pagamentos e filtros instantâneos.</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="admin-pill admin-pill--muted"><%= contract.installments.length %> registros</span>
+                <span class="admin-accordion-toggle"><i class="bi bi-chevron-down"></i></span>
+            </div>
         </div>
+
         <% if (contract.installments.length) { %>
-            <div class="admin-table-wrap"><table class="table admin-table mb-0"><thead><tr><th>#</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Pagamento</th><th>Método</th></tr></thead><tbody>
-                <% contract.installments.forEach(installment => { %>
-                    <tr>
-                        <td><strong><%= installment.number %></strong></td>
-                        <td><%= formatDate(installment.dueDate) %></td>
-                        <td><%= formatCurrency(installment.amount) %></td>
-                        <td><span class="admin-pill admin-pill--<%= installment.status === 'PAID' ? 'success' : installment.status === 'OVERDUE' ? 'danger' : 'muted' %>"><%= displayStatus(installment.status, installmentStatusLabels) %></span></td>
-                        <td><%= formatDate(installment.paymentDate) %></td>
-                        <td><%= installment.paymentMethod || '—' %></td>
-                    </tr>
-                <% }) %>
-            </tbody></table></div>
+            <div class="admin-sandwich-toolbar">
+                <div class="admin-sandwich-tabs">
+                    <button type="button" class="admin-sandwich-tab is-active" onclick="filterSandwichTable('installments-table', 'ALL', this)">
+                        Todas (<%= contract.installments.length %>)
+                    </button>
+                    <button type="button" class="admin-sandwich-tab" onclick="filterSandwichTable('installments-table', 'PENDING', this)">
+                        Pendentes (<%= pendingCount %>)
+                    </button>
+                    <button type="button" class="admin-sandwich-tab" onclick="filterSandwichTable('installments-table', 'PAID', this)">
+                        Pagas (<%= paidCount %>)
+                    </button>
+                    <% if (overdueCount > 0) { %>
+                        <button type="button" class="admin-sandwich-tab" onclick="filterSandwichTable('installments-table', 'OVERDUE', this)">
+                            Atrasadas (<%= overdueCount %>)
+                        </button>
+                    <% } %>
+                </div>
+
+                <div class="admin-sandwich-search">
+                    <i class="bi bi-search"></i>
+                    <input type="text" class="form-control" placeholder="Buscar parcela..." oninput="searchSandwichTable('installments-table', this.value)">
+                </div>
+            </div>
+
+            <div class="admin-table-wrap admin-table-sandwich" id="installments-sandwich-container">
+                <table class="table admin-table mb-0" id="installments-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">#</th>
+                            <th>Vencimento</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th>Pagamento</th>
+                            <th>Método</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% contract.installments.forEach(installment => { %>
+                            <tr data-status="<%= installment.status %>">
+                                <td><strong><%= installment.number %></strong></td>
+                                <td><%= formatDate(installment.dueDate) %></td>
+                                <td><%= formatCurrency(installment.amount) %></td>
+                                <td><span class="admin-pill admin-pill--<%= installment.status === 'PAID' ? 'success' : installment.status === 'OVERDUE' ? 'danger' : 'muted' %>"><%= displayStatus(installment.status, installmentStatusLabels) %></span></td>
+                                <td><%= formatDate(installment.paymentDate) %></td>
+                                <td><%= installment.paymentMethod || '—' %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="admin-sandwich-footer">
+                <span id="installments-table-visible-count"><%= contract.installments.length %> visíveis</span>
+                <button type="button" class="admin-sandwich-btn-expand" onclick="toggleSandwichExpansion(this, 'installments-sandwich-container')">
+                    <i class="bi bi-arrows-angle-expand"></i>
+                    <span class="sandwich-btn-text">Expandir todas as linhas</span>
+                </button>
+            </div>
         <% } else { %>
             <div class="admin-empty"><i class="bi bi-calendar2-x fs-1 d-block mb-3"></i>Nenhuma parcela vinculada.</div>
         <% } %>
     </section>
 
-    <section class="admin-card mt-3">
-        <div class="admin-card__header">
+    <section class="admin-card admin-card--accordion mt-3" id="card-contract-bids">
+        <div class="admin-card__header" onclick="toggleAdminAccordion(this)">
             <div><h2>Lances</h2><div class="admin-muted mt-1">Propostas relacionadas a este contrato.</div></div>
-            <span class="admin-pill admin-pill--muted"><%= contract.bids.length %> registros</span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="admin-pill admin-pill--muted"><%= contract.bids.length %> registros</span>
+                <span class="admin-accordion-toggle"><i class="bi bi-chevron-down"></i></span>
+            </div>
         </div>
         <% if (contract.bids.length) { %>
-            <div class="admin-table-wrap"><table class="table admin-table mb-0"><thead><tr><th>Tipo</th><th>Percentual</th><th>Valor</th><th>Status</th><th>Vencedor</th><th>Criado em</th></tr></thead><tbody>
-                <% contract.bids.forEach(bid => { %>
-                    <tr>
-                        <td><%= bid.type === 'FIXED' ? 'Fixo' : bid.type === 'FREE' ? 'Livre' : bid.type %></td>
-                        <td><%= bid.percentage %>%</td>
-                        <td><%= formatCurrency(bid.amount) %></td>
-                        <td><span class="admin-pill admin-pill--<%= bid.status === 'APPROVED' || bid.status === 'CONTEMPLATED' ? 'success' : bid.status === 'REJECTED' ? 'danger' : 'muted' %>"><%= displayStatus(bid.status, bidStatusLabels) %></span></td>
-                        <td><%= bid.isWinner ? 'Sim' : 'Não' %></td>
-                        <td><%= formatDate(bid.createdAt) %></td>
-                    </tr>
-                <% }) %>
-            </tbody></table></div>
+            <div class="admin-table-wrap admin-table-sandwich" id="bids-sandwich-container" style="max-height: 280px;">
+                <table class="table admin-table mb-0" id="bids-table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Percentual</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th>Vencedor</th>
+                            <th>Criado em</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% contract.bids.forEach(bid => { %>
+                            <tr>
+                                <td><%= bid.type === 'FIXED' ? 'Fixo' : bid.type === 'FREE' ? 'Livre' : bid.type %></td>
+                                <td><%= bid.percentage %>%</td>
+                                <td><%= formatCurrency(bid.amount) %></td>
+                                <td><span class="admin-pill admin-pill--<%= bid.status === 'APPROVED' || bid.status === 'CONTEMPLATED' ? 'success' : bid.status === 'REJECTED' ? 'danger' : 'muted' %>"><%= displayStatus(bid.status, bidStatusLabels) %></span></td>
+                                <td><%= bid.isWinner ? 'Sim' : 'Não' %></td>
+                                <td><%= formatDate(bid.createdAt) %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <% if (contract.bids.length > 5) { %>
+                <div class="admin-sandwich-footer">
+                    <span><%= contract.bids.length %> propostas</span>
+                    <button type="button" class="admin-sandwich-btn-expand" onclick="toggleSandwichExpansion(this, 'bids-sandwich-container')">
+                        <i class="bi bi-arrows-angle-expand"></i>
+                        <span class="sandwich-btn-text">Expandir</span>
+                    </button>
+                </div>
+            <% } %>
         <% } else { %>
             <div class="admin-empty"><i class="bi bi-trophy fs-1 d-block mb-3"></i>Nenhum lance registrado.</div>
         <% } %>

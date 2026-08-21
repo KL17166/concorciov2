@@ -345,7 +345,7 @@
                     </span>
                 </div>
                 <% if (transactionFeed && transactionFeed.length > 0) { %>
-                    <div class="table-responsive">
+                    <div class="table-responsive admin-table-sandwich" id="reports-feed-sandwich-container" style="max-height: 380px;">
                         <table class="table table-custom align-middle w-100 mb-0" id="transactionTable">
                             <thead>
                                 <tr>
@@ -397,6 +397,15 @@
                             </tbody>
                         </table>
                     </div>
+                    <% if (transactionFeed.length > 5) { %>
+                        <div class="admin-sandwich-footer">
+                            <span>Exibindo <%= transactionFeed.length %> transações</span>
+                            <button type="button" class="admin-sandwich-btn-expand" onclick="toggleSandwichExpansion(this, 'reports-feed-sandwich-container')">
+                                <i class="bi bi-arrows-angle-expand"></i>
+                                <span class="sandwich-btn-text">Expandir todas</span>
+                            </button>
+                        </div>
+                    <% } %>
                 <% } else { %>
                     <div class="text-center py-5">
                         <i class="bi bi-inbox text-muted" style="font-size: 2.5rem; opacity: 0.3;"></i>
