@@ -178,8 +178,8 @@
                 </div>
 
                 <% if (bids && bids.length > 0) { %>
-                    <div class="table-responsive">
-                        <table class="table table-custom align-middle w-100" id="bidsTable">
+                    <div class="table-responsive admin-table-sandwich" id="bids-main-sandwich-container" style="max-height: 420px;">
+                        <table class="table table-custom align-middle w-100 mb-0" id="bidsTable">
                             <thead>
                                 <tr>
                                     <th>Cliente</th>
@@ -228,13 +228,11 @@
                                         </td>
                                         <td>
                                             <strong style="color:var(--success-color); font-size:0.95rem;">
-                                                R$ <%= Number(bid.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                                                R$ <%= Number(bid.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                                             </strong>
                                         </td>
                                         <td>
-                                            <span class="badge-premium" style="background:rgba(99,102,241,0.1); color:var(--primary-color); border:1px solid rgba(99,102,241,0.2); font-size:0.72rem;">
-                                                <%= bidPct %>%
-                                            </span>
+                                            <span class="fw-semibold"><%= bidPct %>%</span>
                                         </td>
                                         <td>
                                             <span class="text-muted" style="font-size:0.9rem;">
@@ -264,6 +262,15 @@
                             </tbody>
                         </table>
                     </div>
+                    <% if (bids.length > 5) { %>
+                        <div class="admin-sandwich-footer">
+                            <span>Exibindo <%= bids.length %> lances registrados</span>
+                            <button type="button" class="admin-sandwich-btn-expand" onclick="toggleSandwichExpansion(this, 'bids-main-sandwich-container')">
+                                <i class="bi bi-arrows-angle-expand"></i>
+                                <span class="sandwich-btn-text">Expandir todos</span>
+                            </button>
+                        </div>
+                    <% } %>
                 <% } else { %>
                     <div class="text-center py-5">
                         <div class="mb-4 d-inline-block p-4 rounded-circle" style="background:rgba(99,102,241,0.1);">
