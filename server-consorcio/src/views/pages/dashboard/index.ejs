@@ -181,8 +181,8 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="px-4 pt-3 pb-1">
-                            <canvas id="cashFlowChart" style="max-height: 400px;"></canvas>
+                        <div class="px-4 pt-3 pb-3" style="position: relative; height: 320px; width: 100%;">
+                            <canvas id="cashFlowChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -193,8 +193,8 @@
                             <i class="bi bi-pie-chart-fill me-2 text-warning"></i>
                             Status de Pagamentos
                         </div>
-                        <div class="p-4 d-flex justify-content-center">
-                            <canvas id="paymentStatusChart" style="max-height: 400px;"></canvas>
+                        <div class="p-4 d-flex justify-content-center align-items-center" style="position: relative; height: 320px; width: 100%;">
+                            <canvas id="paymentStatusChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -428,12 +428,11 @@
                             y: {
                                 beginAtZero: true,
                                 border: { display: false },
-                                grid: { color: 'rgba(0,0,0,0.05)' },
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
                                 ticks: {
-                                    precision: 0,
-                                    stepSize: 1,
+                                    maxTicksLimit: 6,
                                     callback: function(value) {
-                                        return 'R$ ' + value.toLocaleString('pt-BR');
+                                        return 'R$ ' + Number(value).toLocaleString('pt-BR');
                                     }
                                 }
                             },

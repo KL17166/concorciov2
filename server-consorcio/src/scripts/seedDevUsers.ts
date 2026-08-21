@@ -192,7 +192,7 @@ async function main() {
           amount: installmentAmount,
           dueDate,
           status: isPaid ? 'PAID' : 'PENDING',
-          paymentDate: isPaid ? new Date() : null,
+          paymentDate: isPaid ? new Date(dueDate) : null,
           paymentMethod: isPaid ? 'PIX' : null
         }
       });
