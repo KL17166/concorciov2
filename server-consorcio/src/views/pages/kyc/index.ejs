@@ -6,7 +6,7 @@
             <!-- Top Bar -->
             <div class="top-bar">
                 <div>
-                    <h1 class="page-title">🔍 Verificação KYC</h1>
+                    <h1 class="page-title"><i class="bi bi-search me-2"></i>Verificação KYC</h1>
                     <p class="text-muted mb-0">Verificação de identidade dos clientes</p>
                 </div>
                 <div class="top-bar-actions">
@@ -146,7 +146,7 @@
                                             </div>
                                         </div>
                                         <span class="badge-premium" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
-                                            <i class="bi bi-clock"></i> <%= pUser.kycStatus %>
+                                            <i class="bi bi-clock"></i> <%= ({ PENDING: 'Pendente', SUBMITTED: 'Enviado', APPROVED: 'Aprovado', REJECTED: 'Rejeitado' }[pUser.kycStatus] || pUser.kycStatus) %>
                                         </span>
                                     </div>
 
@@ -156,7 +156,8 @@
                                         <div class="col-md-4 text-center">
                                             <p class="fw-bold mb-1" style="font-size: 0.85rem;">Documento (Frente)</p>
                                             <% if (pUser.documentFrontUrl) { %>
-                                                <img src="<%= pUser.documentFrontUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" alt="Doc Frente">
+                                                <img src="<%= pUser.documentFrontUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');" alt="Doc Frente">
+                                                <div class="text-muted d-none" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;"><i class="bi bi-file-earmark-x" style="font-size: 1.5rem;"></i><p class="mb-0 mt-1" style="font-size: 0.85rem;">Imagem indisponível</p></div>
                                             <% } else { %>
                                                 <div style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;" class="text-muted">
                                                     <i class="bi bi-x-circle" style="font-size: 1.5rem;"></i>
@@ -167,7 +168,8 @@
                                         <div class="col-md-4 text-center">
                                             <p class="fw-bold mb-1" style="font-size: 0.85rem;">Documento (Verso)</p>
                                             <% if (pUser.documentBackUrl) { %>
-                                                <img src="<%= pUser.documentBackUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" alt="Doc Verso">
+                                                <img src="<%= pUser.documentBackUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');" alt="Doc Verso">
+                                                <div class="text-muted d-none" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;"><i class="bi bi-file-earmark-x" style="font-size: 1.5rem;"></i><p class="mb-0 mt-1" style="font-size: 0.85rem;">Imagem indisponível</p></div>
                                             <% } else { %>
                                                 <div style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;" class="text-muted">
                                                     <i class="bi bi-x-circle" style="font-size: 1.5rem;"></i>
@@ -178,7 +180,8 @@
                                         <div class="col-md-4 text-center">
                                             <p class="fw-bold mb-1" style="font-size: 0.85rem;">Selfie</p>
                                             <% if (pUser.selfieUrl) { %>
-                                                <img src="<%= pUser.selfieUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" alt="Selfie">
+                                                <img src="<%= pUser.selfieUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');" alt="Selfie">
+                                                <div class="text-muted d-none" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;"><i class="bi bi-person-bounding-box" style="font-size: 1.5rem;"></i><p class="mb-0 mt-1" style="font-size: 0.85rem;">Imagem indisponível</p></div>
                                             <% } else { %>
                                                 <div style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;" class="text-muted">
                                                     <i class="bi bi-x-circle" style="font-size: 1.5rem;"></i>
@@ -207,7 +210,7 @@
                                                         <tr>
                                                             <td><%= sub.plan.product.name %></td>
                                                             <td><%= sub.plan.name %></td>
-                                                            <td>R$ <%= Number(sub.creditValue).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+                                                            <td>R$ <%= Number(sub.creditValue).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                                             <td>
                                                                 <% if (sub.installments[0] && sub.installments[0].status === 'PAID') { %>
                                                                     <span class="badge-premium" style="background: rgba(16, 185, 129, 0.1); color: #10b981;"><i class="bi bi-check-circle"></i> Paga</span>
@@ -215,7 +218,7 @@
                                                                     <span class="badge-premium" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;"><i class="bi bi-clock"></i> Pendente</span>
                                                                 <% } %>
                                                             </td>
-                                                            <td><span class="badge-premium" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;"><%= sub.status %></span></td>
+                                                            <td><span class="badge-premium" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;"><%= ({ PENDING: 'Pendente', ACTIVE: 'Ativo', CANCELLED: 'Cancelado', CONTEMPLATED: 'Contemplado', SUBMITTED: 'Enviado' }[sub.status] || sub.status) %></span></td>
                                                         </tr>
                                                     <% }); %>
                                                 </tbody>

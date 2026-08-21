@@ -31,14 +31,14 @@
                     <div class="row g-4">
                         <!-- Form -->
                         <div class="col-md-7">
-                            <div class="card shadow-sm border-0">
-                                <div class="card-header bg-white border-0 pt-4 pb-0">
+                            <div class="admin-card">
+                                <div class="admin-card__header">
                                     <h5 class="mb-0">
-                                        <i class="bi bi-file-text text-primary me-2"></i>
+                                        <i class="bi bi-file-text me-2" style="color: var(--admin-brand);"></i>
                                         Dados do Contrato
                                     </h5>
                                 </div>
-                                <div class="card-body mt-3">
+                                <div class="admin-card__body">
                                     <form action="/admin/contracts/new" method="POST" id="contractForm">
                                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                     <!-- Step 1: Client Selection -->
@@ -158,14 +158,14 @@
 
                         <!-- Preview -->
                         <div class="col-md-5">
-                            <div class="card shadow-sm border-0 sticky-top" style="top: 2rem;">
-                                <div class="card-header bg-white border-0 pt-4 pb-0">
+                            <div class="admin-card sticky-top" style="top: 2rem;">
+                                <div class="admin-card__header">
                                     <h5 class="mb-0">
-                                        <i class="bi bi-eye text-primary me-2"></i>
+                                        <i class="bi bi-eye me-2" style="color: var(--admin-brand);"></i>
                                         Pré-visualização
                                     </h5>
                                 </div>
-                                <div class="card-body mt-3">
+                                <div class="admin-card__body">
                                     <div id="previewEmpty" class="text-center py-5">
                                     <i class="bi bi-file-earmark-text" style="font-size: 4rem; opacity: 0.2;"></i>
                                     <p class="text-muted mt-3">Preencha os campos ao lado<br>para ver a prévia</p>
@@ -252,5 +252,148 @@
                         </div>
                     </div>
         </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const plans = <%- JSON.stringify(plans || []).replace(/</g, '\\u003c') %>;
+        const clientSelect = document.getElementById('clientSelect');
+        const productSelect = document.getElementById('uiProductSelect');
+        const durationSelect = document.getElementById('uiDurationSelect');
+        const feeSelect = document.getElementById('uiFeeSelect');
+        const planIdInput = document.getElementById('planId');
+        const submitButton = document.getElementById('submitBtn');
+        const clientPreview = document.getElementById('clientPreview');
+        const previewContent = document.getElementById('previewContent');
+        const previewEmpty = document.getElementById('previewEmpty');
+
+        const currency = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const unique = (items) => [...new Set(items)];
+        const selectedPlan = () => plans.find((plan) => String(plan.id) === String(planIdInput.value));
+        const productPlans = () => plans.filter((plan) => String(plan.productId) === String(productSelect.value));
+
+        function setOptions(select, options, placeholder) {
+            select.innerHTML = `<option value="">${placeholder}</option>`;
+            options.forEach((option) => select.appendChild(option));
+        }
+
+        function populateProducts() {
+            const products = [];
+            const seen = new Set();
+            plans.forEach((plan) => {
+                if (plan.product && !seen.has(plan.product.id)) {
+                    seen.add(plan.product.id);
+                    products.push(plan.product);
+                }
+            });
+            setOptions(productSelect, products.map((product) => {
+                const option = document.createElement('option');
+                option.value = product.id;
+                option.textContent = product.name;
+                return option;
+            }), 'Escolha um produto...');
+            productSelect.disabled = products.length === 0;
+        }
+
+        function populateDurations() {
+            const currentPlans = productPlans();
+            const durations = unique(currentPlans.map((plan) => plan.durationMonths)).sort((a, b) => a - b);
+            setOptions(durationSelect, durations.map((duration) => {
+                const option = document.createElement('option');
+                option.value = duration;
+                option.textContent = `${duration} meses`;
+                return option;
+            }), 'Escolha as parcelas...');
+            durationSelect.disabled = durations.length === 0;
+            setOptions(feeSelect, [], 'Escolha a taxa...');
+            feeSelect.disabled = true;
+            planIdInput.value = '';
+        }
+
+        function populateFees() {
+            const currentPlans = productPlans().filter((plan) => String(plan.durationMonths) === String(durationSelect.value));
+            const fees = unique(currentPlans.map((plan) => String(plan.adminFeeRate)));
+            setOptions(feeSelect, fees.map((fee) => {
+                const option = document.createElement('option');
+                option.value = fee;
+                option.textContent = `${Number(fee).toLocaleString('pt-BR')}%`;
+                return option;
+            }), 'Escolha a taxa...');
+            feeSelect.disabled = fees.length === 0;
+            planIdInput.value = '';
+        }
+
+        function updatePlan() {
+            const plan = productPlans().find((candidate) =>
+                String(candidate.durationMonths) === String(durationSelect.value) &&
+                String(candidate.adminFeeRate) === String(feeSelect.value)
+            );
+            planIdInput.value = plan ? plan.id : '';
+            updatePreview();
+            submitButton.disabled = !clientSelect.value || !planIdInput.value;
+        }
+
+        function updateClientPreview() {
+            const selected = clientSelect.options[clientSelect.selectedIndex];
+            if (!clientSelect.value || !selected || !selected.dataset.name) {
+                clientPreview.style.display = 'none';
+                document.getElementById('previewClientInfo').style.display = 'none';
+                return;
+            }
+            const name = selected.dataset.name;
+            const initial = name.trim().charAt(0).toUpperCase();
+            document.getElementById('clientInitial').textContent = initial;
+            document.getElementById('clientName').textContent = name;
+            document.getElementById('clientCpf').textContent = selected.dataset.cpf || 'CPF não informado';
+            document.getElementById('clientEmail').textContent = selected.dataset.email || 'E-mail não informado';
+            clientPreview.style.display = 'block';
+            document.getElementById('previewClientInitial').textContent = initial;
+            document.getElementById('previewClientName').textContent = name;
+            document.getElementById('previewClientCpf').textContent = selected.dataset.cpf || 'CPF não informado';
+            document.getElementById('previewClientInfo').style.display = 'block';
+            submitButton.disabled = !planIdInput.value;
+        }
+
+        function updatePreview() {
+            const plan = selectedPlan();
+            if (!plan) {
+                previewContent.style.display = 'none';
+                previewEmpty.style.display = 'block';
+                return;
+            }
+            previewEmpty.style.display = 'none';
+            previewContent.style.display = 'block';
+            document.getElementById('previewProduct').textContent = plan.product?.name || 'Produto';
+            document.getElementById('previewDuration').textContent = `${plan.durationMonths} meses`;
+            document.getElementById('previewPrice').textContent = currency(plan.product?.price);
+            document.getElementById('previewAdminFee').textContent = `${Number(plan.adminFeeRate).toLocaleString('pt-BR')}%`;
+            document.getElementById('previewFundRate').textContent = `${Number(plan.fundRate).toLocaleString('pt-BR')}%`;
+            const credit = Number(plan.product?.price || 0) * (1 + Number(plan.adminFeeRate || 0) / 100 + Number(plan.fundRate || 0) / 100);
+            document.getElementById('previewCreditValue').textContent = currency(credit);
+            document.getElementById('previewInstallment').textContent = currency(credit / Number(plan.durationMonths || 1));
+            document.getElementById('installmentCount').textContent = plan.durationMonths;
+            if (plan.product?.imageUrl) {
+                document.getElementById('productImage').src = plan.product.imageUrl;
+                document.getElementById('productImageContainer').style.display = 'block';
+            }
+        }
+
+        clientSelect.addEventListener('change', updateClientPreview);
+        productSelect.addEventListener('change', function () {
+            populateDurations();
+            updatePreview();
+            submitButton.disabled = true;
+        });
+        durationSelect.addEventListener('change', function () {
+            populateFees();
+            updatePlan();
+        });
+        feeSelect.addEventListener('change', updatePlan);
+
+        populateProducts();
+        updateClientPreview();
+        updatePreview();
+        submitButton.disabled = true;
+    });
+</script>
 
 <%- include('../../partials/footer') %>

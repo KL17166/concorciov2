@@ -48,7 +48,7 @@
                                 <div class="info-label">Recebido Total</div>
                                 <div style="font-size: 1.7rem; font-weight: 800; line-height: 1; color: #10b981;">
                                     <span style="font-size: 0.9rem;">R$</span>
-                                    <%= summary.totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                                    <%= summary.totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                                 </div>
                                 <small class="text-muted mt-1 d-block"><%= summary.paidCount %> parcelas pagas</small>
                             </div>
@@ -57,7 +57,7 @@
                             </div>
                         </div>
                         <div class="mt-2 pt-2" style="border-top: 1px solid var(--border-color);">
-                            <small class="text-muted"><i class="bi bi-calendar-check me-1"></i>Este mês: <strong style="color:#10b981;">R$ <%= summary.receivedThisMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></strong></small>
+                            <small class="text-muted"><i class="bi bi-calendar-check me-1"></i>Este mês: <strong style="color:#10b981;">R$ <%= summary.receivedThisMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong></small>
                         </div>
                     </div>
                 </div>
@@ -69,7 +69,7 @@
                                 <div class="info-label">Pendente</div>
                                 <div style="font-size: 1.7rem; font-weight: 800; line-height: 1; color: #f59e0b;">
                                     <span style="font-size: 0.9rem;">R$</span>
-                                    <%= summary.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                                    <%= summary.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                                 </div>
                                 <small class="text-muted mt-1 d-block"><%= summary.pendingCount %> parcelas aguardando</small>
                             </div>
@@ -90,7 +90,7 @@
                                 <div class="info-label">Atrasado</div>
                                 <div style="font-size: 1.7rem; font-weight: 800; line-height: 1; color: #ef4444;">
                                     <span style="font-size: 0.9rem;">R$</span>
-                                    <%= summary.totalOverdue.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                                    <%= summary.totalOverdue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                                 </div>
                                 <small class="text-muted mt-1 d-block"><%= summary.overdueCount %> parcelas vencidas</small>
                             </div>
@@ -112,7 +112,7 @@
                                 <div class="info-label">Total Geral</div>
                                 <div style="font-size: 1.7rem; font-weight: 800; line-height: 1; color: var(--primary-color);">
                                     <span style="font-size: 0.9rem;">R$</span>
-                                    <%= (summary.totalPaid + summary.totalPending + summary.totalOverdue).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                                    <%= (summary.totalPaid + summary.totalPending + summary.totalOverdue).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                                 </div>
                                 <small class="text-muted mt-1 d-block"><%= summary.paidCount + summary.pendingCount + summary.overdueCount %> parcelas no total</small>
                             </div>
@@ -121,7 +121,7 @@
                             </div>
                         </div>
                         <div class="mt-2 pt-2" style="border-top: 1px solid var(--border-color);">
-                            <small class="text-muted"><i class="bi bi-arrow-return-left me-1"></i>Reembolsado: <strong style="color:#3b82f6;">R$ <%= summary.totalRefunded.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></strong></small>
+                            <small class="text-muted"><i class="bi bi-arrow-return-left me-1"></i>Reembolsado: <strong style="color:#3b82f6;">R$ <%= summary.totalRefunded.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong></small>
                         </div>
                     </div>
                 </div>
@@ -258,7 +258,7 @@
                                             </td>
                                             <td>
                                                 <strong style="color:var(--success-color); font-size:0.95rem;">
-                                                    R$ <%= Number(inst.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                                                    R$ <%= Number(inst.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                                                 </strong>
                                             </td>
                                             <td>
@@ -392,7 +392,7 @@
                                         <div class="d-flex gap-4 mb-3">
                                             <div>
                                                 <div class="info-label">Valor</div>
-                                                <strong style="color:var(--success-color); font-size:1.1rem;">R$ <%= Number(inst.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></strong>
+                                                <strong style="color:var(--success-color); font-size:1.1rem;">R$ <%= Number(inst.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong>
                                             </div>
                                             <div>
                                                 <div class="info-label">Parcela</div>

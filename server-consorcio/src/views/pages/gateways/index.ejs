@@ -588,10 +588,13 @@
                                 </div>
 
                                 <!-- Submit -->
-                                <button class="btn btn-lg w-100" id="wdBtn" onclick="doWithdraw()" style="border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, var(--primary-color), #8b5cf6); color: white; border: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); transition: all 0.3s;">
+                                <button class="btn btn-lg w-100" id="wdBtn" onclick="doWithdraw()" disabled aria-disabled="true" title="Aguardando conexão com o gateway" style="border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, var(--primary-color), #8b5cf6); color: white; border: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); transition: all 0.3s;">
                                     <i class="bi bi-send-fill me-2"></i>Solicitar Saque
                                 </button>
 
+                                <div id="wdConnectionNotice" class="alert alert-warning py-2 px-3 mb-3" role="status">
+                                    <i class="bi bi-wifi-off me-2"></i>Aguardando conexão com o gateway para habilitar saques.
+                                </div>
                                 <div id="wdResult" class="wd-result"></div>
 
                                 <!-- PixGo Note -->
@@ -655,6 +658,21 @@
             // Balance Fetch (shared: overview + withdraw)
             // ═══════════════════════════════════════════
             const fmt = (v) => v == null || isNaN(v) ? '0,00' : Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            let gatewayConnected = false;
+            const setWithdrawAvailability = (connected) => {
+                gatewayConnected = connected;
+                const btn = document.getElementById('wdBtn');
+                const notice = document.getElementById('wdConnectionNotice');
+                if (btn) {
+                    btn.disabled = !connected;
+                    btn.setAttribute('aria-disabled', String(!connected));
+                    btn.title = connected ? 'Solicitar saque' : 'Aguardando conexão com o gateway';
+                }
+                if (notice) {
+                    notice.classList.toggle('d-none', connected);
+                    notice.className = connected ? 'd-none' : 'alert alert-warning py-2 px-3 mb-3';
+                }
+            };
 
             (async function loadBal() {
                 try {
@@ -662,6 +680,7 @@
                     if (!r.ok) throw new Error('HTTP ' + r.status);
                     const d = await r.json();
                     if (d.error) throw new Error(d.error);
+                    setWithdrawAvailability(true);
 
                     // Overview cards
                     const setOV = (id, val) => { const el = document.getElementById(id); if (el) el.innerHTML = `<span class="cur">R$</span> ${fmt(val)}`; };
@@ -681,6 +700,7 @@
                     ['ovAvailable', 'ovPending', 'ovLocked'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = errHTML; });
                     const wBal = document.getElementById('wdBalance');
                     if (wBal) { wBal.style.fontSize = '1rem'; wBal.style.color = 'var(--text-secondary)'; wBal.textContent = 'Sem conexão'; wBal.style.background = 'none'; wBal.style.webkitTextFillColor = 'var(--text-secondary)'; }
+                    setWithdrawAvailability(false);
                 }
             })();
 
@@ -694,6 +714,9 @@
                 const pixKey = document.getElementById('wdKey').value;
                 const desc = document.getElementById('wdDesc').value;
 
+                if (!gatewayConnected) {
+                    res.className = 'wd-result err'; res.innerHTML = '<i class="bi bi-wifi-off me-2"></i>O gateway está sem conexão. Tente novamente quando o saldo estiver disponível.'; res.style.display = 'block'; return;
+                }
                 if (!amount || !pixKey) {
                     res.className = 'wd-result err'; res.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>Preencha o valor e a chave PIX'; res.style.display = 'block'; return;
                 }

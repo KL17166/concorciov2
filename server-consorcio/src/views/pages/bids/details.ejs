@@ -65,7 +65,7 @@
                                     <div class="p-3 rounded-3" style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2);">
                                         <div class="info-label mb-1">Valor do Lance</div>
                                         <div class="fw-bold" style="font-size:1.4rem; color:var(--success-color);">
-                                            R$ <%= Number(bid.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                                            R$ <%= Number(bid.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                                         </div>
                                     </div>
                                 </div>
@@ -166,7 +166,7 @@
                                 </div>
                                 <div class="col-6">
                                     <div class="info-label">Crédito Total</div>
-                                    <span class="fw-semibold small" style="color:var(--success-color);">R$ <%= Number(bid.subscription.creditValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></span>
+                                    <span class="fw-semibold small" style="color:var(--success-color);">R$ <%= Number(bid.subscription.creditValue).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
                                 </div>
                             </div>
 

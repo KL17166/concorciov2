@@ -222,4 +222,140 @@
                     </div>
         </div>
 
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const typeSelect = document.getElementById('typeSelect');
+                const categorySelect = document.getElementById('categorySelect');
+                const categoryHidden = document.getElementById('categoryHiddenInputValue');
+                const specsJson = document.getElementById('specsJson');
+                const specsContainer = document.getElementById('dynamicSpecsContainer');
+                const imageContainer = document.getElementById('imageUrlsContainer');
+                const imageUrlsHidden = document.getElementById('imageUrlsArrayHidden');
+                const mainImageHidden = document.getElementById('mainImageUrlHidden');
+                const addImageButton = document.getElementById('addImageBtn');
+                const form = document.getElementById('productForm');
+
+                const categoryOptions = {
+                    MOTO: [
+                        ['urbana', 'Urbana'], ['esportiva', 'Esportiva'], ['trail', 'Trail'],
+                        ['custom', 'Custom'], ['street', 'Street'], ['adventure', 'Adventure'],
+                        ['scooter', 'Scooter'], ['naked', 'Naked'], ['touring', 'Touring']
+                    ],
+                    CARRO: [['suv', 'SUV'], ['hatch', 'Hatch'], ['sedan', 'Sedan'], ['pickup', 'Picape'], ['esportivo', 'Esportivo'], ['outros', 'Outros']],
+                    CARTA_CREDITO: [['geral', 'Uso geral'], ['veiculo', 'Veículos'], ['imovel', 'Imóveis'], ['premium', 'Premium']],
+                    ELETRONICO: [['gaming', 'Gaming'], ['notebook', 'Notebook'], ['smartphone', 'Smartphone'], ['tablet', 'Tablet'], ['outros', 'Outros']],
+                    IMOVEL: [['residencial', 'Residencial'], ['comercial', 'Comercial'], ['terreno', 'Terreno'], ['rural', 'Rural']],
+                    SERVICO: [['educacao', 'Educação'], ['viagem', 'Viagem'], ['saude', 'Saúde'], ['consultoria', 'Consultoria'], ['outros', 'Outros']]
+                };
+
+                const specsByType = {
+                    MOTO: [['displacement', 'Cilindrada'], ['power', 'Potência'], ['torque', 'Torque'], ['transmission', 'Transmissão'], ['engineType', 'Tipo de motor'], ['frontBrake', 'Freio dianteiro'], ['rearBrake', 'Freio traseiro'], ['weight', 'Peso'], ['fuelCapacity', 'Tanque'], ['consumption', 'Consumo']],
+                    CARRO: [['motor', 'Motor'], ['potencia', 'Potência'], ['cambio', 'Câmbio'], ['combustivel', 'Combustível'], ['portas', 'Portas'], ['lugares', 'Lugares'], ['portaMalas', 'Porta-malas'], ['tracao', 'Tração']],
+                    CARTA_CREDITO: [['finalidade', 'Finalidade'], ['restricoes', 'Restrições']],
+                    ELETRONICO: [['processador', 'Processador'], ['gpu', 'GPU'], ['ram', 'Memória RAM'], ['armazenamento', 'Armazenamento'], ['tela', 'Tela'], ['bateria', 'Bateria']],
+                    IMOVEL: [['area', 'Área'], ['quartos', 'Quartos'], ['banheiros', 'Banheiros'], ['vagas', 'Vagas'], ['localizacao', 'Localização']],
+                    SERVICO: [['descricao', 'Descrição do serviço'], ['cobertura', 'Cobertura'], ['duracao', 'Duração'], ['observacoes', 'Observações']]
+                };
+
+                const parseJson = (value, fallback) => {
+                    try {
+                        const parsed = typeof value === 'string' ? JSON.parse(value || '') : value;
+                        return parsed && typeof parsed === 'object' ? parsed : fallback;
+                    } catch (_) {
+                        return fallback;
+                    }
+                };
+
+                let specsState = parseJson(<%- JSON.stringify(product.specs || '{}') %>, {});
+                let imageUrls = parseJson(<%- JSON.stringify(product.imageUrls || '[]') %>, []);
+                if (!Array.isArray(imageUrls)) imageUrls = [];
+                <% if (product.imageUrl) { %>
+                    if (imageUrls.length === 0) imageUrls.push(<%- JSON.stringify(product.imageUrl) %>);
+                <% } %>
+
+                const renderCategories = () => {
+                    const type = typeSelect.value;
+                    const options = [...(categoryOptions[type] || [])];
+                    const currentValue = categoryHidden.value;
+                    if (currentValue && !options.some(([value]) => value === currentValue)) {
+                        options.unshift([currentValue, currentValue]);
+                    }
+                    categorySelect.innerHTML = '<option value="">Selecione uma categoria...</option>' + options
+                        .map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
+                    categorySelect.value = currentValue && options.some(([value]) => value === currentValue)
+                        ? currentValue
+                        : (options[0]?.[0] || '');
+                    categoryHidden.value = categorySelect.value;
+                };
+
+                const readRenderedSpecs = () => {
+                    if (!specsContainer) return {};
+                    const values = {};
+                    specsContainer.querySelectorAll('[data-spec-key]').forEach((field) => {
+                        const value = field.value.trim();
+                        if (value) values[field.dataset.specKey] = value;
+                    });
+                    return values;
+                };
+
+                const renderSpecs = () => {
+                    const fields = specsByType[typeSelect.value] || [];
+                    if (fields.length === 0) {
+                        specsContainer.innerHTML = '<div class="col-12"><div class="text-muted small"><i class="bi bi-info-circle me-1"></i>Não há especificações técnicas específicas para este tipo.</div></div>';
+                        return;
+                    }
+                    specsContainer.innerHTML = fields.map(([key, label]) => `
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold" for="spec-${key}">${label}</label>
+                            <input type="text" class="form-control" id="spec-${key}" data-spec-key="${key}" value="${String(specsState[key] ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">
+                        </div>
+                    `).join('');
+                };
+
+                const renderImages = () => {
+                    if (imageUrls.length === 0) {
+                        imageContainer.innerHTML = '<div class="text-muted small mb-2"><i class="bi bi-images me-1"></i>Nenhuma imagem adicionada.</div>';
+                    } else {
+                        imageContainer.innerHTML = imageUrls.map((url, index) => `
+                            <div class="input-group mb-2" data-image-row="${index}">
+                                <span class="input-group-text"><i class="bi bi-image"></i></span>
+                                <input type="url" class="form-control image-url-input" value="${String(url).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" placeholder="https://...">
+                                <button type="button" class="btn btn-outline-danger remove-image" title="Remover imagem"><i class="bi bi-trash"></i></button>
+                            </div>
+                        `).join('');
+                    }
+                    imageContainer.querySelectorAll('.remove-image').forEach((button) => {
+                        button.addEventListener('click', () => {
+                            const row = button.closest('[data-image-row]');
+                            imageUrls.splice(Number(row.dataset.imageRow), 1);
+                            renderImages();
+                        });
+                    });
+                };
+
+                typeSelect.addEventListener('change', () => {
+                    specsState = { ...specsState, ...readRenderedSpecs() };
+                    renderCategories();
+                    renderSpecs();
+                });
+                categorySelect.addEventListener('change', () => { categoryHidden.value = categorySelect.value; });
+                addImageButton.addEventListener('click', () => {
+                    const currentUrls = [...imageContainer.querySelectorAll('.image-url-input')].map(input => input.value.trim()).filter(Boolean);
+                    imageUrls = [...currentUrls, ''];
+                    renderImages();
+                    imageContainer.querySelector('.image-url-input:last-of-type')?.focus();
+                });
+                form.addEventListener('submit', () => {
+                    specsState = { ...specsState, ...readRenderedSpecs() };
+                    specsJson.value = JSON.stringify(specsState);
+                    imageUrls = [...imageContainer.querySelectorAll('.image-url-input')].map(input => input.value.trim()).filter(Boolean);
+                    imageUrlsHidden.value = JSON.stringify(imageUrls);
+                    mainImageHidden.value = imageUrls[0] || '';
+                });
+
+                renderCategories();
+                renderSpecs();
+                renderImages();
+            });
+        </script>
 <%- include('../../partials/footer') %>

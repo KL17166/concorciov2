@@ -1,0 +1,107 @@
+<%- include('../../partials/header') %>
+<%- include('../../partials/sidebar', { path: '/people' }) %>
+
+<div class="main-content admin-page">
+    <div class="top-bar">
+        <div>
+            <div class="admin-page__eyebrow">Pessoas e Contas</div>
+            <h1 class="page-title"><%= editing ? 'Editar pessoa/conta' : 'Nova pessoa/conta' %></h1>
+            <p class="text-muted mb-0"><%= editing ? 'Perfil, contatos e acesso ficam organizados em seções protegidas.' : 'Cadastre uma pessoa e defina o tipo de conta.' %></p>
+        </div>
+        <div class="top-bar-actions"><a href="/admin/people" class="btn btn-outline-secondary admin-btn"><i class="bi bi-arrow-left"></i> Voltar</a></div>
+    </div>
+
+    <% if (typeof error_msg !== 'undefined' && error_msg && error_msg.length > 0) { %><div class="alert alert-danger admin-alert"><i class="bi bi-exclamation-triangle me-2"></i><%= error_msg %></div><% } %>
+    <% if (typeof success_msg !== 'undefined' && success_msg && success_msg.length > 0) { %><div class="alert alert-success admin-alert"><i class="bi bi-check-circle me-2"></i><%= success_msg %></div><% } %>
+
+    <% if (!editing) { %>
+        <section class="admin-card">
+            <div class="admin-card__header"><div><h2>Dados básicos</h2><div class="admin-muted mt-1">Campos obrigatórios são validados no servidor.</div></div></div>
+            <div class="admin-card__body">
+                <form method="post" action="/admin/people/new">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div class="admin-form-grid">
+                        <div><label class="form-label" for="name">Nome completo *</label><input class="form-control" id="name" name="name" required></div>
+                        <div><label class="form-label" for="email">E-mail *</label><input class="form-control" id="email" type="email" name="email" required></div>
+                        <div><label class="form-label" for="cpf">CPF *</label><input class="form-control" id="cpf" name="cpf" inputmode="numeric" maxlength="14" required></div>
+                        <div><label class="form-label" for="phone">Telefone</label><input class="form-control" id="phone" name="phone"></div>
+                        <div><label class="form-label" for="password">Senha inicial *</label><input class="form-control" id="password" type="password" name="password" minlength="8" required></div>
+                        <% if (canManageAccess) { %><div><label class="form-label" for="role">Tipo de conta</label><select class="form-select" id="role" name="role"><option value="CLIENT">Cliente</option><option value="SUPPORT">Suporte</option><option value="MANAGER">Gerente</option><option value="MASTER">Mestre</option></select></div><% } %>
+                        <div class="span-2"><div class="admin-section-label mb-2">Endereço</div></div>
+                        <div><label class="form-label" for="address_cep">CEP</label><input class="form-control" id="address_cep" name="address_cep"></div>
+                        <div><label class="form-label" for="address_street">Rua</label><input class="form-control" id="address_street" name="address_street"></div>
+                        <div><label class="form-label" for="address_number">Número</label><input class="form-control" id="address_number" name="address_number"></div>
+                        <div><label class="form-label" for="address_complement">Complemento</label><input class="form-control" id="address_complement" name="address_complement"></div>
+                        <div><label class="form-label" for="address_neighborhood">Bairro</label><input class="form-control" id="address_neighborhood" name="address_neighborhood"></div>
+                        <div><label class="form-label" for="address_city">Cidade</label><input class="form-control" id="address_city" name="address_city"></div>
+                        <div><label class="form-label" for="address_state">Estado</label><input class="form-control" id="address_state" name="address_state" maxlength="2"></div>
+                    </div>
+                    <div class="admin-actions mt-4"><a class="btn btn-outline-secondary admin-btn" href="/admin/people">Cancelar</a><button class="btn btn-primary admin-btn" type="submit"><i class="bi bi-check2"></i> Criar cadastro</button></div>
+                </form>
+            </div>
+        </section>
+    <% } else { %>
+        <div class="admin-detail-grid">
+            <section class="admin-card">
+                <div class="admin-card__header"><div><h2>Perfil e contato</h2><div class="admin-muted mt-1">O gerente pode atualizar o e-mail; o suporte permanece somente leitura.</div></div></div>
+                <div class="admin-card__body">
+                    <form method="post" action="/admin/people/<%= person.id %>/profile">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <div class="admin-form-grid">
+                            <div class="span-2"><label class="form-label" for="name">Nome completo</label><input class="form-control" id="name" name="name" value="<%= person.name || '' %>" required></div>
+                            <div class="span-2"><label class="form-label" for="email">E-mail</label><input class="form-control" id="email" type="email" name="email" value="<%= person.email || '' %>" <%= canChangeEmail ? '' : 'readonly' %> required></div>
+                            <div class="span-2"><label class="form-label" for="phone">Telefone</label><input class="form-control" id="phone" name="phone" value="<%= person.phone || '' %>"></div>
+                            <div class="span-2"><div class="admin-section-label mb-2">Endereço</div></div>
+                            <div><label class="form-label" for="address_cep">CEP</label><input class="form-control" id="address_cep" name="address_cep" value="<%= parsedAddress.cep || '' %>"></div>
+                            <div><label class="form-label" for="address_street">Rua</label><input class="form-control" id="address_street" name="address_street" value="<%= parsedAddress.street || '' %>"></div>
+                            <div><label class="form-label" for="address_number">Número</label><input class="form-control" id="address_number" name="address_number" value="<%= parsedAddress.number || '' %>"></div>
+                            <div><label class="form-label" for="address_complement">Complemento</label><input class="form-control" id="address_complement" name="address_complement" value="<%= parsedAddress.complement || '' %>"></div>
+                            <div><label class="form-label" for="address_neighborhood">Bairro</label><input class="form-control" id="address_neighborhood" name="address_neighborhood" value="<%= parsedAddress.neighborhood || '' %>"></div>
+                            <div><label class="form-label" for="address_city">Cidade</label><input class="form-control" id="address_city" name="address_city" value="<%= parsedAddress.city || '' %>"></div>
+                            <div><label class="form-label" for="address_state">Estado</label><input class="form-control" id="address_state" name="address_state" value="<%= parsedAddress.state || '' %>" maxlength="2"></div>
+                        </div>
+                        <% if (canChangeEmail) { %><div class="admin-muted mt-3"><i class="bi bi-info-circle me-1"></i>Seu perfil pode alterar o e-mail desta conta.</div><% } %>
+                        <div class="admin-actions mt-4"><a class="btn btn-outline-secondary admin-btn" href="/admin/people/<%= person.id %>">Cancelar</a><button class="btn btn-primary admin-btn" type="submit"><i class="bi bi-check2"></i> Salvar perfil</button></div>
+                    </form>
+                </div>
+            </section>
+
+            <section class="admin-card">
+                <div class="admin-card__header"><div><h2>Perfil de acesso</h2><div class="admin-muted mt-1">Role e senha são operações de alta sensibilidade.</div></div></div>
+                <div class="admin-card__body">
+                    <div class="mb-4"><div class="admin-section-label">Nível atual</div><div class="mt-2"><span class="admin-pill admin-pill--brand"><%= person.roleLabel %></span></div></div>
+                    <% if (canManageAccess) { %>
+                        <form method="post" action="/admin/people/<%= person.id %>/access" class="mb-4">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <label class="form-label" for="role">Alterar nível</label>
+                            <select class="form-select" id="role" name="role"><option value="CLIENT" <%= person.role === 'CLIENT' ? 'selected' : '' %>>Cliente</option><option value="SUPPORT" <%= person.role === 'SUPPORT' ? 'selected' : '' %>>Suporte</option><option value="MANAGER" <%= person.role === 'MANAGER' ? 'selected' : '' %>>Gerente</option><option value="MASTER" <%= person.role === 'MASTER' ? 'selected' : '' %>>Mestre</option></select>
+                            <button class="btn btn-outline-primary admin-btn mt-2" type="submit"><i class="bi bi-shield-check"></i> Atualizar acesso</button>
+                        </form>
+                        <div class="border-top pt-4">
+                            <div class="admin-section-label">Alterar Senha Diretamente</div>
+                            <p class="admin-muted mt-2">Como Mestre, você pode definir uma nova senha diretamente para este usuário ou gerar uma aleatória.</p>
+                            <form method="post" action="/admin/people/<%= person.id %>/password" class="mb-3">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <div class="mb-2">
+                                    <label class="form-label small" for="new_password">Nova Senha (mínimo 6 caracteres)</label>
+                                    <div class="input-group">
+                                        <input class="form-control" id="new_password" type="text" name="password" minlength="6" placeholder="Digite a nova senha desejada" required>
+                                        <button class="btn btn-primary admin-btn" type="submit"><i class="bi bi-check2"></i> Salvar Senha</button>
+                                    </div>
+                                </div>
+                            </form>
+                            <form method="post" action="/admin/people/<%= person.id %>/reset-password">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <button class="btn btn-outline-warning admin-btn btn-sm" type="submit"><i class="bi bi-key"></i> Gerar Senha Aleatória Automática</button>
+                            </form>
+                        </div>
+                    <% } else { %>
+                        <div class="admin-empty py-4"><i class="bi bi-lock fs-2 d-block mb-2"></i>Alterações de role e senha são restritas ao mestre.</div>
+                    <% } %>
+                </div>
+            </section>
+        </div>
+    <% } %>
+</div>
+
+<%- include('../../partials/footer') %>

@@ -1,0 +1,212 @@
+<%- include('../../partials/header') %>
+<%- include('../../partials/sidebar', { path: '/contracts' }) %>
+
+<%
+    const statusLabels = {
+        PENDING: 'Pendente',
+        PENDING_KYC: 'Aguardando KYC',
+        ACTIVE: 'Ativo',
+        CONTEMPLATED: 'Contemplado',
+        COMPLETED: 'Concluído',
+        CANCELLED: 'Cancelado'
+    };
+    const installmentStatusLabels = {
+        PENDING: 'Pendente',
+        PAID: 'Pago',
+        OVERDUE: 'Em atraso',
+        CANCELLED: 'Cancelada',
+        REFUNDED: 'Reembolsada'
+    };
+    const bidStatusLabels = {
+        PENDING: 'Pendente',
+        APPROVED: 'Aprovado',
+        REJECTED: 'Rejeitado',
+        CONTEMPLATED: 'Contemplado'
+    };
+    const statusClass = (status) => ({
+        ACTIVE: 'success',
+        CONTEMPLATED: 'success',
+        COMPLETED: 'success',
+        PENDING: 'warning',
+        PENDING_KYC: 'warning',
+        CANCELLED: 'danger'
+    }[status] || 'muted');
+    const formatDate = (value) => value ? new Date(value).toLocaleDateString('pt-BR') : 'Não informado';
+    const formatDateTime = (value) => value ? new Date(value).toLocaleString('pt-BR') : 'Não informado';
+    const formatCurrency = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const displayStatus = (status, labels) => labels[status] || status || 'Não informado';
+    const progressValue = Math.max(0, Math.min(100, Number(stats.progress) || 0));
+    const canManageContracts = typeof hasCapability === 'function' && hasCapability('contracts.manage');
+    const canShowMessage = (message) => typeof message !== 'undefined' && message && message.length > 0;
+%>
+
+<div class="main-content admin-page">
+    <div class="top-bar">
+        <div>
+            <div class="admin-page__eyebrow">Operação · Contratos</div>
+            <h1 class="page-title">Detalhes do contrato</h1>
+            <p class="text-muted mb-0">Visão consolidada do contrato, pagamentos, lances e histórico.</p>
+        </div>
+        <div class="top-bar-actions">
+            <a href="/admin/contracts" class="btn btn-outline-secondary admin-btn"><i class="bi bi-arrow-left"></i> Voltar</a>
+            <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Alternar tema">
+                <i class="bi bi-moon-stars" id="themeIcon"></i>
+            </button>
+        </div>
+    </div>
+
+    <% if (canShowMessage(success_msg)) { %>
+        <div class="alert alert-success admin-alert" role="alert"><i class="bi bi-check-circle me-2"></i><%= Array.isArray(success_msg) ? success_msg.join(' ') : success_msg %></div>
+    <% } %>
+    <% if (canShowMessage(error_msg)) { %>
+        <div class="alert alert-danger admin-alert" role="alert"><i class="bi bi-exclamation-triangle me-2"></i><%= Array.isArray(error_msg) ? error_msg.join(' ') : error_msg %></div>
+    <% } %>
+
+    <section class="admin-card mb-3">
+        <div class="admin-card__header">
+            <div>
+                <div class="admin-page__eyebrow">Contrato</div>
+                <h2><%= contract.id %></h2>
+                <div class="admin-muted mt-1">Criado em <%= formatDate(contract.createdAt) %> · Atualizado em <%= formatDateTime(contract.updatedAt) %></div>
+            </div>
+            <span class="admin-pill admin-pill--<%= statusClass(contract.status) %>"><%= displayStatus(contract.status, statusLabels) %></span>
+        </div>
+        <div class="admin-card__body">
+            <div class="admin-detail-grid">
+                <div>
+                    <div class="admin-muted mb-2">Cliente</div>
+                    <div class="person-cell">
+                        <span class="person-avatar"><%= (contract.user?.name || '?').split(' ').slice(0, 2).map(part => part[0]).join('').toUpperCase() %></span>
+                        <div>
+                            <div class="person-cell__name"><%= contract.user?.name || 'Não informado' %></div>
+                            <div class="person-cell__meta"><%= contract.user?.email || 'E-mail não informado' %></div>
+                            <div class="person-cell__meta">CPF: <%= contract.user?.cpf || 'Não informado' %></div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="admin-muted mb-2">Grupo e cota</div>
+                    <div class="h5 mb-1">G:<%= contract.groupNumber || '—' %> / C:<%= contract.quotaNumber || '—' %></div>
+                    <div class="admin-muted">Identificação operacional do consórcio</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="admin-detail-grid">
+        <section class="admin-card">
+            <div class="admin-card__header">
+                <div><h2>Plano contratado</h2><div class="admin-muted mt-1">Produto e condições comerciais.</div></div>
+                <span class="admin-pill admin-pill--brand"><%= contract.plan?.product?.name || contract.plan?.name || 'Plano não informado' %></span>
+            </div>
+            <div class="admin-card__body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5 admin-muted">Produto</dt><dd class="col-sm-7"><%= contract.plan?.product?.name || 'Não informado' %></dd>
+                    <dt class="col-sm-5 admin-muted">Plano</dt><dd class="col-sm-7"><%= contract.plan?.name || 'Não informado' %></dd>
+                    <dt class="col-sm-5 admin-muted">Prazo</dt><dd class="col-sm-7"><%= contract.plan?.durationMonths || contract.totalInstallments || 0 %> meses</dd>
+                    <dt class="col-sm-5 admin-muted">Taxa administrativa</dt><dd class="col-sm-7"><%= contract.plan?.adminFeeRate ?? '—' %>%</dd>
+                    <dt class="col-sm-5 admin-muted">Fundo de reserva</dt><dd class="col-sm-7"><%= contract.plan?.fundRate ?? '—' %>%</dd>
+                </dl>
+            </div>
+        </section>
+
+        <section class="admin-card">
+            <div class="admin-card__header">
+                <div><h2>Resumo financeiro</h2><div class="admin-muted mt-1">Valores e evolução do pagamento.</div></div>
+            </div>
+            <div class="admin-card__body">
+                <dl class="row mb-3">
+                    <dt class="col-sm-6 admin-muted">Valor do crédito</dt><dd class="col-sm-6 text-end fw-semibold"><%= formatCurrency(contract.creditValue) %></dd>
+                    <dt class="col-sm-6 admin-muted">Total pago</dt><dd class="col-sm-6 text-end fw-semibold text-success"><%= formatCurrency(stats.totalPaid) %></dd>
+                    <dt class="col-sm-6 admin-muted">Saldo devedor</dt><dd class="col-sm-6 text-end fw-semibold"><%= formatCurrency(contract.balanceDue) %></dd>
+                    <dt class="col-sm-6 admin-muted">Parcelas</dt><dd class="col-sm-6 text-end"><%= contract.paidInstallments || stats.paidInstallments || 0 %>/<%= contract.totalInstallments || 0 %></dd>
+                </dl>
+                <div class="d-flex justify-content-between align-items-center mb-2"><span class="admin-muted">Progresso</span><strong><%= progressValue.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) %>%</strong></div>
+                <div class="progress" role="progressbar" aria-label="Progresso de pagamento" aria-valuenow="<%= progressValue %>" aria-valuemin="0" aria-valuemax="100" style="height: 10px;">
+                    <div class="progress-bar bg-primary" style="width: <%= progressValue %>%"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <section class="admin-card mt-3">
+        <div class="admin-card__header">
+            <div><h2>Dados do contrato</h2><div class="admin-muted mt-1">Assinatura digital e situação de contemplação.</div></div>
+            <span class="admin-pill admin-pill--<%= contract.termsAccepted ? 'success' : 'muted' %>"><%= contract.termsAccepted ? 'Termos aceitos' : 'Termos pendentes' %></span>
+        </div>
+        <div class="admin-card__body">
+            <div class="admin-detail-grid">
+                <dl class="row mb-0">
+                    <dt class="col-sm-6 admin-muted">Termos aceitos em</dt><dd class="col-sm-6"><%= formatDateTime(contract.termsAcceptedAt) %></dd>
+                    <dt class="col-sm-6 admin-muted">IP da assinatura</dt><dd class="col-sm-6"><%= contract.termsIpAddress || 'Não informado' %></dd>
+                    <dt class="col-sm-6 admin-muted">Contemplado</dt><dd class="col-sm-6"><%= contract.contemplated ? 'Sim' : 'Não' %></dd>
+                </dl>
+                <dl class="row mb-0">
+                    <dt class="col-sm-6 admin-muted">Data da contemplação</dt><dd class="col-sm-6"><%= formatDate(contract.contemplatedDate || contract.contemplationDate) %></dd>
+                    <dt class="col-sm-6 admin-muted">Tipo</dt><dd class="col-sm-6"><%= contract.contemplationType || 'Não informado' %></dd>
+                    <dt class="col-sm-6 admin-muted">Última atualização</dt><dd class="col-sm-6"><%= formatDateTime(contract.updatedAt) %></dd>
+                </dl>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-card mt-3">
+        <div class="admin-card__header">
+            <div><h2>Parcelas</h2><div class="admin-muted mt-1">Histórico de vencimentos e pagamentos.</div></div>
+            <span class="admin-pill admin-pill--muted"><%= contract.installments.length %> registros</span>
+        </div>
+        <% if (contract.installments.length) { %>
+            <div class="admin-table-wrap"><table class="table admin-table mb-0"><thead><tr><th>#</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Pagamento</th><th>Método</th></tr></thead><tbody>
+                <% contract.installments.forEach(installment => { %>
+                    <tr>
+                        <td><strong><%= installment.number %></strong></td>
+                        <td><%= formatDate(installment.dueDate) %></td>
+                        <td><%= formatCurrency(installment.amount) %></td>
+                        <td><span class="admin-pill admin-pill--<%= installment.status === 'PAID' ? 'success' : installment.status === 'OVERDUE' ? 'danger' : 'muted' %>"><%= displayStatus(installment.status, installmentStatusLabels) %></span></td>
+                        <td><%= formatDate(installment.paymentDate) %></td>
+                        <td><%= installment.paymentMethod || '—' %></td>
+                    </tr>
+                <% }) %>
+            </tbody></table></div>
+        <% } else { %>
+            <div class="admin-empty"><i class="bi bi-calendar2-x fs-1 d-block mb-3"></i>Nenhuma parcela vinculada.</div>
+        <% } %>
+    </section>
+
+    <section class="admin-card mt-3">
+        <div class="admin-card__header">
+            <div><h2>Lances</h2><div class="admin-muted mt-1">Propostas relacionadas a este contrato.</div></div>
+            <span class="admin-pill admin-pill--muted"><%= contract.bids.length %> registros</span>
+        </div>
+        <% if (contract.bids.length) { %>
+            <div class="admin-table-wrap"><table class="table admin-table mb-0"><thead><tr><th>Tipo</th><th>Percentual</th><th>Valor</th><th>Status</th><th>Vencedor</th><th>Criado em</th></tr></thead><tbody>
+                <% contract.bids.forEach(bid => { %>
+                    <tr>
+                        <td><%= bid.type === 'FIXED' ? 'Fixo' : bid.type === 'FREE' ? 'Livre' : bid.type %></td>
+                        <td><%= bid.percentage %>%</td>
+                        <td><%= formatCurrency(bid.amount) %></td>
+                        <td><span class="admin-pill admin-pill--<%= bid.status === 'APPROVED' || bid.status === 'CONTEMPLATED' ? 'success' : bid.status === 'REJECTED' ? 'danger' : 'muted' %>"><%= displayStatus(bid.status, bidStatusLabels) %></span></td>
+                        <td><%= bid.isWinner ? 'Sim' : 'Não' %></td>
+                        <td><%= formatDate(bid.createdAt) %></td>
+                    </tr>
+                <% }) %>
+            </tbody></table></div>
+        <% } else { %>
+            <div class="admin-empty"><i class="bi bi-trophy fs-1 d-block mb-3"></i>Nenhum lance registrado.</div>
+        <% } %>
+    </section>
+
+    <% if (canManageContracts && !['CANCELLED', 'COMPLETED', 'CONTEMPLATED'].includes(contract.status)) { %>
+        <section class="admin-card mt-3">
+            <div class="admin-card__header"><div><h2>Ações do contrato</h2><div class="admin-muted mt-1">Operações sensíveis protegidas por capacidade.</div></div><span class="admin-pill admin-pill--muted"><i class="bi bi-shield-lock"></i> Controle de acesso</span></div>
+            <div class="admin-card__body d-flex flex-wrap gap-2">
+                <% if (contract.status === 'PENDING' || contract.status === 'PENDING_KYC') { %>
+                    <form method="post" action="/admin/contracts/<%= contract.id %>/contemplate" onsubmit="return confirm('Confirmar a contemplação deste contrato?')"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="contemplationType" value="DIRECT"><button class="btn btn-outline-warning admin-btn" type="submit"><i class="bi bi-award"></i> Contemplar contrato</button></form>
+                <% } %>
+                <form method="post" action="/admin/contracts/<%= contract.id %>/cancel" onsubmit="return confirm('Confirmar o cancelamento deste contrato?')"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-outline-danger admin-btn" type="submit"><i class="bi bi-x-circle"></i> Cancelar contrato</button></form>
+            </div>
+        </section>
+    <% } %>
+</div>
+
+<%- include('../../partials/footer') %>

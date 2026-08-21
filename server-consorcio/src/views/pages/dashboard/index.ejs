@@ -119,7 +119,7 @@
                                 <div class="info-label">Recebido Este Mês</div>
                                 <div style="font-size: 1.8rem; font-weight: 800; line-height: 1; color: #10b981;">
                                     <span style="font-size: 1rem;">R$</span>
-                                    <%= stats.totalReceivedThisMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                                    <%= stats.totalReceivedThisMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                                 </div>
                             </div>
                             <div class="stat-icon-wrapper" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
@@ -239,6 +239,8 @@
                                                             <span class="badge-premium" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);"><i class="bi bi-clock-fill"></i>Pendente</span>
                                                         <% } else if (contract.status === 'CONTEMPLATED') { %>
                                                             <span class="badge-premium" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2);"><i class="bi bi-trophy-fill"></i>Contemplado</span>
+<% } else if (contract.status === 'CANCELLED') { %>
+                                                            <span class="badge-premium" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);"><i class="bi bi-x-circle-fill"></i>Cancelado</span>
                                                         <% } else { %>
                                                             <span class="badge-premium" style="background: rgba(108, 117, 125, 0.1); color: #6c757d; border: 1px solid rgba(108, 117, 125, 0.2);"><%= contract.status %></span>
                                                         <% } %>
@@ -289,7 +291,7 @@
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <strong style="color: #10b981;">R$ <%= Number(payment.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></strong>
+                                                        <strong style="color: #10b981;">R$ <%= Number(payment.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong>
                                                     </td>
                                                     <td>
                                                         <% if (payment.paymentMethod) { %>

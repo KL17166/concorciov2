@@ -1,0 +1,104 @@
+<%- include('../../partials/header') %>
+<%- include('../../partials/sidebar', { path: '/people' }) %>
+
+<div class="main-content admin-page">
+    <div class="top-bar">
+        <div>
+            <h1 class="page-title">Pessoas e Contas</h1>
+            <p class="text-muted mb-0">Um diretório único para clientes, administradores e perfis de acesso.</p>
+        </div>
+        <div class="top-bar-actions">
+            <% if (hasCapability('people.create')) { %>
+                <a href="/admin/people/new" class="btn btn-primary admin-btn">
+                    <i class="bi bi-person-plus"></i> Nova pessoa
+                </a>
+            <% } %>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Alternar tema">
+                <i class="bi bi-moon-stars" id="themeIcon"></i>
+            </button>
+        </div>
+    </div>
+
+    <% if (typeof success_msg !== 'undefined' && success_msg && success_msg.length > 0) { %>
+        <div class="alert alert-success admin-alert" role="alert"><i class="bi bi-check-circle me-2"></i><%= success_msg %></div>
+    <% } %>
+    <% if (typeof error_msg !== 'undefined' && error_msg && error_msg.length > 0) { %>
+        <div class="alert alert-danger admin-alert" role="alert"><i class="bi bi-exclamation-triangle me-2"></i><%= error_msg %></div>
+    <% } %>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3"><div class="admin-stat p-3"><div class="admin-muted">Total de pessoas</div><div class="h3 mb-0 mt-2"><%= people.length %></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="admin-stat p-3"><div class="admin-muted">Clientes</div><div class="h3 mb-0 mt-2"><%= people.filter(p => p.role === 'CLIENT').length %></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="admin-stat p-3"><div class="admin-muted">Contas administrativas</div><div class="h3 mb-0 mt-2"><%= people.filter(p => ['MASTER', 'MANAGER', 'SUPPORT'].includes(p.role)).length %></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="admin-stat p-3"><div class="admin-muted">Contratos ativos</div><div class="h3 mb-0 mt-2"><%= people.reduce((total, p) => total + p.activeContractCount, 0) %></div></div></div>
+    </div>
+
+    <form method="get" action="/admin/people" class="admin-toolbar">
+        <div class="admin-toolbar__grid">
+            <div>
+                <label class="form-label" for="search">Buscar</label>
+                <input class="form-control" id="search" name="search" value="<%= filters.search %>" placeholder="Nome, e-mail ou CPF">
+            </div>
+            <div>
+                <label class="form-label" for="role">Tipo de conta</label>
+                <select class="form-select" id="role" name="role">
+                    <option value="">Todos</option>
+                    <% roleOptions.forEach(option => { %>
+                        <option value="<%= option.value %>" <%= filters.role === option.value ? 'selected' : '' %>><%= option.label %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <button class="btn btn-primary admin-btn" type="submit"><i class="bi bi-search"></i> Filtrar</button>
+            <a class="btn btn-outline-secondary admin-btn" href="/admin/people"><i class="bi bi-arrow-counterclockwise"></i> Limpar</a>
+        </div>
+    </form>
+
+    <section class="admin-card">
+        <div class="admin-card__header">
+            <div>
+                <h2>Diretório de pessoas</h2>
+                <div class="admin-muted mt-1">Ações sensíveis aparecem somente para os perfis autorizados.</div>
+            </div>
+            <span class="admin-pill admin-pill--muted"><i class="bi bi-shield-check"></i> Acesso controlado</span>
+        </div>
+        <% if (people.length) { %>
+            <div class="admin-table-wrap">
+                <table class="table admin-table mb-0">
+                    <thead>
+                        <tr><th>Pessoa</th><th>Contato</th><th>Tipo</th><th>Contratos</th><th>Cadastro</th><th class="text-end">Ações</th></tr>
+                    </thead>
+                    <tbody>
+                        <% people.forEach(person => {
+                            const roleClass = person.role === 'MASTER' ? 'danger' : person.role === 'MANAGER' ? 'warning' : person.role === 'SUPPORT' ? 'success' : 'brand';
+                            const initials = (person.name || '?').split(' ').slice(0, 2).map(part => part[0]).join('').toUpperCase();
+                        %>
+                            <tr>
+                                <td>
+                                    <div class="person-cell">
+                                        <span class="person-avatar"><%= initials %></span>
+                                        <div><div class="person-cell__name"><%= person.name %></div><div class="person-cell__meta">CPF: <%= person.cpf || 'não informado' %></div></div>
+                                    </div>
+                                </td>
+                                <td><div class="person-cell__name"><%= person.email %></div><div class="person-cell__meta"><%= person.phone || 'Telefone não informado' %></div></td>
+                                <td><span class="admin-pill admin-pill--<%= roleClass %>"><%= person.roleLabel %></span></td>
+                                <td><span class="person-cell__name"><%= person.contractCount %></span><div class="person-cell__meta"><%= person.activeContractCount %> ativos</div></td>
+                                <td class="admin-muted"><%= new Date(person.createdAt).toLocaleDateString('pt-BR') %></td>
+                                <td>
+                                    <div class="admin-actions">
+                                        <a class="btn btn-sm btn-outline-primary admin-btn" href="/admin/people/<%= person.id %>"><i class="bi bi-eye"></i><span class="d-none d-lg-inline"> Ver</span></a>
+                                        <% if (hasCapability('people.edit_profile')) { %><a class="btn btn-sm btn-outline-secondary admin-btn" href="/admin/people/<%= person.id %>/edit"><i class="bi bi-pencil"></i></a><% } %>
+                                        <% if (hasCapability('people.change_password')) { %><form method="post" action="/admin/people/<%= person.id %>/reset-password" class="d-inline"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-outline-warning admin-btn" title="Alterar senha" type="submit"><i class="bi bi-key"></i></button></form><% } %>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <div class="admin-empty"><i class="bi bi-people fs-1 d-block mb-3"></i><strong>Nenhuma pessoa encontrada.</strong><div class="mt-1">Ajuste os filtros ou crie um novo cadastro.</div></div>
+        <% } %>
+    </section>
+</div>
+
+<%- include('../../partials/footer') %>

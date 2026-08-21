@@ -3,6 +3,7 @@
    ========================================================================== */
 
 @import './business.css';
+@import './reorganization.css';
 
 :root {
   /* ── Brand Colors (Matching AppColors.dart) ───────────────────────────── */

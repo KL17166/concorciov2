@@ -15,6 +15,7 @@ import securityRoutes from './securityRoutes';
 import gatewayRoutes from './gatewayRoutes';
 import kycRoutes from './kycRoutes';
 import profileRoutes from './profileRoutes';
+import peopleRoutes from './peopleRoutes';
 
 const router = Router();
 
@@ -44,6 +45,7 @@ router.use((req, res, next) => {
 router.use(authRoutes);
 router.use(dashboardRoutes);
 router.use(profileRoutes);
+router.use(peopleRoutes);
 router.use(clientRoutes);
 router.use(contractRoutes);
 router.use(paymentRoutes);

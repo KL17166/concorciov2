@@ -178,6 +178,9 @@ async function main() {
       }
     });
 
+    // Clear old installments to ensure clean historical dates
+    await prisma.installment.deleteMany({ where: { subscriptionId: sub.id } });
+
     // Create 12 paid installments and remaining pending installments
     const installmentAmount = (Number(product.price) * 1.1) / plan.durationMonths;
     for (let i = 1; i <= plan.durationMonths; i++) {

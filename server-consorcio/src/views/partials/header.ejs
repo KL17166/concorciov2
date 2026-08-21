@@ -28,6 +28,7 @@
 
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="/css/admin-design-system.css">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,34 +38,36 @@
 
     <style>
         :root {
-            --primary-color: #6366f1;
-            --primary-dark: #4f46e5;
+            /* Aliases legados: a fonte de verdade visual fica em admin-design-system.css. */
+            --primary-color: var(--admin-brand);
+            --primary-dark: var(--admin-brand-strong);
             --secondary-color: #1e293b;
-            --success-color: #10b981;
-            --danger-color: #ef4444;
-            --warning-color: #f59e0b;
+            --success-color: var(--admin-success);
+            --danger-color: var(--admin-danger);
+            --warning-color: var(--admin-warning);
             --info-color: #3b82f6;
 
-            --bg-primary: #ffffff;
-            --bg-secondary: #f8fafc;
+            --bg-primary: var(--admin-surface);
+            --bg-secondary: var(--admin-surface-muted);
             --bg-tertiary: #f1f5f9;
-            --text-primary: #0f172a;
-            --text-secondary: #64748b;
-            --border-color: #e2e8f0;
+            --text-primary: var(--admin-text);
+            --text-secondary: var(--admin-muted);
+            --border-color: var(--admin-border);
             --sidebar-bg: #1e293b;
             --sidebar-text: #94a3b8;
-            --sidebar-active: #6366f1;
+            --sidebar-active: var(--admin-brand);
         }
 
         [data-theme="dark"] {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
+            --bg-primary: var(--admin-surface);
+            --bg-secondary: var(--admin-surface-muted);
             --bg-tertiary: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --border-color: #334155;
+            --text-primary: var(--admin-text);
+            --text-secondary: var(--admin-muted);
+            --border-color: var(--admin-border);
             --sidebar-bg: #020617;
-            --sidebar-text: #64748b;
+            --sidebar-text: #647a8b;
+            --sidebar-active: var(--admin-brand);
         }
 
         /* Dark mode Bootstrap overrides */

@@ -119,12 +119,12 @@
             <div class="mb-4">
                 <div class="btn-group shadow-sm" role="group">
                     <a href="/admin/products" class="btn btn-sm <%= !typeFilter ? 'btn-primary' : 'btn-outline-primary' %>" style="border-radius: 8px 0 0 8px;">Todos</a>
-                    <a href="/admin/products?type=MOTO" class="btn btn-sm <%= typeFilter === 'MOTO' ? 'btn-primary' : 'btn-outline-primary' %>">🏍️ Motos</a>
-                    <a href="/admin/products?type=CARRO" class="btn btn-sm <%= typeFilter === 'CARRO' ? 'btn-primary' : 'btn-outline-primary' %>">🚗 Carros</a>
-                    <a href="/admin/products?type=CARTA_CREDITO" class="btn btn-sm <%= typeFilter === 'CARTA_CREDITO' ? 'btn-primary' : 'btn-outline-primary' %>">💳 Cartas</a>
-                    <a href="/admin/products?type=ELETRONICO" class="btn btn-sm <%= typeFilter === 'ELETRONICO' ? 'btn-primary' : 'btn-outline-primary' %>">💻 Eletrônicos</a>
-                    <a href="/admin/products?type=IMOVEL" class="btn btn-sm <%= typeFilter === 'IMOVEL' ? 'btn-primary' : 'btn-outline-primary' %>">🏠 Imóveis</a>
-                    <a href="/admin/products?type=SERVICO" class="btn btn-sm <%= typeFilter === 'SERVICO' ? 'btn-primary' : 'btn-outline-primary' %>" style="border-radius: 0 8px 8px 0;">✈️ Serviços</a>
+<a href="/admin/products?type=MOTO" class="btn btn-sm <%= typeFilter === 'MOTO' ? 'btn-primary' : 'btn-outline-primary' %>"><i class="bi bi-bicycle me-1"></i>Motos</a>
+                    <a href="/admin/products?type=CARRO" class="btn btn-sm <%= typeFilter === 'CARRO' ? 'btn-primary' : 'btn-outline-primary' %>"><i class="bi bi-car-front me-1"></i>Carros</a>
+                    <a href="/admin/products?type=CARTA_CREDITO" class="btn btn-sm <%= typeFilter === 'CARTA_CREDITO' ? 'btn-primary' : 'btn-outline-primary' %>"><i class="bi bi-credit-card me-1"></i>Cartas</a>
+                    <a href="/admin/products?type=ELETRONICO" class="btn btn-sm <%= typeFilter === 'ELETRONICO' ? 'btn-primary' : 'btn-outline-primary' %>"><i class="bi bi-laptop me-1"></i>Eletrônicos</a>
+                    <a href="/admin/products?type=IMOVEL" class="btn btn-sm <%= typeFilter === 'IMOVEL' ? 'btn-primary' : 'btn-outline-primary' %>"><i class="bi bi-house me-1"></i>Imóveis</a>
+                    <a href="/admin/products?type=SERVICO" class="btn btn-sm <%= typeFilter === 'SERVICO' ? 'btn-primary' : 'btn-outline-primary' %>" style="border-radius: 0 8px 8px 0;"><i class="bi bi-briefcase me-1"></i>Serviços</a>
                 </div>
             </div>
 
@@ -133,7 +133,7 @@
                 <div class="card-header-premium d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <h5 class="mb-0 fw-bold">
                         <i class="bi bi-box-seam text-primary me-2"></i>
-                        Catálogo (<%= products.length %>)
+                        Catálogo (<span id="catalogCount"><%= products.length %></span>)
                     </h5>
                     <div class="d-flex align-items-center gap-3">
                         <div class="d-flex align-items-center gap-2">
@@ -219,9 +219,9 @@
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <% const typeLabels = { MOTO: '🏍️ Moto', CARRO: '🚗 Carro', CARTA_CREDITO: '💳 Carta', ELETRONICO: '💻 Eletrônico', IMOVEL: '🏠 Imóvel', SERVICO: '✈️ Serviço' }; %>
+<% const typeLabels = { MOTO: 'Moto', CARRO: 'Carro', CARTA_CREDITO: 'Carta', ELETRONICO: 'Eletrônico', IMOVEL: 'Imóvel', SERVICO: 'Serviço' }; const typeIcons = { MOTO: 'bi-bicycle', CARRO: 'bi-car-front', CARTA_CREDITO: 'bi-credit-card', ELETRONICO: 'bi-laptop', IMOVEL: 'bi-house', SERVICO: 'bi-briefcase' }; %>
                                                     <span class="badge-premium" style="background: rgba(99, 102, 241, 0.1); color: var(--primary-color); border: 1px solid rgba(99, 102, 241, 0.2);">
-                                                        <%= typeLabels[product.type] || product.type %>
+                                                        <i class="bi <%= typeIcons[product.type] || 'bi-box' %> me-1"></i><%= typeLabels[product.type] || product.type %>
                                                     </span>
                                                     <div class="small text-muted mt-1"><%= product.category %></div>
                                                 </td>
@@ -261,6 +261,13 @@
                             </a>
                         </div>
                     <% } %>
+                    <div id="productsTableSearchEmpty" class="text-center py-5 d-none">
+                        <div class="mb-3 d-inline-block p-3 rounded-circle" style="background: rgba(99, 102, 241, 0.1);">
+                            <i class="bi bi-search text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <h5 class="text-dark fw-bold">Nenhum resultado encontrado</h5>
+                        <p class="text-muted mb-0">Tente buscar por outro nome, categoria ou característica.</p>
+                    </div>
                 </div>
                 <!-- Table Pagination -->
                 <div class="d-flex justify-content-between align-items-center mt-3 px-1" id="productsTablePagination" style="display: none;">
@@ -291,9 +298,9 @@
                                         <!-- Status Badge (top-right) -->
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <div>
-                                                <% const typeLabelsCard = { MOTO: '🏍️ Moto', CARRO: '🚗 Carro', CARTA_CREDITO: '💳 Carta', ELETRONICO: '💻 Eletrônico', IMOVEL: '🏠 Imóvel', SERVICO: '✈️ Serviço' }; %>
+<% const typeLabelsCard = { MOTO: 'Moto', CARRO: 'Carro', CARTA_CREDITO: 'Carta', ELETRONICO: 'Eletrônico', IMOVEL: 'Imóvel', SERVICO: 'Serviço' }; const typeIconsCard = { MOTO: 'bi-bicycle', CARRO: 'bi-car-front', CARTA_CREDITO: 'bi-credit-card', ELETRONICO: 'bi-laptop', IMOVEL: 'bi-house', SERVICO: 'bi-briefcase' }; %>
                                                 <span class="badge-premium" style="background: rgba(99, 102, 241, 0.1); color: var(--primary-color); border: 1px solid rgba(99, 102, 241, 0.2); font-size: 0.7rem;">
-                                                    <%= typeLabelsCard[product.type] || product.type %>
+                                                    <i class="bi <%= typeIconsCard[product.type] || 'bi-box' %> me-1"></i><%= typeLabelsCard[product.type] || product.type %>
                                                 </span>
                                             </div>
                                             <% if(product.active) { %>
@@ -358,6 +365,13 @@
                         </a>
                     </div>
                 <% } %>
+                <div id="productsCardsSearchEmpty" class="text-center py-5 d-none">
+                    <div class="mb-3 d-inline-block p-3 rounded-circle" style="background: rgba(99, 102, 241, 0.1);">
+                        <i class="bi bi-search text-primary" style="font-size: 2rem;"></i>
+                    </div>
+                    <h5 class="text-dark fw-bold">Nenhum resultado encontrado</h5>
+                    <p class="text-muted mb-0">Tente buscar por outro nome, categoria ou característica.</p>
+                </div>
                 <!-- Cards Pagination -->
                 <div class="d-flex justify-content-between align-items-center mt-3 px-1" id="productsCardsPagination" style="display: none;">
                     <small class="text-muted" id="productsCardsInfo"></small>
@@ -402,21 +416,28 @@
                 const searchInput = document.getElementById('sharedSearch');
                 if (searchInput) {
                     searchInput.addEventListener('input', function(e) {
-                        const term = e.target.value.toLowerCase();
-                        
-                        // Filter Table View
+                        const term = e.target.value.trim().toLowerCase();
                         const tableRows = document.querySelectorAll('#productsTable tbody tr');
+                        const cards = document.querySelectorAll('#productsCardsGrid > div');
+                        let visibleRows = 0;
+                        let visibleCards = 0;
+
                         tableRows.forEach(row => {
-                            const text = row.textContent.toLowerCase();
-                            row.style.display = text.includes(term) ? '' : 'none';
+                            const matches = !term || row.textContent.toLowerCase().includes(term);
+                            row.style.display = matches ? '' : 'none';
+                            if (matches) visibleRows += 1;
+                        });
+                        cards.forEach(card => {
+                            const matches = !term || card.textContent.toLowerCase().includes(term);
+                            card.style.display = matches ? '' : 'none';
+                            if (matches) visibleCards += 1;
                         });
 
-                        // Filter Cards View
-                        const cards = document.querySelectorAll('#productsCardsGrid > div');
-                        cards.forEach(card => {
-                            const text = card.textContent.toLowerCase();
-                            card.style.display = text.includes(term) ? '' : 'none';
-                        });
+                        const visibleCount = term ? Math.max(visibleRows, visibleCards) : <%= products.length %>;
+                        const countElement = document.getElementById('catalogCount');
+                        if (countElement) countElement.textContent = visibleCount;
+                        document.getElementById('productsTableSearchEmpty')?.classList.toggle('d-none', !term || visibleRows > 0);
+                        document.getElementById('productsCardsSearchEmpty')?.classList.toggle('d-none', !term || visibleCards > 0);
                     });
                 }
             });

@@ -1,0 +1,73 @@
+<%- include('../../partials/header') %>
+<%- include('../../partials/sidebar', { path: '/people' }) %>
+
+<div class="main-content admin-page">
+    <div class="top-bar">
+        <div>
+            <div class="admin-page__eyebrow">Pessoas e Contas</div>
+            <h1 class="page-title"><%= person.name %></h1>
+            <p class="text-muted mb-0">Visão consolidada de perfil, acesso e contratos.</p>
+        </div>
+        <div class="top-bar-actions">
+            <% if (hasCapability('people.edit_profile')) { %><a href="/admin/people/<%= person.id %>/edit" class="btn btn-primary admin-btn"><i class="bi bi-pencil"></i> Editar</a><% } %>
+            <a href="/admin/people" class="btn btn-outline-secondary admin-btn"><i class="bi bi-arrow-left"></i> Voltar</a>
+        </div>
+    </div>
+
+    <% if (typeof success_msg !== 'undefined' && success_msg && success_msg.length > 0) { %><div class="alert alert-success admin-alert"><i class="bi bi-check-circle me-2"></i><%= success_msg %></div><% } %>
+    <% if (typeof error_msg !== 'undefined' && error_msg && error_msg.length > 0) { %><div class="alert alert-danger admin-alert"><i class="bi bi-exclamation-triangle me-2"></i><%= error_msg %></div><% } %>
+
+    <div class="admin-detail-grid">
+        <section class="admin-card">
+            <div class="admin-card__header"><div><h2>Dados da pessoa</h2><div class="admin-muted mt-1">Cadastro e contatos principais.</div></div><span class="admin-pill admin-pill--brand"><%= person.roleLabel %></span></div>
+            <div class="admin-card__body">
+                <div class="person-cell mb-4"><span class="person-avatar"><%= (person.name || '?').split(' ').slice(0, 2).map(part => part[0]).join('').toUpperCase() %></span><div><div class="person-cell__name"><%= person.name %></div><div class="person-cell__meta">Cadastro em <%= new Date(person.createdAt).toLocaleDateString('pt-BR') %></div></div></div>
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 admin-muted">E-mail</dt><dd class="col-sm-8"><%= person.email %></dd>
+                    <dt class="col-sm-4 admin-muted">Telefone</dt><dd class="col-sm-8"><%= person.phone || 'Não informado' %></dd>
+                    <dt class="col-sm-4 admin-muted">CPF</dt><dd class="col-sm-8"><%= person.cpf || 'Não informado' %></dd>
+                    <dt class="col-sm-4 admin-muted">Endereço</dt><dd class="col-sm-8"><%= [parsedAddress.street, parsedAddress.number, parsedAddress.city, parsedAddress.state].filter(Boolean).join(', ') || 'Não informado' %></dd>
+                </dl>
+            </div>
+        </section>
+
+        <section class="admin-card">
+            <div class="admin-card__header"><div><h2>Segurança da conta</h2><div class="admin-muted mt-1">Permissões aplicadas pelo servidor.</div></div></div>
+            <div class="admin-card__body">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3"><span class="admin-muted">Acesso ao painel</span><strong><%= ['MASTER', 'MANAGER', 'SUPPORT'].includes(person.role) ? 'Administrativo' : 'Cliente' %></strong></div>
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3"><span class="admin-muted">Contratos vinculados</span><strong><%= person.subscriptions.length %></strong></div>
+                <% if (hasCapability('people.change_password')) { %>
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="admin-section-label mb-2">Alterar Senha Diretamente</div>
+                        <form method="post" action="/admin/people/<%= person.id %>/password" class="mb-2">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <div class="input-group">
+                                <input class="form-control" type="text" name="password" minlength="6" placeholder="Nova senha" required>
+                                <button class="btn btn-primary admin-btn" type="submit"><i class="bi bi-check2"></i> Salvar</button>
+                            </div>
+                        </form>
+                        <form method="post" action="/admin/people/<%= person.id %>/reset-password">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <button class="btn btn-outline-warning admin-btn btn-sm w-100" type="submit"><i class="bi bi-key"></i> Gerar Senha Aleatória</button>
+                        </form>
+                    </div>
+                <% } %>
+            </div>
+        </section>
+    </div>
+
+    <section class="admin-card mt-3">
+        <div class="admin-card__header"><div><h2>Contratos vinculados</h2><div class="admin-muted mt-1">Histórico resumido deste cadastro.</div></div><span class="admin-pill admin-pill--muted"><%= person.subscriptions.length %> registros</span></div>
+        <% if (person.subscriptions.length) { %>
+            <div class="admin-table-wrap"><table class="table admin-table mb-0"><thead><tr><th>Contrato</th><th>Produto</th><th>Status</th><th>Parcelas</th><th>Criado em</th></tr></thead><tbody>
+                <% person.subscriptions.forEach(subscription => { %><tr><td><strong><%= subscription.contractNumber || subscription.id %></strong></td><td><%= subscription.plan?.product?.name || subscription.plan?.name || 'Plano' %></td><td><span class="admin-pill admin-pill--<%= ['ACTIVE', 'CONTEMPLATED'].includes(subscription.status) ? 'success' : subscription.status === 'CANCELLED' ? 'danger' : 'muted' %>"><%= ({ PENDING: 'Pendente', ACTIVE: 'Ativo', CONTEMPLATED: 'Contemplado', CANCELLED: 'Cancelado', PENDING_KYC: 'Pendente de KYC' }[subscription.status] || subscription.status) %></span></td><td><%= subscription._count.installments %></td><td class="admin-muted"><%= new Date(subscription.createdAt).toLocaleDateString('pt-BR') %></td></tr><% }) %>
+            </tbody></table></div>
+        <% } else { %><div class="admin-empty"><i class="bi bi-file-earmark-text fs-1 d-block mb-3"></i>Nenhum contrato vinculado.</div><% } %>
+    </section>
+
+    <% if (hasCapability('people.delete')) { %>
+        <section class="admin-card mt-3 border-danger"><div class="admin-card__body d-flex align-items-center justify-content-between gap-3"><div><div class="fw-bold text-danger">Zona de risco</div><div class="admin-muted">A exclusão é irreversível e deve ser usada somente quando o histórico puder ser preservado por outra regra.</div></div><form method="post" action="/admin/people/<%= person.id %>/delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-outline-danger admin-btn" type="submit"><i class="bi bi-trash"></i> Excluir cadastro</button></form></div></section>
+    <% } %>
+</div>
+
+<%- include('../../partials/footer') %>

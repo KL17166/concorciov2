@@ -97,6 +97,38 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
+     * Register new client via Nuxt BFF → server-consorcio
+     */
+    async register(data: { name: string; email: string; cpf: string; phone?: string; password: string }): Promise<{ success: boolean; message?: string }> {
+      this.isLoading = true
+
+      try {
+        const response = await $fetch<{ success: boolean; message: string; user?: UserProfile; token?: string }>('/api/auth/register', {
+          method: 'POST',
+          body: {
+            name: data.name,
+            email: data.email,
+            cpf: unmaskCpf(data.cpf),
+            phone: data.phone,
+            password: data.password
+          }
+        })
+
+        if (response?.token && response?.user) {
+          this.setSession({ token: response.token, user: response.user })
+          return { success: true, message: response.message }
+        }
+
+        return { success: response?.success ?? true, message: response?.message || 'Conta criada com sucesso!' }
+      } catch (error: any) {
+        const errorMessage = error?.data?.message || error?.data?.error || error?.message || 'Erro ao criar conta.'
+        return { success: false, message: errorMessage }
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
      * Store session state in memory and localStorage
      */
     setSession(data: { token: string; user: UserProfile }) {

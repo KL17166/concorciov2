@@ -1,100 +1,30 @@
 <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
-        <h4>
-            <i class="bi bi-speedometer"></i>
-            Katari Admin
-        </h4>
+        <h4><i class="bi bi-grid-1x2-fill"></i> Katari Admin</h4>
+        <small class="text-white-50">Operação de consórcios</small>
     </div>
 
     <div class="sidebar-nav">
-        <!-- Dashboard -->
-        <a href="/admin/dashboard" class="<%= typeof path !== 'undefined' && path === '/dashboard' ? 'active' : '' %>">
-            <i class="bi bi-house-door"></i>
-            <span>Dashboard</span>
-        </a>
+        <div class="nav-section">Visão geral</div>
+        <% if (hasCapability('dashboard.view')) { %><a href="/admin/dashboard" class="<%= path === '/dashboard' ? 'active' : '' %>"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a><% } %>
 
-        <!-- Seção Operacional -->
-        <div class="nav-section">Operacional</div>
+        <div class="nav-section">Operação</div>
+        <% if (hasCapability('people.view')) { %><a href="/admin/people" class="<%= path === '/people' ? 'active' : '' %>"><i class="bi bi-people"></i><span>Pessoas e Contas</span></a><% } %>
+        <% if (hasCapability('contracts.view')) { %><a href="/admin/contracts" class="<%= path === '/contracts' ? 'active' : '' %>"><i class="bi bi-file-earmark-text"></i><span>Contratos</span></a><% } %>
+        <% if (hasCapability('payments.view')) { %><a href="/admin/payments" class="<%= path === '/payments' ? 'active' : '' %>"><i class="bi bi-cash-coin"></i><span>Financeiro</span></a><% } %>
+        <% if (hasCapability('bids.view')) { %><a href="/admin/bids" class="<%= path === '/bids' ? 'active' : '' %>"><i class="bi bi-trophy"></i><span>Lances</span></a><% } %>
 
-        <a href="/admin/clients" class="<%= typeof path !== 'undefined' && path === '/clients' ? 'active' : '' %>">
-            <i class="bi bi-people"></i>
-            <span>Clientes</span>
-        </a>
+        <div class="nav-section">Catálogo e análise</div>
+        <% if (hasCapability('catalog.view')) { %><a href="/admin/products" class="<%= path === '/products' ? 'active' : '' %>"><i class="bi bi-box-seam"></i><span>Catálogo</span></a><% } %>
+        <% if (hasCapability('reports.view')) { %><a href="/admin/reports" class="<%= path === '/reports' ? 'active' : '' %>"><i class="bi bi-bar-chart-line"></i><span>Relatórios</span></a><% } %>
 
-        <a href="/admin/contracts" class="<%= typeof path !== 'undefined' && path === '/contracts' ? 'active' : '' %>">
-            <i class="bi bi-file-text"></i>
-            <span>Contratos</span>
-        </a>
+        <div class="nav-section">Controle e segurança</div>
+        <% if (hasCapability('compliance.view')) { %><a href="/admin/kyc" class="<%= path === '/kyc' ? 'active' : '' %>"><i class="bi bi-person-check"></i><span>Compliance / KYC</span></a><% } %>
+        <% if (hasCapability('integrations.view')) { %><a href="/admin/gateways" class="<%= path === '/gateways' ? 'active' : '' %>"><i class="bi bi-plug"></i><span>Integrações</span></a><% } %>
+        <% if (hasCapability('security.view')) { %><a href="/admin/security" class="<%= path === '/security' ? 'active' : '' %>"><i class="bi bi-shield-lock"></i><span>Segurança</span></a><% } %>
 
-        <% if (['MASTER', 'MANAGER'].includes(user.role)) { %>
-        <a href="/admin/payments" class="<%= typeof path !== 'undefined' && path === '/payments' ? 'active' : '' %>">
-            <i class="bi bi-cash-coin"></i>
-            <span>Pagamentos</span>
-        </a>
-
-        <a href="/admin/bids" class="<%= typeof path !== 'undefined' && path === '/bids' ? 'active' : '' %>">
-            <i class="bi bi-trophy"></i>
-            <span>Lances</span>
-        </a>
-        <% } %>
-
-        <% if (['MASTER', 'MANAGER'].includes(user.role)) { %>
-        <!-- Seção Cadastros -->
-        <div class="nav-section">Cadastros</div>
-
-        <a href="/admin/products" class="<%= typeof path !== 'undefined' && path === '/products' ? 'active' : '' %>">
-            <i class="bi bi-box-seam"></i>
-            <span>Produtos</span>
-        </a>
-
-        <% if (user.role === 'MASTER') { %>
-        <a href="/admin/users" class="<%= typeof path !== 'undefined' && path === '/users' ? 'active' : '' %>">
-            <i class="bi bi-person-gear"></i>
-            <span>Usuários Admin</span>
-        </a>
-        <% } %>
-        <% } %>
-
-        <!-- Seção Gestão -->
-        <div class="nav-section">Gestão</div>
-
-        <% if (user.role === 'MASTER') { %>
-        <a href="/admin/gateways" class="<%= typeof path !== 'undefined' && path === '/gateways' ? 'active' : '' %>">
-            <i class="bi bi-credit-card-2-front"></i>
-            <span>Gateways</span>
-        </a>
-        <% } %>
-
-        <% if (['MASTER', 'MANAGER'].includes(user.role)) { %>
-        <a href="/admin/reports" class="<%= typeof path !== 'undefined' && path === '/reports' ? 'active' : '' %>">
-            <i class="bi bi-graph-up"></i>
-            <span>Relatórios</span>
-        </a>
-        <% } %>
-
-        <a href="/admin/kyc" class="<%= typeof path !== 'undefined' && path === '/kyc' ? 'active' : '' %>">
-            <i class="bi bi-person-check"></i>
-            <span>Verificação KYC</span>
-        </a>
-
-        <% if (user.role === 'MASTER') { %>
-        <a href="/admin/security" class="<%= typeof path !== 'undefined' && path === '/security' ? 'active' : '' %>">
-            <i class="bi bi-shield-lock"></i>
-            <span>Segurança</span>
-        </a>
-        <% } %>
-
-        <!-- Logout -->
-        <div class="nav-section">Conta</div>
-
-        <a href="/admin/profile/2fa" class="<%= typeof path !== 'undefined' && path === '/profile/2fa' ? 'active' : '' %>">
-            <i class="bi bi-shield-check"></i>
-            <span>Segurança (2FA)</span>
-        </a>
-
-        <a href="/admin/logout" class="text-danger">
-            <i class="bi bi-box-arrow-left"></i>
-            <span>Sair</span>
-        </a>
+        <div class="nav-section">Minha conta</div>
+        <% if (hasCapability('account.security')) { %><a href="/admin/profile/2fa" class="<%= path === '/profile/2fa' ? 'active' : '' %>"><i class="bi bi-shield-check"></i><span>Minha segurança</span></a><% } %>
+        <a href="/admin/logout" class="text-danger"><i class="bi bi-box-arrow-left"></i><span>Sair</span></a>
     </div>
 </div>

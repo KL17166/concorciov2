@@ -1,16 +1,15 @@
 import { Router } from 'express';
-import { isAdmin } from '../../middlewares/adminAuthMiddleware';
-import { requireRoles } from '../../security/adminAuth';
+import { isAdmin, requireCapability } from '../../middlewares/adminAuthMiddleware';
 import * as bidsController from '../../controllers/admin/bidsController';
 
 const router = Router();
 
-router.get('/bids', isAdmin, requireRoles(['MASTER', 'MANAGER']), bidsController.getBids);
-router.get('/bids/pending', isAdmin, requireRoles(['MASTER', 'MANAGER']), bidsController.getPendingBids);
-router.get('/bids/draw', isAdmin, requireRoles(['MASTER', 'MANAGER']), bidsController.getDrawPage);
-router.post('/bids/draw', isAdmin, requireRoles(['MASTER', 'MANAGER']), bidsController.performDraw);
-router.get('/bids/:id', isAdmin, requireRoles(['MASTER', 'MANAGER']), bidsController.getBidDetails);
-router.post('/bids/:id/approve', isAdmin, requireRoles(['MASTER', 'MANAGER']), bidsController.approveBid);
-router.post('/bids/:id/reject', isAdmin, requireRoles(['MASTER', 'MANAGER']), bidsController.rejectBid);
+router.get('/bids', isAdmin, requireCapability('bids.view'), bidsController.getBids);
+router.get('/bids/pending', isAdmin, requireCapability('bids.view'), bidsController.getPendingBids);
+router.get('/bids/draw', isAdmin, requireCapability('bids.manage'), bidsController.getDrawPage);
+router.post('/bids/draw', isAdmin, requireCapability('bids.manage'), bidsController.performDraw);
+router.get('/bids/:id', isAdmin, requireCapability('bids.view'), bidsController.getBidDetails);
+router.post('/bids/:id/approve', isAdmin, requireCapability('bids.manage'), bidsController.approveBid);
+router.post('/bids/:id/reject', isAdmin, requireCapability('bids.manage'), bidsController.rejectBid);
 
 export default router;

@@ -1,13 +1,44 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { AdminCapability, capabilitiesForRole, hasCapability } from '../security/adminCapabilities';
+
+function wantsJson(req: Request): boolean {
+    return Boolean(req.xhr || req.headers.accept?.includes('application/json') || !req.headers.accept?.includes('text/html'));
+}
+
+function deny(req: Request, res: Response, message = 'Você não possui permissão para realizar esta ação.') {
+    if (wantsJson(req)) {
+        return res.status(403).json({ error: 'FORBIDDEN', message });
+    }
+    req.flash('error_msg', message);
+    return res.redirect('back');
+}
+
+function attachAdminContext(req: Request, res: Response) {
+    const sessionUser = (req as any).session?.user;
+    const role = sessionUser?.role;
+    const capabilities = capabilitiesForRole(role);
+
+    (req as any).adminContext = {
+        userId: sessionUser?.id,
+        role,
+        capabilities
+    };
+    res.locals.adminUser = sessionUser || null;
+    res.locals.capabilities = capabilities;
+    res.locals.hasCapability = (capability: AdminCapability) => hasCapability(role, capability);
+}
 
 /**
- * Middleware to enforce admin role and perform silent JWT renewal.
+ * Gate global do painel. Além de autenticar, anexa a política de capacidades
+ * que é usada por rotas, controllers e views.
  */
 export const isAdmin = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     const session = (req as any).session;
-    if (session && session.user && ['MASTER', 'MANAGER', 'SUPPORT'].includes(session.user.role)) {
-        // Silent JWT refresh
+    const role = session?.user?.role;
+    if (session && session.user && ['MASTER', 'MANAGER', 'SUPPORT'].includes(role)) {
+        attachAdminContext(req, res);
+
         const currentToken: string | undefined = session.adminToken;
         if (currentToken) {
             try {
@@ -37,13 +68,47 @@ export const isAdmin = async (req: Request, res: Response, next: NextFunction): 
         return next();
     }
 
-    if (req.xhr || req.headers.accept?.includes('application/json') || !req.headers.accept?.includes('text/html')) {
+    if (wantsJson(req)) {
         return res.status(403).json({
-            error: 'Acesso negado',
+            error: 'UNAUTHORIZED',
             message: 'Apenas administradores autorizados podem acessar esta rota. Faça login como admin.'
         });
     }
 
     req.flash('error', 'Por favor, faça login como administrador.');
-    res.redirect('/admin/login');
+    return res.redirect('/admin/login');
+};
+
+export const requireCapability = (capability: AdminCapability) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+        const role = (req as any).session?.user?.role as string | undefined;
+        if (!hasCapability(role, capability)) {
+            return deny(req, res, `Seu perfil não pode executar a ação “${capability}”.`);
+        }
+        attachAdminContext(req, res);
+        return next();
+    };
+};
+
+export const requireAnyCapability = (...capabilities: AdminCapability[]) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+        const role = (req as any).session?.user?.role as string | undefined;
+        if (!capabilities.some((capability) => hasCapability(role, capability))) {
+            return deny(req, res);
+        }
+        attachAdminContext(req, res);
+        return next();
+    };
+};
+
+/** Compatibilidade para rotas legadas; novas rotas devem usar capacidades. */
+export const requireRoles = (roles: string[]) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+        const role = (req as any).session?.user?.role as string | undefined;
+        if (!role || !roles.includes(role)) {
+            return deny(req, res, 'Acesso negado. Nível de permissão insuficiente.');
+        }
+        attachAdminContext(req, res);
+        return next();
+    };
 };
