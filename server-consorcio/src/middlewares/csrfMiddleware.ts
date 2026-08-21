@@ -28,7 +28,8 @@ export const validateToken = (req: Request, res: Response, next: NextFunction) =
         }
         // For browser requests: redirect
         req.flash('error_msg', 'Token de seguranca invalido ou expirado. Tente novamente.');
-        return res.redirect('back');
+        const referer = req.get('Referer') || '/admin/dashboard';
+        return res.redirect(referer);
     }
     next();
 };

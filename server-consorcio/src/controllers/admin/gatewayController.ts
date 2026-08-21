@@ -65,8 +65,7 @@ export const listGateways = async (req: Request, res: Response) => {
         res.render('pages/gateways/index', {
             path: '/gateways',
             gateways,
-            // @ts-ignore
-            csrfToken: req.csrfToken ? req.csrfToken() : ''
+            csrfToken: res.locals.csrfToken || (req.session as any)?.csrfToken || ''
         });
     } catch (error) {
         logger.error('Gateways page error:', error);

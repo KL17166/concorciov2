@@ -11,7 +11,8 @@ function deny(req: Request, res: Response, message = 'Você não possui permiss�
         return res.status(403).json({ error: 'FORBIDDEN', message });
     }
     req.flash('error_msg', message);
-    return res.redirect('back');
+    const referer = req.get('Referer') || '/admin/dashboard';
+    return res.redirect(referer);
 }
 
 function attachAdminContext(req: Request, res: Response) {

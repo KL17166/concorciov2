@@ -70,8 +70,7 @@ export const getContracts = async (req: Request, res: Response) => {
             search,
             pagination,
             buildPageUrl: (p: number) => buildPageUrl('/admin/contracts', req.query, p),
-            // @ts-ignore
-            csrfToken: req.csrfToken ? req.csrfToken() : ''
+            csrfToken: res.locals.csrfToken || (req.session as any)?.csrfToken || ''
         });
     } catch (error) {
         logger.error('Contracts page error:', error);
@@ -123,8 +122,7 @@ export const getContract = async (req: Request, res: Response) => {
                 totalPaid,
                 progress: progress.toFixed(1)
             },
-            // @ts-ignore
-            csrfToken: req.csrfToken ? req.csrfToken() : ''
+            csrfToken: res.locals.csrfToken || (req.session as any)?.csrfToken || ''
         });
     } catch (error) {
         logger.error('Contract detail error:', error);
@@ -159,8 +157,7 @@ export const getNewContract = async (req: Request, res: Response) => {
             clients,
             clientId,
             plans,
-            // @ts-ignore
-            csrfToken: req.csrfToken ? req.csrfToken() : ''
+            csrfToken: res.locals.csrfToken || (req.session as any)?.csrfToken || ''
         });
     } catch (error) {
         logger.error('New contract form error:', error);
@@ -201,6 +198,7 @@ export const createContract = async (req: Request, res: Response) => {
 // POST /admin/contracts/:id/contemplate - Contemplar contrato
 export const contemplateContract = async (req: Request, res: Response) => {
     const id = req.params.id as string;
+    const referer = req.get('Referer') || '/admin/contracts';
     try {
         const { contemplationType } = req.body;
 
@@ -210,12 +208,12 @@ export const contemplateContract = async (req: Request, res: Response) => {
         });
 
         req.flash('success_msg', 'Contrato contemplado com sucesso!');
-        res.redirect(`/admin/contracts/${id}`);
+        res.redirect(referer);
     } catch (error: any) {
         logger.error('Error contemplating contract via admin:', error);
         const userMsg = (error.statusCode && error.statusCode < 500) ? error.message : 'Erro ao contemplar contrato.';
         req.flash('error_msg', userMsg);
-        res.redirect(`/admin/contracts/${id}`);
+        res.redirect(referer);
     }
 };
 
@@ -223,6 +221,7 @@ export const contemplateContract = async (req: Request, res: Response) => {
 export const cancelContract = async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const sessionUser = (req as any).session?.user;
+    const referer = req.get('Referer') || '/admin/contracts';
     try {
         const result = await cancelSubUseCase({
             subscriptionId: id,
@@ -230,14 +229,15 @@ export const cancelContract = async (req: Request, res: Response) => {
             requesterRole: (sessionUser?.role as any) || 'MASTER'
         });
 
-        req.flash('success_msg', result.message || 'Contrato cancelado');
-        res.redirect(`/admin/contracts/${id}`);
+        req.flash('success_msg', result.message || 'Contrato cancelado com sucesso');
+        res.redirect(referer);
     } catch (error: any) {
         logger.error('Error cancelling contract via admin:', error);
         const userMsg = (error.statusCode && error.statusCode < 500) ? error.message : 'Erro ao cancelar contrato.';
         req.flash('error_msg', userMsg);
-        res.redirect(`/admin/contracts/${id}`);
+        res.redirect(referer);
     }
+};
 };
 
 // POST /admin/contracts/:id/installments/:installmentId/pay - Dar baixa manual em parcela

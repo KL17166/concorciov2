@@ -32,7 +32,8 @@ export const requireRoles = (roles: string[]) => {
                 });
             }
             req.flash('error', 'Acesso negado. Nível de permissão insuficiente.');
-            return res.redirect('back');
+            const referer = req.get('Referer') || '/admin/dashboard';
+            return res.redirect(referer);
         }
         next();
     };
