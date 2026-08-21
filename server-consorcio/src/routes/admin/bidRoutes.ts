@@ -11,5 +11,7 @@ router.post('/bids/draw', isAdmin, requireCapability('bids.manage'), bidsControl
 router.get('/bids/:id', isAdmin, requireCapability('bids.view'), bidsController.getBidDetails);
 router.post('/bids/:id/approve', isAdmin, requireCapability('bids.manage'), bidsController.approveBid);
 router.post('/bids/:id/reject', isAdmin, requireCapability('bids.manage'), bidsController.rejectBid);
+router.post('/bids/notification-frequency', isAdmin, requireCapability('bids.manage'), bidsController.updateNotificationFrequency);
 
 export default router;
+

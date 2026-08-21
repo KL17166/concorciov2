@@ -20,7 +20,14 @@ import {
   X,
   History,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  QrCode,
+  Copy,
+  Trash2,
+  Check,
+  Loader2,
+  Sparkles,
+  Trophy
 } from 'lucide-vue-next'
 
 definePageMeta({
@@ -42,14 +49,23 @@ const isHistoryOpen = ref(false)
 const isSubmitting = ref(false)
 const toastMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null)
 
+// Approved Bid PIX & Cancel State
+const isPixModalOpen = ref(false)
+const isGeneratingPix = ref(false)
+const pixData = ref<any>(null)
+const hasCopiedPix = ref(false)
+const isCancelConfirmOpen = ref(false)
+const isCancelling = ref(false)
+
 const contract = computed<ActiveContract | null>(() => {
   return consortiumStore.activeContracts[0] || null
 })
 
 onMounted(async () => {
-  if (consortiumStore.activeContracts.length === 0) {
-    await consortiumStore.loadHomeData()
-  }
+  await Promise.all([
+    consortiumStore.activeContracts.length === 0 ? consortiumStore.loadHomeData() : Promise.resolve(),
+    bidStore.fetchUserBids()
+  ])
 })
 
 // Effective percentage based on modal selection
@@ -219,6 +235,60 @@ async function handleConfirmBid() {
     isSubmitting.value = false
   }
 }
+
+async function handleOpenPix(bidId: string) {
+  isGeneratingPix.value = true
+  toastMessage.value = null
+  try {
+    const res = await bidStore.generatePix(bidId)
+    pixData.value = res
+    isPixModalOpen.value = true
+  } catch (err: any) {
+    toastMessage.value = {
+      type: 'error',
+      text: err?.data?.message || err?.message || 'Erro ao gerar PIX do lance'
+    }
+  } finally {
+    isGeneratingPix.value = false
+  }
+}
+
+function copyPixCode() {
+  if (!pixData.value?.pixCopiaECola) return
+  navigator.clipboard.writeText(pixData.value.pixCopiaECola)
+  hasCopiedPix.value = true
+  setTimeout(() => {
+    hasCopiedPix.value = false
+  }, 3000)
+}
+
+async function handleConfirmCancelBid(bidId: string) {
+  isCancelling.value = true
+  toastMessage.value = null
+  try {
+    const res = await bidStore.cancelBid(bidId)
+    if (res.success) {
+      isCancelConfirmOpen.value = false
+      toastMessage.value = {
+        type: 'success',
+        text: 'Seu lance foi cancelado com sucesso.'
+      }
+      await bidStore.fetchUserBids()
+    } else {
+      toastMessage.value = {
+        type: 'error',
+        text: res.message || 'Erro ao cancelar lance'
+      }
+    }
+  } catch (err: any) {
+    toastMessage.value = {
+      type: 'error',
+      text: err?.data?.message || err?.message || 'Erro ao cancelar lance'
+    }
+  } finally {
+    isCancelling.value = false
+  }
+}
 </script>
 
 <template>
@@ -233,6 +303,65 @@ async function handleConfirmBid() {
     </header>
 
     <div v-if="contract" class="bids-main-container">
+      <!-- 0. APPROVED BID HIGHLIGHT CARD -->
+      <div v-if="bidStore.hasApprovedBid" class="approved-bid-action-card">
+        <div class="approved-badge-top">
+          <Trophy :size="15" class="trophy-sparkle" />
+          <span>LANCE APROVADO NA ASSEMBLEIA</span>
+        </div>
+
+        <div class="approved-main-info">
+          <div class="approved-text-col">
+            <span class="approved-subtitle">Valor a pagar do seu lance</span>
+            <div class="approved-amount-val">{{ formatCurrency(bidStore.approvedBid?.amount || 0) }}</div>
+            <span class="approved-meta-tag">{{ bidStore.approvedBid?.percentage }}% de lance • {{ bidStore.approvedBid?.type === 'FREE' ? 'Lance Livre' : 'Lance Fixo' }}</span>
+          </div>
+          <div class="approved-icon-circle">
+            <CheckCircle2 :size="30" color="#10B981" />
+          </div>
+        </div>
+
+        <div class="approved-actions-row">
+          <button
+            type="button"
+            class="btn-pay-bid-pix"
+            :disabled="isGeneratingPix"
+            @click="handleOpenPix(bidStore.approvedBid!.id)"
+          >
+            <Loader2 v-if="isGeneratingPix" :size="18" class="animate-spin" />
+            <QrCode v-else :size="18" />
+            <span>Pagar Lance via PIX</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn-cancel-bid-action"
+            @click="isCancelConfirmOpen = true"
+          >
+            <Trash2 :size="16" />
+            <span>Cancelar Lance</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 0.1 PENDING BID ALERT -->
+      <div v-else-if="bidStore.hasPendingBid" class="pending-bid-alert-card">
+        <div class="pending-icon-wrap">
+          <AlertCircle :size="20" color="#F59E0B" />
+        </div>
+        <div class="pending-text-col">
+          <strong>Lance em Análise para a Assembleia</strong>
+          <span>Você ofertou {{ formatCurrency(bidStore.pendingBid?.amount || 0) }} ({{ bidStore.pendingBid?.percentage }}%).</span>
+        </div>
+        <button
+          type="button"
+          class="btn-cancel-pending-inline"
+          @click="isCancelConfirmOpen = true"
+        >
+          Cancelar
+        </button>
+      </div>
+
       <!-- 1. Header Card with Product & Contract Info (Fiel ao Flutter) -->
       <div class="bid-header-card">
         <div class="bid-product-meta-row">
@@ -589,10 +718,437 @@ async function handleConfirmBid() {
         </button>
       </div>
     </div>
+
+    <!-- ── PIX Payment Modal ─────────────────────────────────────────────── -->
+    <div v-if="isPixModalOpen" class="modal-overlay" @click.self="isPixModalOpen = false">
+      <div class="modal-bottom-sheet pix-modal-sheet">
+        <div class="modal-handle"></div>
+
+        <div class="modal-header-row">
+          <div class="d-flex align-items-center gap-2">
+            <QrCode :size="22" color="#FF6D00" />
+            <h2 class="modal-title">Pagar Lance via PIX</h2>
+          </div>
+          <button class="modal-close-btn" @click="isPixModalOpen = false">
+            <X :size="20" color="#757575" />
+          </button>
+        </div>
+
+        <div class="pix-amount-badge">
+          <span class="pix-amount-label">Valor a pagar:</span>
+          <strong class="pix-amount-value">{{ formatCurrency(pixData?.amount || bidStore.approvedBid?.amount || 0) }}</strong>
+        </div>
+
+        <!-- QR Code display -->
+        <div class="pix-qr-wrapper">
+          <img
+            v-if="pixData?.qrCode"
+            :src="pixData.qrCode.startsWith('data:') ? pixData.qrCode : `data:image/png;base64,${pixData.qrCode}`"
+            alt="QR Code PIX"
+            class="pix-qr-img"
+          />
+          <div v-else class="pix-qr-placeholder">
+            <QrCode :size="120" color="#263238" />
+          </div>
+        </div>
+
+        <!-- Pix Copia e Cola -->
+        <div class="pix-copy-box">
+          <label class="pix-copy-label">Código PIX Copia e Cola:</label>
+          <div class="pix-input-group">
+            <input
+              type="text"
+              readonly
+              :value="pixData?.pixCopiaECola || pixData?.qrCodeText || '00020126580014br.gov.bcb.pix...'"
+              class="pix-code-input"
+            />
+            <button
+              type="button"
+              class="btn-copy-pix"
+              :class="{ copied: hasCopiedPix }"
+              @click="copyPixCode"
+            >
+              <Check v-if="hasCopiedPix" :size="16" />
+              <Copy v-else :size="16" />
+              <span>{{ hasCopiedPix ? 'Copiado!' : 'Copiar' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="pix-instructions">
+          <p class="pix-inst-text">
+            1. Abra o app do seu banco e escolha <strong>PIX</strong>.<br />
+            2. Escaneie o QR Code ou cole o código acima.<br />
+            3. A confirmação da contemplação e liberação do crédito ocorre em instantes.
+          </p>
+        </div>
+
+        <button type="button" class="btn-done-pix" @click="isPixModalOpen = false">
+          Entendi, já realizei o pagamento
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Cancel Confirmation Modal ─────────────────────────────────────── -->
+    <div v-if="isCancelConfirmOpen" class="modal-overlay" @click.self="isCancelConfirmOpen = false">
+      <div class="modal-bottom-sheet cancel-modal-sheet">
+        <div class="modal-handle"></div>
+
+        <div class="cancel-icon-wrapper">
+          <Trash2 :size="32" color="#EF4444" />
+        </div>
+
+        <h2 class="cancel-modal-title">Cancelar Lance?</h2>
+        <p class="cancel-modal-desc">
+          Tem certeza de que deseja cancelar este lance? Caso cancele, sua proposta será removida desta assembleia.
+        </p>
+
+        <div class="cancel-actions-col">
+          <button
+            type="button"
+            class="btn-confirm-cancel-bid"
+            :disabled="isCancelling"
+            @click="handleConfirmCancelBid(bidStore.approvedBid?.id || bidStore.pendingBid?.id!)"
+          >
+            <Loader2 v-if="isCancelling" :size="18" class="animate-spin" />
+            <span v-else>Sim, Cancelar Lance</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn-keep-bid"
+            @click="isCancelConfirmOpen = false"
+          >
+            Não, Manter Lance
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
+/* ── Approved & Pending Bid Styles ──────────────────────────────────────── */
+.approved-bid-action-card {
+  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+  border: 1px solid rgba(255, 183, 3, 0.35);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 0 20px rgba(255, 109, 0, 0.12);
+  color: #FFFFFF;
+}
+
+.approved-badge-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34D399;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.trophy-sparkle {
+  color: #FBBF24;
+}
+
+.approved-main-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.approved-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.approved-subtitle {
+  font-size: 13px;
+  color: #94A3B8;
+}
+
+.approved-amount-val {
+  font-size: 24px;
+  font-weight: 900;
+  color: #10B981;
+  line-height: 1.2;
+}
+
+.approved-meta-tag {
+  font-size: 12px;
+  color: #CBD5E1;
+}
+
+.approved-icon-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.approved-actions-row {
+  display: flex;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-pay-bid-pix {
+  flex: 1;
+  height: 44px;
+  background: linear-gradient(135deg, #FF6D00 0%, #E65100 100%);
+  border: none;
+  border-radius: 12px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(255, 109, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.btn-pay-bid-pix:hover {
+  transform: translateY(-1px);
+}
+
+.btn-cancel-bid-action {
+  height: 44px;
+  padding: 0 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  color: #EF4444;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-cancel-bid-action:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* Pending Banner */
+.pending-bid-alert-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.pending-text-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  color: #92400E;
+}
+
+.btn-cancel-pending-inline {
+  background: transparent;
+  border: 1px solid #D97706;
+  color: #B45309;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* PIX Modal Styles */
+.pix-amount-badge {
+  background: var(--color-surface-variant, #F8F8F8);
+  border: 1px solid var(--color-border, #E0E0E0);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.pix-amount-label {
+  display: block;
+  font-size: 12px;
+  color: #757575;
+}
+
+.pix-amount-value {
+  font-size: 22px;
+  color: #10B981;
+  font-weight: 900;
+}
+
+.pix-qr-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.pix-qr-img {
+  width: 180px;
+  height: 180px;
+  border-radius: 12px;
+  border: 1px solid #E0E0E0;
+}
+
+.pix-copy-box {
+  margin-bottom: 16px;
+}
+
+.pix-copy-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #263238;
+  margin-bottom: 6px;
+}
+
+.pix-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.pix-code-input {
+  flex: 1;
+  height: 40px;
+  border: 1px solid #E0E0E0;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: #616161;
+  background: #FAFAFA;
+}
+
+.btn-copy-pix {
+  height: 40px;
+  padding: 0 16px;
+  background: #FF6D00;
+  border: none;
+  border-radius: 10px;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-copy-pix.copied {
+  background: #10B981;
+}
+
+.pix-instructions {
+  background: #F8F9FA;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.pix-inst-text {
+  font-size: 12px;
+  color: #616161;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.btn-done-pix {
+  width: 100%;
+  height: 46px;
+  background: #263238;
+  border: none;
+  border-radius: 12px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Cancel Modal */
+.cancel-modal-sheet {
+  text-align: center;
+}
+
+.cancel-icon-wrapper {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #FEE2E2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.cancel-modal-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #263238;
+  margin-bottom: 8px;
+}
+
+.cancel-modal-desc {
+  font-size: 14px;
+  color: #757575;
+  line-height: 1.4;
+  margin-bottom: 24px;
+}
+
+.cancel-actions-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-confirm-cancel-bid {
+  height: 46px;
+  background: #EF4444;
+  border: none;
+  border-radius: 12px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.btn-keep-bid {
+  height: 40px;
+  background: transparent;
+  border: none;
+  color: #757575;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* ── 1. Top Header Card (Matching Flutter) ──────────────────────────────── */
 .bid-header-card {
   background-color: #FFFFFF;

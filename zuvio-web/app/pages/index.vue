@@ -3,10 +3,12 @@ import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useConsortiumStore } from '~/stores/consortium'
 import { useCheckoutStore } from '~/stores/checkout'
+import { useBidStore } from '~/stores/bid'
 import { useToast } from '~/composables/useToast'
 import { formatCurrency } from '~~/shared/utils/currency'
 import { PRODUCT_CATEGORIES } from '~~/shared/utils/catalogData'
 import type { Product, ActiveContract, ProductTypeKey } from '~~/shared/types/catalog'
+import ApprovedBidModal from '~/components/bids/ApprovedBidModal.vue'
 import {
   Search,
   CheckCircle,
@@ -32,12 +34,16 @@ definePageMeta({
 const authStore = useAuthStore()
 const consortiumStore = useConsortiumStore()
 const checkoutStore = useCheckoutStore()
+const bidStore = useBidStore()
 const toast = useToast()
 
 const currentContractIndex = ref(0)
 
 onMounted(async () => {
-  await consortiumStore.loadHomeData()
+  await Promise.all([
+    consortiumStore.loadHomeData(),
+    bidStore.fetchUserBids()
+  ])
 })
 
 function openProductDetail(product: Product) {
@@ -198,12 +204,13 @@ function handlePayAdhesion(contract: ActiveContract) {
                 <button
                   type="button"
                   class="action-pill-btn"
-                  :class="{ 'is-locked': !contract.isAdesaoPaid }"
+                  :class="{ 'is-locked': !contract.isAdesaoPaid, 'has-bid-alert': bidStore.hasApprovedBid }"
                   @click="handleContractAction('Ofertar Lance', contract.isAdesaoPaid)"
                 >
                   <div class="action-icon-wrap">
                     <Gavel :size="22" />
                     <Lock v-if="!contract.isAdesaoPaid" :size="10" class="lock-sub-icon" />
+                    <span v-if="bidStore.hasApprovedBid" class="bid-alert-badge" title="Lance Aprovado!">!</span>
                   </div>
                   <span class="action-label">Ofertar Lance</span>
                 </button>
@@ -488,10 +495,52 @@ function handlePayAdhesion(contract: ActiveContract) {
         </div>
       </div>
     </Transition>
+
+    <!-- Interstitial Alert Modal for Approved Bids -->
+    <ApprovedBidModal />
   </div>
 </template>
 
 <style scoped>
+/* ── Bid Alert Badge ────────────────────────────────────────────────────── */
+.action-icon-wrap {
+  position: relative;
+}
+
+.bid-alert-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.6);
+  animation: pulseAttention 1.5s infinite;
+}
+
+@keyframes pulseAttention {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
 /* ── Flutter Scaffold Matching ──────────────────────────────────────────── */
 .flutter-home-scaffold {
   min-height: 100vh;

@@ -3,6 +3,8 @@ import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 import { paginate, paginationMeta, buildPageUrl } from '../../utils/pagination';
 
+import { getBidNotificationFrequency, setBidNotificationFrequency, NotificationFrequency } from '../../config/notificationSettings';
+
 // GET /admin/bids
 export const getBids = async (req: Request, res: Response) => {
     try {
@@ -53,6 +55,7 @@ export const getBids = async (req: Request, res: Response) => {
         const totalAmount       = allBids.reduce((s, b) => s + Number(b.amount), 0);
 
         const pagination = paginationMeta(total, page, limit);
+        const notificationFrequency = getBidNotificationFrequency();
 
         res.render('pages/bids/index', {
             path: '/bids',
@@ -69,6 +72,7 @@ export const getBids = async (req: Request, res: Response) => {
             type,
             search,
             pagination,
+            notificationFrequency,
             buildPageUrl: (p: number) => buildPageUrl('/admin/bids', req.query as Record<string, any>, p)
         });
     } catch (error) {
@@ -287,3 +291,21 @@ export const performDraw = async (req: Request, res: Response) => {
         res.redirect('/admin/bids/draw');
     }
 };
+
+// POST /admin/bids/notification-frequency
+export const updateNotificationFrequency = async (req: Request, res: Response) => {
+    const { frequency } = req.body;
+    try {
+        if (frequency === 'HOURLY' || frequency === 'DAILY') {
+            setBidNotificationFrequency(frequency);
+            req.flash('success_msg', `Frequência de lembretes atualizada para: ${frequency === 'HOURLY' ? 'De hora em hora' : 'Diariamente'}`);
+        } else {
+            req.flash('error_msg', 'Frequência inválida');
+        }
+    } catch (error) {
+        logger.error(error);
+        req.flash('error_msg', 'Erro ao atualizar frequência de notificações');
+    }
+    res.redirect('/admin/bids');
+};
+

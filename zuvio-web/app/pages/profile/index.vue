@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useConsortiumStore } from '~/stores/consortium'
+import { useBidStore } from '~/stores/bid'
 import {
   ArrowLeft,
   User,
@@ -30,8 +31,13 @@ definePageMeta({
 const router = useRouter()
 const authStore = useAuthStore()
 const consortiumStore = useConsortiumStore()
+const bidStore = useBidStore()
 
 const isLogoutDialogOpen = ref(false)
+
+onMounted(async () => {
+  await bidStore.fetchUserBids()
+})
 
 const user = computed(() => authStore.user || {
   id: 'dev_user',
@@ -152,14 +158,16 @@ function handleLogout() {
 
           <!-- Ofertar Lance -->
           <div class="profile-menu-card" @click="router.push('/consortium/bids')">
-            <div class="menu-icon-circle orange">
+            <div class="menu-icon-circle orange" style="position: relative;">
               <TrendingUp :size="20" color="#FF6D00" />
+              <span v-if="bidStore.hasApprovedBid" class="profile-bid-alert-badge">!</span>
             </div>
             <div class="menu-texts">
               <span class="menu-title">Ofertar Lance</span>
-              <span class="menu-subtitle">Simule lances e antecipe sua moto</span>
+              <span class="menu-subtitle">{{ bidStore.hasApprovedBid ? '🎉 Você tem um lance aprovado!' : 'Simule lances e antecipe seu consórcio' }}</span>
             </div>
-            <ChevronRight :size="18" color="#B0BEC5" />
+            <span v-if="bidStore.hasApprovedBid" class="badge-approved-pill">Aprovado</span>
+            <ChevronRight v-else :size="18" color="#B0BEC5" />
           </div>
 
           <!-- Validação de Documentos / KYC -->
@@ -501,5 +509,40 @@ function handleLogout() {
   color: #FFFFFF;
   font-weight: 700;
   cursor: pointer;
+}
+
+.profile-bid-alert-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  background: #EF4444;
+  color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
+  animation: pulseAttention 1.5s infinite;
+}
+
+.badge-approved-pill {
+  padding: 3px 8px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10B981;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 999px;
+}
+
+@keyframes pulseAttention {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 </style>
