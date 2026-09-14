@@ -13,7 +13,7 @@ minDuration: 12
 maxDuration: 60
 adminFeeRate: 15.0
 imageUrls:
-  - https://www.bb.com.br/docs/portal/consorcios/images/consorcio-motos.png
+  - https://images.unsplash.com/photo-1558981803-3e15e4f52e59?w=800&auto=format&fit=crop&q=80
 description: >-
   Carta de crédito de R$ 25.000,00 da BB Consórcios para aquisição de motocicletas, scooters ou triciclos de qualquer cilindrada, novos ou seminovos. Ideal para quem busca mobilidade urbana, trabalho ou lazer sobre duas rodas com economia inteligente, sem juros de financiamento e com prazos flexíveis de pagamento.
 specs:

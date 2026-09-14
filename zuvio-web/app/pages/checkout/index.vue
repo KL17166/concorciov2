@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useConsortiumStore } from '~/stores/consortium'
 import { useCheckoutStore } from '~/stores/checkout'
+import { DEFAULT_PRODUCTS } from '~~/shared/utils/catalogData'
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,6 +17,7 @@ import {
   Hash,
   Home,
   Phone,
+  Lock,
   AlertCircle,
   UploadCloud,
   CheckCircle2,
@@ -41,9 +43,50 @@ const cepSuccessMsg = ref<string | null>(null)
 const formError = ref<string | null>(null)
 
 // Step 0 - Personal
+// name e cpf são SOMENTE LEITURA — puxados do cadastro, não podem ser alterados no checkout
 const name = ref('')
 const cpf = ref('')
 const phone = ref('')
+
+// Computeds que exibem os dados registrados (garantidos pela conta)
+const displayRegisteredName = computed(() => {
+  return authStore.user?.name || name.value || ''
+})
+
+const displayRegisteredCpf = computed(() => {
+  const raw = authStore.user?.cpf || cpf.value || ''
+  return formatCpf(raw)
+})
+
+function syncUserData() {
+  const u = authStore.user
+  if (u) {
+    if (u.name) name.value = u.name
+    if (u.cpf) cpf.value = formatCpf(u.cpf)
+    if (!phone.value && u.phone) {
+      phone.value = formatPhone(u.phone)
+    }
+    if (!cep.value && u.cep) {
+      cep.value = formatCep(u.cep)
+      street.value = (u as any).street || ''
+      number.value = (u as any).number || ''
+      district.value = (u as any).neighborhood || (u as any).district || ''
+      city.value = (u as any).city || ''
+      state.value = (u as any).state || ''
+      isAddressExpanded.value = true
+    }
+  } else {
+    name.value = checkoutStore.personal.name
+    cpf.value = formatCpf(checkoutStore.personal.cpf)
+    if (!phone.value) phone.value = formatPhone(checkoutStore.personal.phone)
+  }
+}
+
+watch(
+  () => authStore.user,
+  () => { syncUserData() },
+  { deep: true, immediate: true }
+)
 
 // Step 1 - Address
 const cep = ref('')
@@ -59,21 +102,38 @@ const docFront = ref<string | null>(null)
 const docBack = ref<string | null>(null)
 const selfie = ref<string | null>(null)
 
-onMounted(() => {
-  checkoutStore.initFromAuth()
+const route = useRoute()
 
-  // Pre-fill from store or auth
-  name.value = checkoutStore.personal.name
-  cpf.value = formatCpf(checkoutStore.personal.cpf)
-  phone.value = formatPhone(checkoutStore.personal.phone)
+onMounted(async () => {
+  await checkoutStore.initFromAuth()
 
-  cep.value = formatCep(checkoutStore.address.cep)
-  street.value = checkoutStore.address.street
-  number.value = checkoutStore.address.number
-  district.value = checkoutStore.address.district
-  city.value = checkoutStore.address.city
-  state.value = checkoutStore.address.state
-  complement.value = checkoutStore.address.complement || ''
+  // Sync selectedProduct and selectedPlan from route query if present
+  if (route.query.productId) {
+    const prodId = String(route.query.productId)
+    const prod = consortiumStore.products.find(p => p.id === prodId) || DEFAULT_PRODUCTS.find(p => p.id === prodId)
+    if (prod) {
+      consortiumStore.selectedProduct = prod
+      if (route.query.planId) {
+        const planId = String(route.query.planId)
+        const pl = prod.plans.find(p => p.id === planId)
+        if (pl) consortiumStore.selectedPlan = pl
+      }
+    }
+  }
+
+  // Sincroniza dados do usuário autenticado (nome/cpf são readonly — puxados do cadastro)
+  syncUserData()
+
+  // Endereço e documentos do checkoutStore
+  if (!cep.value) {
+    cep.value = formatCep(checkoutStore.address.cep)
+    street.value = checkoutStore.address.street
+    number.value = checkoutStore.address.number
+    district.value = checkoutStore.address.district
+    city.value = checkoutStore.address.city
+    state.value = checkoutStore.address.state
+    complement.value = checkoutStore.address.complement || ''
+  }
 
   if (street.value && street.value.trim().length > 0) {
     isAddressExpanded.value = true
@@ -107,9 +167,7 @@ function formatCep(v: string) {
 }
 
 // Watchers for masked input
-watch(cpf, (val) => {
-  cpf.value = formatCpf(val)
-})
+// cpf é readonly — sem watcher de edição
 watch(phone, (val) => {
   phone.value = formatPhone(val)
 })
@@ -154,7 +212,7 @@ async function fetchAddressFromViaCep(cleanCep: string) {
   try {
     const res = await $fetch<any>(`https://viacep.com.br/ws/${cleanCep}/json/`)
     if (res.erro) {
-      formError.value = 'CEP não encontrado. Por favor, preencha o endereço manualmente abaixo.'
+      formError.value = 'CEP nÃ£o encontrado. Por favor, preencha o endereÃ§o manualmente abaixo.'
       isAddressExpanded.value = true
       isManualAddressMode.value = true
     } else {
@@ -162,7 +220,7 @@ async function fetchAddressFromViaCep(cleanCep: string) {
       district.value = res.bairro || ''
       city.value = res.localidade || ''
       state.value = (res.uf || '').toUpperCase()
-      cepSuccessMsg.value = 'Endereço localizado! Informe o número da residência.'
+      cepSuccessMsg.value = 'EndereÃ§o localizado! Informe o nÃºmero da residÃªncia.'
       isAddressExpanded.value = true
       isManualAddressMode.value = false
 
@@ -173,7 +231,7 @@ async function fetchAddressFromViaCep(cleanCep: string) {
       }, 150)
     }
   } catch (_) {
-    formError.value = 'Erro ao consultar CEP. Preencha o endereço manualmente abaixo.'
+    formError.value = 'Erro ao consultar CEP. Preencha o endereÃ§o manualmente abaixo.'
     isAddressExpanded.value = true
     isManualAddressMode.value = true
   } finally {
@@ -202,16 +260,10 @@ function validateCurrentStep(): boolean {
   formError.value = null
 
   if (currentStep.value === 0) {
-    if (!name.value.trim() || name.value.trim().length < 3) {
-      formError.value = 'Informe seu nome completo.'
-      return false
-    }
-    if (!isValidCpf(cpf.value)) {
-      formError.value = 'CPF inválido. Verifique os dígitos digitados.'
-      return false
-    }
-    if (phone.value.replace(/\D/g, '').length < 10) {
-      formError.value = 'Telefone com DDD inválido.'
+    // Nome e CPF são bloqueados — não são validados aqui (vêm do cadastro)
+    const cleanPhone = phone.value.replace(/\D/g, '')
+    if (cleanPhone.length < 10) {
+      formError.value = 'Informe um telefone celular válido com DDD.'
       return false
     }
     return true
@@ -219,7 +271,7 @@ function validateCurrentStep(): boolean {
 
   if (currentStep.value === 1) {
     if (cep.value.replace(/\D/g, '').length !== 8) {
-      formError.value = 'Informe um CEP válido com 8 dígitos.'
+      formError.value = 'Informe um CEP vÃ¡lido com 8 dÃ­gitos.'
       return false
     }
     if (!isAddressExpanded.value) {
@@ -231,7 +283,7 @@ function validateCurrentStep(): boolean {
       return false
     }
     if (!number.value.trim()) {
-      formError.value = 'Informe o número da residência.'
+      formError.value = 'Informe o nÃºmero da residÃªncia.'
       const numInput = document.getElementById('number-input')
       numInput?.focus()
       return false
@@ -274,9 +326,8 @@ function handleContinue() {
   if (!validateCurrentStep()) return
 
   if (currentStep.value === 0) {
+    // Apenas o telefone pode ser atualizado — nome e CPF vêm do cadastro e são imutáveis
     checkoutStore.updatePersonal({
-      name: name.value,
-      cpf: cpf.value,
       phone: phone.value
     })
     currentStep.value = 1
@@ -297,7 +348,10 @@ function handleContinue() {
     checkoutStore.updateDocument('front', docFront.value!)
     checkoutStore.updateDocument('back', docBack.value!)
     checkoutStore.updateDocument('selfie', selfie.value!)
-    router.push('/checkout/contract')
+    router.push({
+      path: '/checkout/contract',
+      query: route.query
+    })
   }
 }
 </script>
@@ -309,7 +363,7 @@ function handleContinue() {
       <button class="appbar-back-btn" aria-label="Voltar" @click="currentStep > 0 ? currentStep-- : router.back()">
         <ArrowLeft :size="22" color="#263238" />
       </button>
-      <h1 class="appbar-title">Contratação</h1>
+      <h1 class="appbar-title">ContrataÃ§Ã£o</h1>
       <div class="appbar-spacer"></div>
     </header>
 
@@ -333,7 +387,7 @@ function handleContinue() {
             <Check v-if="currentStep > 1" :size="18" color="#FFFFFF" />
             <MapPin v-else :size="18" :color="currentStep >= 1 ? '#FFFFFF' : '#9E9E9E'" />
           </div>
-          <span class="step-label">Endereço</span>
+          <span class="step-label">EndereÃ§o</span>
         </div>
 
         <div class="step-connector" :class="{ active: currentStep >= 2 }"></div>
@@ -361,48 +415,62 @@ function handleContinue() {
         <span>{{ cepSuccessMsg }}</span>
       </div>
 
-      <!-- ── STEP 0: DADOS PESSOAIS ────────────────────────────────────────── -->
+      <!-- â”€â”€ STEP 0: DADOS PESSOAIS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <section v-if="currentStep === 0" class="step-card-box">
         <div class="step-card-header">
           <h2 class="step-title">Dados Pessoais</h2>
-          <p class="step-subtitle">Preencha seus dados cadastrais para o contrato</p>
+          <p class="step-subtitle">Dados vinculados ao seu cadastro. Apenas o telefone pode ser alterado nesta etapa.</p>
         </div>
 
         <div class="form-grid">
-          <!-- Nome -->
+          <!-- Nome Completo (Bloqueado) -->
           <div class="input-group">
-            <label class="input-label" for="name-input">Nome Completo</label>
-            <div class="input-wrapper">
+            <div class="input-label-row">
+              <label class="input-label" for="name-input">Nome Completo</label>
+              <span class="badge-locked"><Lock :size="11" /> Bloqueado</span>
+            </div>
+            <div class="input-wrapper input-disabled">
               <User :size="18" class="input-icon" />
               <input
                 id="name-input"
-                v-model="name"
+                :value="displayRegisteredName"
                 type="text"
-                placeholder="Ex: João da Silva"
-                class="form-input"
+                disabled
+                readonly
+                tabindex="-1"
+                placeholder="Nome vinculado ao cadastro"
+                class="form-input form-input-disabled"
               />
             </div>
           </div>
 
-          <!-- CPF -->
+          <!-- CPF (Bloqueado) -->
           <div class="input-group">
-            <label class="input-label" for="cpf-input">CPF</label>
-            <div class="input-wrapper">
+            <div class="input-label-row">
+              <label class="input-label" for="cpf-input">CPF</label>
+              <span class="badge-locked"><Lock :size="11" /> Bloqueado</span>
+            </div>
+            <div class="input-wrapper input-disabled">
               <CreditCard :size="18" class="input-icon" />
               <input
                 id="cpf-input"
-                v-model="cpf"
+                :value="displayRegisteredCpf"
                 type="text"
+                disabled
+                readonly
+                tabindex="-1"
                 placeholder="000.000.000-00"
-                maxlength="14"
-                class="form-input"
+                class="form-input form-input-disabled"
               />
             </div>
           </div>
 
-          <!-- Telefone -->
+          <!-- Telefone (Editável) -->
           <div class="input-group">
-            <label class="input-label" for="phone-input">Telefone Celular</label>
+            <div class="input-label-row">
+              <label class="input-label" for="phone-input">Telefone Celular</label>
+              <span class="badge-editable">Editável</span>
+            </div>
             <div class="input-wrapper">
               <Phone :size="18" class="input-icon" />
               <input
@@ -414,16 +482,17 @@ function handleContinue() {
                 class="form-input"
               />
             </div>
+            <span class="input-helper">Você pode atualizar seu número de contato para notificações da cota.</span>
           </div>
         </div>
       </section>
 
-      <!-- ── STEP 1: ENDEREÇO ─────────────────────────────────────────────── -->
+      <!-- â”€â”€ STEP 1: ENDEREÃ‡O â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <section v-if="currentStep === 1" class="step-card-box">
         <div class="step-card-header">
-          <h2 class="step-title">Endereço Residencial</h2>
+          <h2 class="step-title">EndereÃ§o Residencial</h2>
           <p class="step-subtitle">
-            {{ isAddressExpanded ? 'Confira os dados e informe o número da residência' : 'Digite seu CEP para carregar o endereço automaticamente' }}
+            {{ isAddressExpanded ? 'Confira os dados e informe o nÃºmero da residÃªncia' : 'Digite seu CEP para carregar o endereÃ§o automaticamente' }}
           </p>
         </div>
 
@@ -438,7 +507,7 @@ function handleContinue() {
                 class="btn-text-action"
                 @click="isAddressExpanded = true; isManualAddressMode = true"
               >
-                Preencher endereço manualmente
+                Preencher endereÃ§o manualmente
               </button>
             </div>
             <div class="input-wrapper">
@@ -481,11 +550,11 @@ function handleContinue() {
                 </div>
               </div>
 
-              <!-- Número & Bairro -->
+              <!-- NÃºmero & Bairro -->
               <div class="form-row-two">
                 <div class="input-group flex-1">
                   <label class="input-label" for="number-input">
-                    Número <span class="required-star">*</span>
+                    NÃºmero <span class="required-star">*</span>
                   </label>
                   <div class="input-wrapper">
                     <Hash :size="18" class="input-icon" />
@@ -565,11 +634,11 @@ function handleContinue() {
         </div>
       </section>
 
-      <!-- ── STEP 2: DOCUMENTOS / KYC ──────────────────────────────────────── -->
+      <!-- â”€â”€ STEP 2: DOCUMENTOS / KYC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <section v-if="currentStep === 2" class="step-card-box">
         <div class="step-card-header">
-          <h2 class="step-title">Documentos de Identificação</h2>
-          <p class="step-subtitle">Envie fotos nítidas do seu documento (RG ou CNH) e uma selfie</p>
+          <h2 class="step-title">Documentos de IdentificaÃ§Ã£o</h2>
+          <p class="step-subtitle">Envie fotos nÃ­tidas do seu documento (RG ou CNH) e uma selfie</p>
         </div>
 
         <div class="docs-upload-list">
@@ -641,7 +710,7 @@ function handleContinue() {
               </div>
               <div class="doc-info-col">
                 <span class="doc-name">Selfie com o Documento</span>
-                <span class="doc-desc">{{ selfie ? 'Foto anexada com sucesso' : 'Segure o documento próximo ao rosto' }}</span>
+                <span class="doc-desc">{{ selfie ? 'Foto anexada com sucesso' : 'Segure o documento prÃ³ximo ao rosto' }}</span>
                 <span v-if="selfie" class="doc-status-pill"><Check :size="12" /> Anexado</span>
               </div>
               <div class="doc-action-icon">
@@ -686,7 +755,7 @@ function handleContinue() {
   flex-direction: column;
 }
 
-/* ── Stepper Bar ────────────────────────────────────────────────────────── */
+/* â”€â”€ Stepper Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .checkout-stepper-bar {
   background-color: #FFFFFF;
   border-bottom: 1px solid var(--color-border, #E0E0E0);
@@ -759,7 +828,7 @@ function handleContinue() {
   background-color: var(--color-primary, #FF6D00);
 }
 
-/* ── Content Container ─────────────────────────────────────────────────── */
+/* â”€â”€ Content Container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .checkout-content-container {
   flex: 1;
   max-width: 600px;
@@ -793,7 +862,7 @@ function handleContinue() {
   margin: 0;
 }
 
-/* ── Form Inputs ────────────────────────────────────────────────────────── */
+/* â”€â”€ Form Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .form-grid {
   display: flex;
   flex-direction: column;
@@ -825,6 +894,51 @@ function handleContinue() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+/* ── Locked / Editable Field Badges ──────────────────────────────────────── */
+.badge-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #757575;
+  background-color: #F5F5F5;
+  border: 1px solid #E0E0E0;
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+
+.badge-editable {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #2E7D32;
+  background-color: #E8F5E9;
+  border: 1px solid #C8E6C9;
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+
+/* ── Disabled Input (Bloqueado) ───────────────────────────────────────────── */
+.input-disabled {
+  opacity: 1;
+}
+
+.form-input-disabled {
+  background-color: #F5F5F5 !important;
+  color: #616161 !important;
+  border-color: #EEEEEE !important;
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.input-helper {
+  font-size: 12px;
+  color: var(--color-text-muted, #757575);
+  padding: 0 4px;
 }
 
 .btn-text-action {
@@ -872,7 +986,7 @@ function handleContinue() {
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
 }
 
-/* ── Smooth Expand Animation ────────────────────────────────────────────── */
+/* â”€â”€ Smooth Expand Animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .slide-expand-enter-active,
 .slide-expand-leave-active {
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -943,7 +1057,7 @@ function handleContinue() {
   100% { transform: rotate(360deg); }
 }
 
-/* ── Feedback Banners ───────────────────────────────────────────────────── */
+/* â”€â”€ Feedback Banners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .checkout-error-banner {
   display: flex;
   align-items: center;
@@ -972,7 +1086,7 @@ function handleContinue() {
   margin-bottom: 20px;
 }
 
-/* ── Documents Upload Cards ─────────────────────────────────────────────── */
+/* â”€â”€ Documents Upload Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .docs-upload-list {
   display: flex;
   flex-direction: column;
@@ -1066,7 +1180,7 @@ function handleContinue() {
   border: 1px solid #E0E0E0;
 }
 
-/* ── Footer Actions Bar ─────────────────────────────────────────────────── */
+/* â”€â”€ Footer Actions Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .checkout-footer-bar {
   position: fixed;
   bottom: 0;
@@ -1125,3 +1239,4 @@ function handleContinue() {
   background-color: #E65100;
 }
 </style>
+

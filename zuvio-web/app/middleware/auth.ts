@@ -1,14 +1,12 @@
 import { useAuthStore } from '~/stores/auth'
 
-export default defineNuxtRouteMiddleware((to, from) => {
-  // Only run on client or when auth state is available
-  if (import.meta.server) return
-
+export default defineNuxtRouteMiddleware((to) => {
   const authStore = useAuthStore()
+  authStore.initFromStorage()
 
   if (!authStore.isAuthenticated) {
     return navigateTo({
-      path: '/login',
+      path: '/auth/login',
       query: { redirect: to.fullPath }
     })
   }

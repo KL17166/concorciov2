@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+﻿import { Request, Response, NextFunction } from 'express';
 import { hashPassword, verifyPassword } from '../../security/password';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
@@ -39,7 +39,7 @@ function isValidCpf(cpf: string): boolean {
 const registerSchema = z.object({
     name: z.string().min(3),
     email: z.string().email(),
-    cpf: z.string().transform(cpf => cpf.replace(/\D/g, '')).refine(isValidCpf, "CPF inválido"),
+    cpf: z.string().transform(cpf => cpf.replace(/\D/g, '')).refine(isValidCpf, "CPF invÃ¡lido"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     phone: z.string().nullable().optional()
 });
@@ -119,9 +119,9 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN || '1h' } as any
         );
 
-        // ── Per-session signing secret ─────────────────────────────────────
+        // â”€â”€ Per-session signing secret â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const signingSecret = crypto.randomBytes(32).toString('hex');
-        // ── Per-session payload encryption key ────────────────────────────
+        // â”€â”€ Per-session payload encryption key â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // A unique AES key for this login session replaces the build-time
         // bootstrap key embedded in the APK for all authenticated requests.
         const payloadSecret = crypto.randomBytes(32).toString('hex');
@@ -140,7 +140,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
                     await redisClient.setEx(`device:binding:${jti}`, ttlSeconds, deviceBindingToken);
                 }
             } catch (redisErr) {
-                logger.warn('Failed to store session secrets in Redis — falling back to static secrets', { userId: user.id });
+                logger.warn('Failed to store session secrets in Redis â€” falling back to static secrets', { userId: user.id });
             }
         }
 
@@ -168,7 +168,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         res.json({
             token,
             signingSecret,
-            // Per-session AES-256-GCM key — Flutter uses this instead of the
+            // Per-session AES-256-GCM key â€” Flutter uses this instead of the
             // build-time bootstrap key for all subsequent authenticated requests.
             payloadSecret,
             user: {
@@ -206,7 +206,7 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
         const userCpf = user?.cpf ?? '';
         const userName = user?.name ?? '';
 
-        // ── Serpro Datavalid KYC validation (V4) ──────────────────────────────
+        // â”€â”€ Serpro Datavalid KYC validation (V4) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Datavalid is a government-database validation service, NOT an OCR API.
         // It validates data you already have (CPF, name, face) against RFB/SENATRAN records.
         if (env.DATAVALID_ENABLED && userCpf !== '11111111111') {
@@ -217,7 +217,7 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
             const kycDir = path.dirname(req.file.path);
 
             if (uploadType === 'selfie') {
-                // ── 1. Facial biometric + liveness check ─────────────────────
+                // â”€â”€ 1. Facial biometric + liveness check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 // Submits the selfie + CPF to Datavalid, which compares the face
                 // against the government SENATRAN/RENACH biometric photo and runs
                 // liveness detection (vivacidade). Endpoint: POST /pf-facial
@@ -237,7 +237,7 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
                         path.join(kycDir, 'kyc-facial-result.json'),
                         JSON.stringify(sidecar, null, 2),
                     );
-                } catch { /* ignore — sidecar is best-effort */ }
+                } catch { /* ignore â€” sidecar is best-effort */ }
 
                 // Fire-and-forget VPS push
                 pushToKycStorage({
@@ -251,14 +251,14 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
                 });
 
                 if (facialErr) {
-                    // Keep the file — admin may override a failed Datavalid check
+                    // Keep the file â€” admin may override a failed Datavalid check
                     if (facialErr.type === 'unavailable') {
                         return res.status(503).json({ error: 'Identity verification service unavailable. Try again later.' });
                     }
                     return res.status(403).json({ error: 'Liveness check failed. Possible fraud attempt.' });
                 }
             } else {
-                // ── 2. Biographical validation against RFB ────────────────────
+                // â”€â”€ 2. Biographical validation against RFB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 // Validates that the CPF + name stored in the user's account match
                 // the Receita Federal database. The document image is stored for
                 // compliance/audit but Datavalid validates against gov records.
@@ -279,7 +279,7 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
                         path.join(kycDir, 'kyc-biographical-result.json'),
                         JSON.stringify(sidecar, null, 2),
                     );
-                } catch { /* ignore — sidecar is best-effort */ }
+                } catch { /* ignore â€” sidecar is best-effort */ }
 
                 // Fire-and-forget VPS push
                 pushToKycStorage({
@@ -293,7 +293,7 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
                 });
 
                 if (bioErr) {
-                    // Keep the file — admin may override a failed Datavalid check
+                    // Keep the file â€” admin may override a failed Datavalid check
                     if (bioErr.type === 'unavailable') {
                         return res.status(503).json({ error: 'Identity verification service unavailable. Try again later.' });
                     }
@@ -301,11 +301,11 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
                 }
             }
         }
-        // ─────────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         // Persist the URL to the user record so the admin KYC panel can access it.
         // The upload type determines which field to update.
-        // `type=selfie` → selfieUrl, `type=document_back` → documentBackUrl, else → documentFrontUrl
+        // `type=selfie` â†’ selfieUrl, `type=document_back` â†’ documentBackUrl, else â†’ documentFrontUrl
         const queryType = (req.query.type as string) || '';
         const urlField: 'selfieUrl' | 'documentFrontUrl' | 'documentBackUrl' =
             queryType === 'selfie' ? 'selfieUrl'
@@ -341,7 +341,8 @@ export const uploadDocument = async (req: Request, res: Response, next: NextFunc
 };
 
 const updateProfileSchema = z.object({
-    name: z.string().min(3).optional(),
+    // name e cpf NAO podem ser alterados via perfil — eles sao definidos no cadastro e sao imutaveis
+    // Qualquer name enviado no body sera IGNORADO pelo handler
     phone: z.string().optional(),
     // Address fields
     cep: z.string().optional(),
@@ -350,7 +351,7 @@ const updateProfileSchema = z.object({
     neighborhood: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
-    // Document URLs are intentionally excluded — they may only be set via
+    // Document URLs are intentionally excluded â€” they may only be set via
     // POST /auth/upload which runs Datavalid KYC validation before storing.
 });
 
@@ -361,7 +362,7 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
         }
 
         const data = updateProfileSchema.parse(req.body);
-        const { name, phone, ...addressData } = data as any;
+        const { phone, ...addressData } = data as any;
 
         // Build address JSON object
         let addressJson = null;
@@ -369,8 +370,9 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
             addressJson = JSON.stringify(addressData);
         }
 
+        // name e cpf sao campos imutaveis — nao podem ser alterados via PUT /profile
+        // Eles sao definidos no cadastro (POST /auth/register) e somente o admin pode alteralos
         const updateData: any = {};
-        if (name) updateData.name = name;
         if (phone) updateData.phone = phone;
         if (addressJson) updateData.address = addressJson;
 
@@ -434,7 +436,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
                     await redisClient.del(`payload:session:${decoded.jti}`);
                 }
             } catch (redisErr) {
-                // Log but do not fail the logout — client will discard the token regardless
+                // Log but do not fail the logout â€” client will discard the token regardless
                 logger.warn('Failed to blacklist JTI on logout (Redis unavailable)', { userId: req.user?.userId });
             }
         }
@@ -451,7 +453,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 const changePasswordSchema = z.object({
-    currentPassword: z.string().min(1, 'Senha atual é obrigatória'),
+    currentPassword: z.string().min(1, 'Senha atual Ã© obrigatÃ³ria'),
     newPassword: z.string().min(8, 'Nova senha deve ter pelo menos 8 caracteres'),
 });
 
@@ -466,7 +468,7 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
 
         const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
         if (!user) {
-            return res.status(404).json({ message: 'Usuário não encontrado' });
+            return res.status(404).json({ message: 'UsuÃ¡rio nÃ£o encontrado' });
         }
 
         const validPassword = await verifyPassword(data.currentPassword, user.passwordHash);

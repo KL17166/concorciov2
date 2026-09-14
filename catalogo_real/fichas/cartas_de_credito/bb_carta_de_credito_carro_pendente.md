@@ -13,7 +13,7 @@ minDuration: 36
 maxDuration: 84
 adminFeeRate: 14.0
 imageUrls:
-  - https://www.bb.com.br/docs/portal/consorcios/images/consorcio-veiculos.png
+  - https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80
 description: >-
   Carta de crédito de R$ 80.000,00 da BB Consórcios para aquisição de veículos novos ou seminovos (carros de passeio, utilitários ou pick-ups) de qualquer marca e modelo em todo o território nacional. Possibilita poder de compra à vista na concessionária ou com vendedor particular, com taxas administrativas altamente competitivas e parcelas que cabem no seu planejamento financeiro.
 specs:

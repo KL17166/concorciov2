@@ -36,27 +36,34 @@ function handleLogout() {
 
         <!-- Right User Actions -->
         <div class="header-actions">
-
-          <div class="user-chip">
-            <div class="user-avatar">
-              <User :size="16" />
+          <template v-if="authStore.isAuthenticated">
+            <div class="user-chip">
+              <div class="user-avatar">
+                <User :size="16" />
+              </div>
+              <div class="user-details">
+                <span class="user-name">{{ authStore.userName }}</span>
+                <span class="user-role-badge" :class="`role-${authStore.userRole.toLowerCase()}`">
+                  {{ authStore.userRole }}
+                </span>
+              </div>
             </div>
-            <div class="user-details">
-              <span class="user-name">{{ authStore.userName }}</span>
-              <span class="user-role-badge" :class="`role-${authStore.userRole.toLowerCase()}`">
-                {{ authStore.userRole }}
-              </span>
-            </div>
-          </div>
 
-          <button
-            type="button"
-            class="btn-logout"
-            title="Sair da conta"
-            @click="handleLogout"
-          >
-            <LogOut :size="18" />
-          </button>
+            <button
+              type="button"
+              class="btn-logout"
+              title="Sair da conta"
+              @click="handleLogout"
+            >
+              <LogOut :size="18" />
+            </button>
+          </template>
+
+          <template v-else>
+            <NuxtLink to="/auth/login" class="btn-login-nav">
+              Entrar
+            </NuxtLink>
+          </template>
         </div>
       </div>
     </header>
@@ -89,7 +96,7 @@ function handleLogout() {
 .header-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 12px 20px;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -212,6 +219,22 @@ function handleLogout() {
   background: var(--color-error-subtle);
   border-color: var(--color-error-border);
   color: var(--color-error);
+}
+
+.btn-login-nav {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, var(--color-primary), #E65100);
+  color: #FFFFFF;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.btn-login-nav:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--color-primary-glow);
 }
 
 .main-viewport {

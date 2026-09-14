@@ -152,60 +152,6 @@ export class SigiloPayService {
         }
     }
 
-    /**
-     * Create a Boleto deposit transaction
-     * Uses the same /gateway/transactions endpoint with payment_method = 'boleto'
-     */
-    static async createBoletoDeposit(params: CreatePixDepositParams): Promise<SigiloPayTransactionResponse> {
-        const config = await this.getConfig();
-
-        if (!config.isConfigured || !config.apiKey || !config.apiSecret) {
-            throw new Error('SigiloPay credentials not configured. Set SIGILOPAY_API_KEY/SECRET in .env or Admin Panel > Gateways.');
-        }
-
-        logger.info(`[SigiloPay] Creating Boleto deposit: ${params.external_id} - R$ ${params.amount}`);
-
-        const cleanDoc = params.payer.document.replace(/\D/g, '');
-
-        const payload: any = {
-            type: 'deposit',
-            payment_method: 'boleto',
-            amount: params.amount,
-            description: params.description || `Pgto #${params.external_id}`,
-            reference: params.external_id,
-            name: params.payer.name,
-            document: cleanDoc,
-            email: params.payer.email || undefined,
-            phone: params.payer.phone?.replace(/\D/g, '') || undefined,
-        };
-
-        if (params.payer.address) {
-            payload.address = {
-                zipCode: params.payer.address.zipCode.replace(/\D/g, ''),
-                street: params.payer.address.street,
-                number: params.payer.address.number,
-                complement: params.payer.address.complement,
-                neighborhood: params.payer.address.neighborhood,
-                city: params.payer.address.city,
-                state: params.payer.address.state,
-            };
-        }
-
-        try {
-            const response = await axios.post<SigiloPayTransactionResponse>(
-                `${config.baseUrl}/gateway/transactions`,
-                payload,
-                { headers: this.buildHeaders(config.apiKey, config.apiSecret) }
-            );
-
-            logger.info(`[SigiloPay] Boleto transaction created: ${response.data.id} - Status: ${response.data.status}`);
-            return response.data;
-        } catch (error: any) {
-            const errData = error.response?.data;
-            logger.error('[SigiloPay] Error creating Boleto deposit:', errData || error.message);
-            throw new Error(errData?.message || 'Failed to create SigiloPay Boleto deposit');
-        }
-    }
 
     /**
      * Get a transaction by ID

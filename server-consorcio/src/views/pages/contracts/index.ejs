@@ -194,7 +194,7 @@
                                             </strong>
                                         </td>
                                         <td>
-                                            <span class="badge <%= contract.paidInstallments === contract.totalInstallments ? 'bg-success-subtle text-success border border-success-subtle' : contract.paidInstallments > 0 ? 'bg-warning-subtle text-warning border border-warning-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle' %>">
+                                            <span class="badge <%= contract.paidInstallments === contract.totalInstallments ? 'bg-success-subtle text-success border-success-subtle' : contract.paidInstallments > 0 ? 'bg-warning-subtle text-warning border-warning-subtle' : 'bg-secondary-subtle text-secondary border-secondary-subtle' %> border">
                                                 <%= contract.paidInstallments %>/<%= contract.totalInstallments %>
                                             </span>
                                         </td>

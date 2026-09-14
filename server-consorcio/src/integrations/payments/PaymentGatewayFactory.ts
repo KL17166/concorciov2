@@ -5,28 +5,43 @@ import { SandboxPaymentAdapter } from './SandboxPaymentAdapter';
 import { prisma } from '../../config/database';
 
 export class PaymentGatewayFactory {
-    static async getGateway(method: PaymentMethod): Promise<PaymentGateway> {
-        const whereClause: any = {
-            enabled: true
-        };
+    /**
+     * Cria a instância do adaptador correspondente à configuração do gateway
+     */
+    static createAdapter(config: any, method: PaymentMethod): PaymentGateway | null {
+        if (!config || !config.enabled) return null;
 
-        if (method === 'PIX') {
-            whereClause.isDefaultPix = true;
-            whereClause.supportsPix = true;
-        } else if (method === 'BOLETO') {
-            whereClause.isDefaultBoleto = true;
-            whereClause.supportsBoleto = true;
-        }
-
-        const gatewayConfig = await prisma.gatewayConfig.findFirst({
-            where: whereClause
-        });
-
-        if (gatewayConfig?.environment === 'sandbox') {
+        if (config.environment === 'sandbox') {
             return new SandboxPaymentAdapter();
         }
 
-        if (!gatewayConfig || !gatewayConfig.enabled) {
+        if (config.name === 'sigilopay') {
+            if (method === 'BOLETO') return null;
+            return new SigiloPayAdapter();
+        }
+
+        if (config.name === 'pixgo') {
+            if (method === 'BOLETO') return null;
+            return new PixGoAdapter();
+        }
+
+        return null;
+    }
+
+    /**
+     * Retorna a lista ordenada de todos os gateways ativos que suportam o método solicitado.
+     * O gateway marcado como padrão (isDefaultPix / isDefaultBoleto) sempre fica em primeiro lugar,
+     * seguido pelos gateways secundários para failover automático.
+     */
+    static async getCandidateGateways(method: PaymentMethod): Promise<PaymentGateway[]> {
+        const configs = await prisma.gatewayConfig.findMany({
+            where: {
+                enabled: true,
+                ...(method === 'PIX' ? { supportsPix: true } : { supportsBoleto: true })
+            }
+        });
+
+        if (!configs || configs.length === 0) {
             throw Object.assign(new Error('Nenhum gateway de pagamento ativo no momento.'), {
                 code: 'GATEWAY_UNAVAILABLE',
                 statusCode: 503,
@@ -34,17 +49,39 @@ export class PaymentGatewayFactory {
             });
         }
 
-        if (gatewayConfig.name === 'sigilopay') {
-            return new SigiloPayAdapter();
-        }
+        // Ordena para que o padrão venha primeiro
+        configs.sort((a, b) => {
+            const aDefault = method === 'PIX' ? a.isDefaultPix : a.isDefaultBoleto;
+            const bDefault = method === 'PIX' ? b.isDefaultPix : b.isDefaultBoleto;
+            if (aDefault && !bDefault) return -1;
+            if (!aDefault && bDefault) return 1;
+            return 0;
+        });
 
-        if (gatewayConfig.name === 'pixgo') {
-            if (method === 'BOLETO') {
-                throw Object.assign(new Error('O gateway ativo (PixGo) não suporta geração de boletos.'), { statusCode: 400 });
+        const gateways: PaymentGateway[] = [];
+        for (const config of configs) {
+            const adapter = this.createAdapter(config, method);
+            if (adapter) {
+                gateways.push(adapter);
             }
-            return new PixGoAdapter();
         }
 
-        throw Object.assign(new Error(`Gateway configurado (${gatewayConfig.name}) não é suportado.`), { statusCode: 500 });
+        if (gateways.length === 0) {
+            throw Object.assign(new Error('Nenhum gateway compatível com o método selecionado está ativo no momento.'), {
+                code: 'GATEWAY_UNAVAILABLE',
+                statusCode: 503,
+                retryable: true
+            });
+        }
+
+        return gateways;
+    }
+
+    /**
+     * Retorna o gateway principal ativo
+     */
+    static async getGateway(method: PaymentMethod): Promise<PaymentGateway> {
+        const candidates = await this.getCandidateGateways(method);
+        return candidates[0];
     }
 }

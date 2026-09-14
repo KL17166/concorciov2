@@ -1,0 +1,16 @@
+{
+  "appId": "com.consorcio.app",
+  "appName": "Katari Consórcios",
+  "webDir": "www",
+  "backgroundColor": "#263238",
+  "server": {
+    "url": "https://treaty-mutual-civilization-templates.trycloudflare.com",
+    "cleartext": false
+  },
+  "android": {
+    "backgroundColor": "#263238",
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}

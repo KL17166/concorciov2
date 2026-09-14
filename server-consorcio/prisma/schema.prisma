@@ -123,7 +123,7 @@ model Subscription {
   installments      Installment[]
   bids              Bid[]
 
-  @@unique([groupNumber, quotaNumber], name: "subscription_group_quota_unique")
+  @@index([groupNumber, quotaNumber])
   @@index([userId, status])
   @@map("subscriptions")
 }
@@ -269,4 +269,19 @@ model WebhookLog {
   processedAt     DateTime @default(now())
 
   @@map("webhook_logs")
+}
+
+model SystemAlert {
+  id              String    @id @default(uuid())
+  type            String    // GATEWAY_FAILOVER, GATEWAY_ERROR, PAYMENT_FAILURE, SECURITY
+  severity        String    @default("WARNING") // INFO, WARNING, CRITICAL
+  title           String
+  message         String
+  details         String?   // JSON com metadados: customerId, customerName, customerCpf, amount, failedGateway, errorReason, fallbackGateway, etc.
+  read            Boolean   @default(false)
+  readAt          DateTime?
+  readBy          String?   // Admin userId
+  createdAt       DateTime  @default(now())
+
+  @@map("system_alerts")
 }

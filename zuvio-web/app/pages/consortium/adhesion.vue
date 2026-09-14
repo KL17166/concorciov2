@@ -8,6 +8,7 @@ import { usePaymentStore } from '~/stores/payment'
 import { useToast } from '~/composables/useToast'
 import { formatCurrency } from '~~/shared/utils/currency'
 import type { ActiveContract } from '~~/shared/types/catalog'
+import QRCode from 'qrcode'
 import {
   ArrowLeft,
   QrCode,
@@ -23,7 +24,8 @@ import {
   ShieldCheck,
   ExternalLink,
   Hourglass,
-  Package
+  Package,
+  Loader2
 } from 'lucide-vue-next'
 
 definePageMeta({
@@ -87,6 +89,41 @@ const pixCode = computed(() => {
 const boletoLine = computed(() => {
   return checkoutStore.paymentData?.boletoLine || ''
 })
+
+const qrCodeImage = ref<string>('')
+const isGeneratingQr = ref(false)
+
+async function generateQrCode(code: string) {
+  if (!code) return
+  isGeneratingQr.value = true
+  try {
+    qrCodeImage.value = await QRCode.toDataURL(code, {
+      width: 320,
+      margin: 2,
+      color: {
+        dark: '#1E293B',
+        light: '#FFFFFF'
+      },
+      errorCorrectionLevel: 'M'
+    })
+  } catch (err) {
+    console.error('Erro ao gerar imagem do QR Code:', err)
+  } finally {
+    isGeneratingQr.value = false
+  }
+}
+
+watch(
+  [pixCode, () => checkoutStore.paymentData?.qrCode],
+  async ([code, qr]) => {
+    if (qr && (qr.startsWith('data:') || qr.startsWith('http'))) {
+      qrCodeImage.value = qr
+    } else if (code) {
+      await generateQrCode(code)
+    }
+  },
+  { immediate: true }
+)
 
 onMounted(async () => {
   // Always load fresh data from backend
@@ -248,55 +285,16 @@ function handleFinish() {
         <!-- QR Code Display Box -->
         <div class="qr-code-box">
           <div class="qr-frame">
-            <svg viewBox="0 0 100 100" class="svg-qr-code">
-              <!-- Corner Markers -->
-              <rect x="5" y="5" width="25" height="25" fill="#263238" rx="4" />
-              <rect x="10" y="10" width="15" height="15" fill="#FFFFFF" rx="2" />
-              <rect x="13" y="13" width="9" height="9" fill="#263238" rx="1" />
-
-              <rect x="70" y="5" width="25" height="25" fill="#263238" rx="4" />
-              <rect x="75" y="10" width="15" height="15" fill="#FFFFFF" rx="2" />
-              <rect x="78" y="13" width="9" height="9" fill="#263238" rx="1" />
-
-              <rect x="5" y="70" width="25" height="25" fill="#263238" rx="4" />
-              <rect x="10" y="75" width="15" height="15" fill="#FFFFFF" rx="2" />
-              <rect x="13" y="78" width="9" height="9" fill="#263238" rx="1" />
-
-              <!-- Data Pixels Pattern -->
-              <rect x="36" y="8" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="46" y="8" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="56" y="8" width="6" height="6" fill="#263238" rx="1" />
-
-              <rect x="8" y="36" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="18" y="36" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="28" y="36" width="6" height="6" fill="#263238" rx="1" />
-
-              <rect x="36" y="36" width="12" height="12" fill="#FF6D00" rx="3" />
-              <rect x="52" y="36" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="62" y="36" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="76" y="36" width="8" height="8" fill="#263238" rx="1" />
-
-              <rect x="36" y="52" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="46" y="52" width="14" height="6" fill="#263238" rx="1" />
-              <rect x="66" y="52" width="6" height="6" fill="#263238" rx="1" />
-
-              <rect x="8" y="52" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="18" y="52" width="12" height="6" fill="#263238" rx="1" />
-
-              <rect x="36" y="66" width="8" height="8" fill="#263238" rx="1" />
-              <rect x="48" y="66" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="58" y="66" width="8" height="8" fill="#263238" rx="1" />
-              <rect x="70" y="66" width="6" height="6" fill="#263238" rx="1" />
-
-              <rect x="36" y="78" width="14" height="6" fill="#263238" rx="1" />
-              <rect x="54" y="78" width="10" height="6" fill="#263238" rx="1" />
-              <rect x="68" y="78" width="8" height="8" fill="#263238" rx="1" />
-              <rect x="80" y="78" width="12" height="6" fill="#263238" rx="1" />
-
-              <rect x="76" y="48" width="6" height="12" fill="#263238" rx="1" />
-              <rect x="86" y="48" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="86" y="58" width="6" height="6" fill="#263238" rx="1" />
-            </svg>
+            <img
+              v-if="qrCodeImage"
+              :src="qrCodeImage"
+              alt="QR Code Pix"
+              class="real-qr-code-img"
+            />
+            <div v-else class="qr-loading-placeholder">
+              <Loader2 :size="32" class="spin-icon" color="#FF6D00" />
+              <span class="qr-loading-text">Gerando QR Code...</span>
+            </div>
           </div>
           <p class="qr-subtext">Aponte a câmera do seu aplicativo de banco para escanear</p>
         </div>
@@ -695,16 +693,48 @@ function handleFinish() {
 .qr-frame {
   width: 220px;
   height: 220px;
-  padding: 14px;
+  padding: 10px;
   background-color: #FFFFFF;
-  border: 2px dashed #CFD8DC;
+  border: 2px solid #E0E0E0;
   border-radius: 18px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
-.svg-qr-code {
+.real-qr-code-img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.qr-loading-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #757575;
+  height: 100%;
+  width: 100%;
+}
+
+.qr-loading-text {
+  font-size: 12px;
+  color: #757575;
+  font-weight: 500;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .qr-subtext {

@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
 export const CreateClientSubscriptionSchema = z.object({
-    userId: z.string().uuid('ID de usuário inválido'),
-    planId: z.string().uuid('ID de plano inválido'),
-    productId: z.string().uuid('ID de produto inválido'),
-    token: z.string().min(1, 'Token de autenticação obrigatório no corpo'),
+    userId: z.string().min(1, 'ID de usuário obrigatório'),
+    planId: z.string().min(1, 'ID de plano obrigatório'),
+    productId: z.string().min(1, 'ID de produto obrigatório').optional(),
+    token: z.string().optional().nullable(),
     termsAccepted: z.boolean().refine(val => val === true, {
         message: 'Você deve aceitar os termos e condições para criar um contrato.'
     }),
@@ -16,8 +16,8 @@ export const CreateClientSubscriptionSchema = z.object({
 export type CreateClientSubscriptionDTO = z.infer<typeof CreateClientSubscriptionSchema>;
 
 export const CreateAdminSubscriptionSchema = z.object({
-    userId: z.string().uuid('ID de usuário inválido'),
-    planId: z.string().uuid('ID de plano inválido'),
+    userId: z.string().min(1, 'ID de usuário obrigatório'),
+    planId: z.string().min(1, 'ID de plano obrigatório'),
     groupNumber: z.string().optional().nullable(),
     quotaNumber: z.string().optional().nullable()
 });

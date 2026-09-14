@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '~/stores/auth'
 import { useConsortiumStore } from '~/stores/consortium'
 import { useBidStore } from '~/stores/bid'
+import { useKycStore } from '~/stores/kyc'
+import { useToast } from '~/composables/useToast'
 import { formatCurrency } from '~~/shared/utils/currency'
 import type { ActiveContract } from '~~/shared/types/catalog'
 import {
@@ -17,6 +20,7 @@ import {
   AlertCircle,
   TrendingUp,
   ShieldCheck,
+  ShieldAlert,
   X,
   History,
   ChevronDown,
@@ -29,6 +33,7 @@ import {
   Sparkles,
   Trophy
 } from 'lucide-vue-next'
+import QRCode from 'qrcode'
 
 definePageMeta({
   middleware: 'auth',
@@ -37,8 +42,11 @@ definePageMeta({
 })
 
 const router = useRouter()
+const authStore = useAuthStore()
 const consortiumStore = useConsortiumStore()
 const bidStore = useBidStore()
+const kycStore = useKycStore()
+const toast = useToast()
 
 // State
 const bidPercentage = ref(30)
@@ -49,22 +57,36 @@ const isHistoryOpen = ref(false)
 const isSubmitting = ref(false)
 const toastMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null)
 
-// Approved Bid PIX & Cancel State
+// Approved Bid PIX, KYC & Cancel State
 const isPixModalOpen = ref(false)
+const isKycPendingModalOpen = ref(false)
 const isGeneratingPix = ref(false)
 const pixData = ref<any>(null)
 const hasCopiedPix = ref(false)
 const isCancelConfirmOpen = ref(false)
 const isCancelling = ref(false)
 
+const isKycApproved = computed(() => {
+  return authStore.isKycApproved || kycStore.status === 'APPROVED'
+})
+
 const contract = computed<ActiveContract | null>(() => {
+  if (bidStore.approvedBid?.subscriptionId) {
+    const found = consortiumStore.activeContracts.find(c => c.id === bidStore.approvedBid?.subscriptionId)
+    if (found) return found
+  }
+  if (bidStore.pendingBid?.subscriptionId) {
+    const found = consortiumStore.activeContracts.find(c => c.id === bidStore.pendingBid?.subscriptionId)
+    if (found) return found
+  }
   return consortiumStore.activeContracts[0] || null
 })
 
 onMounted(async () => {
   await Promise.all([
     consortiumStore.activeContracts.length === 0 ? consortiumStore.loadHomeData() : Promise.resolve(),
-    bidStore.fetchUserBids()
+    bidStore.fetchUserBids(),
+    kycStore.fetchStatus()
   ])
 })
 
@@ -236,17 +258,44 @@ async function handleConfirmBid() {
   }
 }
 
+function handlePayBidClick(bidId: string) {
+  if (!isKycApproved.value) {
+    isKycPendingModalOpen.value = true
+  } else {
+    handleOpenPix(bidId)
+  }
+}
+
+function handleProceedToPixFromKyc() {
+  isKycPendingModalOpen.value = false
+  if (bidStore.approvedBid) {
+    handleOpenPix(bidStore.approvedBid.id)
+  }
+}
+
 async function handleOpenPix(bidId: string) {
   isGeneratingPix.value = true
   toastMessage.value = null
   try {
     const res = await bidStore.generatePix(bidId)
+    const code = res?.pixCopiaECola || res?.qrCodeText
+    if (!res?.qrCode && code) {
+      try {
+        res.qrCode = await QRCode.toDataURL(code, { width: 300, margin: 2 })
+      } catch (_) {}
+    }
     pixData.value = res
     isPixModalOpen.value = true
   } catch (err: any) {
+    const errorMsg =
+      err?.data?.message ||
+      err?.data?.error ||
+      err?.message ||
+      'Limite de tentativas atingido, volte novamente mais tarde.'
+    toast.error(errorMsg, 'Atenção')
     toastMessage.value = {
       type: 'error',
-      text: err?.data?.message || err?.message || 'Erro ao gerar PIX do lance'
+      text: errorMsg
     }
   } finally {
     isGeneratingPix.value = false
@@ -395,7 +444,7 @@ async function handleConfirmCancelBid(bidId: string) {
               type="button"
               class="btn-pay-bid-primary"
               :disabled="isGeneratingPix"
-              @click="handleOpenPix(bidStore.approvedBid!.id)"
+              @click="handlePayBidClick(bidStore.approvedBid!.id)"
             >
               <Loader2 v-if="isGeneratingPix" :size="20" class="animate-spin" />
               <QrCode v-else :size="20" />
@@ -723,7 +772,7 @@ async function handleConfirmCancelBid(bidId: string) {
 
       <!-- Toast Feedback -->
       <div
-        v-if="toastMessage"
+        v-if="toastMessage && typeof toastMessage.text === 'string' && toastMessage.text !== 'true'"
         class="modal-error-banner"
         :style="{
           backgroundColor: toastMessage.type === 'success' ? '#E8F5E9' : '#FFEBEE',
@@ -745,6 +794,27 @@ async function handleConfirmCancelBid(bidId: string) {
       </button>
       </div> <!-- /normal-bidding-screen -->
     </div> <!-- /bids-main-container -->
+
+    <!-- ── ESTADO 4: SEM CONTRATO ATIVO ── -->
+    <div v-else class="bids-empty-screen">
+      <div class="empty-card-clean">
+        <div class="empty-icon-wrap">
+          <Package :size="40" color="#FF6D00" />
+        </div>
+        <h2 class="empty-title">Nenhum Consórcio Ativo</h2>
+        <p class="empty-desc">
+          Você ainda não possui um consórcio ativo para ofertar lances. Acesse o catálogo para escolher seu plano ou conclua a adesão do seu contrato.
+        </p>
+        <button
+          type="button"
+          class="btn-explore-catalog-main"
+          @click="router.push('/')"
+        >
+          <span>EXPLORAR CATÁLOGO</span>
+          <ArrowRight :size="18" />
+        </button>
+      </div>
+    </div>
 
     <!-- ── Confirmation Bottom Sheet Modal ──────────────────────────────── -->
     <div v-if="isConfirmModalOpen" class="modal-overlay" @click.self="isConfirmModalOpen = false">
@@ -895,6 +965,16 @@ async function handleConfirmCancelBid(bidId: string) {
           </p>
         </div>
 
+        <!-- KYC Notice in PIX Modal -->
+        <div v-if="!authStore.isKycApproved" class="pix-kyc-modal-banner">
+          <ShieldAlert :size="16" color="#D97706" />
+          <span>Documentos em análise. O pagamento do PIX garante a sua cota contemplada!</span>
+        </div>
+        <div v-else class="pix-kyc-modal-banner verified">
+          <CheckCircle2 :size="16" color="#059669" />
+          <span>Cadastro aprovado! Crédito liberado para faturamento logo após o PIX.</span>
+        </div>
+
         <button type="button" class="btn-done-pix" @click="isPixModalOpen = false">
           Entendi, já realizei o pagamento
         </button>
@@ -932,6 +1012,43 @@ async function handleConfirmCancelBid(bidId: string) {
             @click="isCancelConfirmOpen = false"
           >
             Não, Manter Lance
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── KYC Under Analysis Modal (Exibido ao tentar pagar sem aprovação) ── -->
+    <div v-if="isKycPendingModalOpen" class="modal-overlay" @click.self="isKycPendingModalOpen = false">
+      <div class="modal-bottom-sheet kyc-analysis-modal-sheet">
+        <div class="modal-handle"></div>
+
+        <div class="kyc-modal-icon-wrapper">
+          <ShieldAlert :size="36" color="#D97706" />
+        </div>
+
+        <h2 class="kyc-modal-title">Documentação em Análise</h2>
+        <p class="kyc-modal-desc">
+          Seus documentos foram enviados e estão em análise pela nossa equipe. O pagamento do seu lance via PIX já garante a sua cota contemplada, e a carta de crédito será liberada para faturamento assim que a análise for concluída!
+        </p>
+
+        <div class="kyc-modal-actions-col">
+          <button
+            type="button"
+            class="btn-proceed-pix-from-kyc"
+            :disabled="isGeneratingPix"
+            @click="handleProceedToPixFromKyc"
+          >
+            <Loader2 v-if="isGeneratingPix" :size="18" class="animate-spin" />
+            <QrCode v-else :size="18" />
+            <span>Pagar Lance via PIX</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn-close-kyc-modal"
+            @click="isKycPendingModalOpen = false"
+          >
+            Voltar
           </button>
         </div>
       </div>
@@ -2011,5 +2128,238 @@ async function handleConfirmCancelBid(bidId: string) {
   color: #2E7D32;
   font-size: 12.5px;
   font-weight: 600;
+}
+
+/* ── Empty State ── */
+.bids-empty-screen {
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 120px);
+}
+
+.empty-card-clean {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: 24px;
+  padding: 40px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 440px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.empty-icon-wrap {
+  width: 80px;
+  height: 80px;
+  border-radius: 40px;
+  background: rgba(255, 109, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1E293B;
+  margin: 0;
+}
+
+.empty-desc {
+  font-size: 14px;
+  color: #64748B;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.btn-explore-catalog-main {
+  margin-top: 8px;
+  width: 100%;
+  height: 50px;
+  border-radius: 14px;
+  border: none;
+  background: var(--color-primary, #FF6D00);
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(255, 109, 0, 0.3);
+  transition: all 0.2s;
+}
+
+.btn-explore-catalog-main:hover {
+  background: #E65100;
+  transform: translateY(-1px);
+}
+
+/* ── KYC Status Notice Box ── */
+.kyc-status-notice-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background-color: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+
+.kyc-status-notice-box.verified {
+  background-color: #ECFDF5;
+  border-color: #A7F3D0;
+}
+
+.kyc-notice-icon-wrap {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.kyc-notice-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.kyc-notice-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #92400E;
+}
+
+.kyc-status-notice-box.verified .kyc-notice-title {
+  color: #065F46;
+}
+
+.kyc-notice-p {
+  font-size: 13px;
+  color: #B45309;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.kyc-status-notice-box.verified .kyc-notice-p {
+  color: #047857;
+}
+
+/* ── PIX KYC Modal Banner ── */
+.pix-kyc-modal-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #B45309;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.pix-kyc-modal-banner.verified {
+  background-color: #ECFDF5;
+  border-color: #A7F3D0;
+  color: #047857;
+}
+
+/* ── KYC Under Analysis Modal ── */
+.kyc-analysis-modal-sheet {
+  max-width: 440px;
+  text-align: center;
+  padding: 32px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.kyc-modal-icon-wrapper {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #FFFBEB;
+  border: 2px solid #FDE68A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  box-shadow: 0 8px 20px rgba(217, 119, 6, 0.15);
+}
+
+.kyc-modal-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1E293B;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.kyc-modal-desc {
+  font-size: 13.5px;
+  color: #475569;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  text-align: center;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.kyc-modal-actions-col {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-proceed-pix-from-kyc {
+  width: 100%;
+  height: 52px;
+  background: linear-gradient(135deg, #FF6D00 0%, #E65100 100%);
+  border: none;
+  border-radius: 16px;
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(255, 109, 0, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-proceed-pix-from-kyc:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 109, 0, 0.45);
+}
+
+.btn-close-kyc-modal {
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  border: 1px solid #CBD5E1;
+  border-radius: 14px;
+  color: #64748B;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-close-kyc-modal:hover {
+  background: #F1F5F9;
+  color: #334155;
 }
 </style>

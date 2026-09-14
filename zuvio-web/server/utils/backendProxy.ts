@@ -86,7 +86,7 @@ export async function proxyToBackend<T>(
   } catch (err: any) {
     // Preserve the original HTTP status from server-consorcio
     const status = err?.status || err?.statusCode || 500
-    const message = err?.data?.error || err?.data?.message || err?.message || 'Erro no servidor'
-    throw createError({ statusCode: status, statusMessage: message, data: err?.data })
+    const message = err?.data?.message || err?.data?.error || err?.message || 'Erro no servidor'
+    throw createError({ statusCode: status, message, data: err?.data })
   }
 }

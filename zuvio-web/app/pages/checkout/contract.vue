@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useConsortiumStore } from '~/stores/consortium'
 import { useCheckoutStore } from '~/stores/checkout'
 import { formatCurrency } from '~~/shared/utils/currency'
+import { DEFAULT_PRODUCTS } from '~~/shared/utils/catalogData'
+import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
 import {
   ArrowLeft,
   ArrowRight,
@@ -28,6 +30,7 @@ definePageMeta({
 })
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const consortiumStore = useConsortiumStore()
 const checkoutStore = useCheckoutStore()
@@ -42,22 +45,27 @@ const frontInputRef = ref<HTMLInputElement | null>(null)
 const backInputRef = ref<HTMLInputElement | null>(null)
 const selfieInputRef = ref<HTMLInputElement | null>(null)
 
+const defaultProduct: Product = DEFAULT_PRODUCTS[0]!
+
 // Selected product and plan fallback
-const product = computed(() => {
-  return consortiumStore.selectedProduct || consortiumStore.products[0] || {
-    id: 'prod_cg_160',
-    name: 'Honda CG 160 Titan',
-    type: 'MOTO',
-    category: 'Motos Populares',
-    price: 18500,
-    plans: [
-      { id: 'p_80', durationMonths: 80, monthlyInstallment: 289.90, adminFeeRate: 15, fundRate: 3 }
-    ]
+const product = computed<Product>(() => {
+  const queryProdId = route.query.productId ? String(route.query.productId) : null
+  if (queryProdId) {
+    const fromStore = consortiumStore.products.find(p => p.id === queryProdId)
+    if (fromStore) return fromStore
+    const fromDefault = DEFAULT_PRODUCTS.find(p => p.id === queryProdId)
+    if (fromDefault) return fromDefault
   }
+  return consortiumStore.selectedProduct || consortiumStore.products[0] || defaultProduct
 })
 
-const plan = computed(() => {
-  return consortiumStore.selectedPlan || (product.value.plans ? product.value.plans[0] : null) || {
+const plan = computed<ConsortiumPlan>(() => {
+  const queryPlanId = route.query.planId ? String(route.query.planId) : null
+  if (queryPlanId && product.value?.plans) {
+    const fromProd = product.value.plans.find(p => p.id === queryPlanId)
+    if (fromProd) return fromProd
+  }
+  return consortiumStore.selectedPlan || (product.value?.plans ? product.value.plans[0] : null) || {
     id: 'p_80',
     durationMonths: 80,
     monthlyInstallment: 289.90,
@@ -130,7 +138,13 @@ async function handleSignContract() {
   try {
     const res = await checkoutStore.finalizeCheckout(product.value as any, plan.value as any)
     if (res.success) {
-      router.push('/checkout/payment')
+      router.push({
+        path: '/checkout/payment',
+        query: {
+          ...route.query,
+          subscriptionId: res.subscriptionId
+        }
+      })
     } else {
       errorMessage.value = res.message || 'Erro ao processar contratação. Tente novamente.'
     }
@@ -139,6 +153,11 @@ async function handleSignContract() {
   } finally {
     isSubmitting.value = false
   }
+}
+
+function handleRelogin() {
+  authStore.clearSession()
+  router.push('/login?redirect=' + encodeURIComponent(router.currentRoute.value.fullPath))
 }
 </script>
 
@@ -616,9 +635,19 @@ async function handleSignContract() {
       </section>
 
       <!-- Error alert -->
-      <div v-if="errorMessage" class="contract-error-alert">
+      <div v-if="errorMessage && typeof errorMessage === 'string' && errorMessage !== 'true'" class="contract-error-alert">
         <AlertCircle :size="18" color="#D32F2F" />
-        <span>{{ errorMessage }}</span>
+        <div class="error-alert-content">
+          <span>{{ errorMessage }}</span>
+          <button
+            v-if="errorMessage.toLowerCase().includes('expirou') || errorMessage.toLowerCase().includes('expirado') || errorMessage.toLowerCase().includes('token')"
+            type="button"
+            class="btn-relogin-action"
+            @click="handleRelogin"
+          >
+            Fazer login novamente
+          </button>
+        </div>
       </div>
 
       <!-- Prompt de Rolagem se não rolou até o final -->
@@ -1263,5 +1292,43 @@ async function handleSignContract() {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.contract-error-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background-color: #FFEBEE;
+  border: 1px solid #FFCDD2;
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: #C62828;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.error-alert-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.btn-relogin-action {
+  align-self: flex-start;
+  background-color: #C62828;
+  color: #FFFFFF;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-relogin-action:hover {
+  background-color: #B71C1C;
 }
 </style>

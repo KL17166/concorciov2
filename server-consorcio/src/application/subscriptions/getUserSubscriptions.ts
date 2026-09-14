@@ -25,7 +25,7 @@ export async function getUserSubscriptions(userId: string) {
                 }
             }
 
-            const isAdesaoPaid = sub.status === 'ACTIVE' || (sub.installments.find((i: Installment) => i.number === 1)?.status === 'PAID');
+            const isAdesaoPaid = sub.status === 'ACTIVE' || sub.status === 'PENDING_KYC' || (sub.installments.find((i: Installment) => i.number === 1)?.status === 'PAID');
             const nextInstallment = sub.installments.find((i: Installment) => i.number === nextIndex);
             const nextPaymentAmount = nextInstallment ? Number(nextInstallment.amount) : 0;
             const dueDate = nextInstallment?.dueDate

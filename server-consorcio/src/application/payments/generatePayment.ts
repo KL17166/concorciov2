@@ -2,7 +2,7 @@ import { InstallmentRepository } from '../../repositories/installmentRepository'
 import { verifyPaymentToken } from '../../security/paymentToken';
 import { calculateInstallmentValue } from '../../domain/calculations/installmentCalculator';
 import { parseAddress } from '../../mappers/addressMapper';
-import { PaymentGatewayFactory } from '../../integrations/payments/PaymentGatewayFactory';
+import { PaymentFailoverService } from '../../services/paymentFailoverService';
 import { PaymentMethod, PaymentResult } from '../../integrations/payments/PaymentGateway';
 import { logger } from '../../config/logger';
 
@@ -71,9 +71,7 @@ export async function generatePayment(input: GeneratePaymentInput): Promise<Paym
         }
     }
 
-    const gateway = await PaymentGatewayFactory.getGateway(method);
-
-    const paymentResult = await gateway.createPayment({
+    const paymentResult = await PaymentFailoverService.executePaymentWithFailover({
         installmentId: installment.id,
         installmentNumber: installment.number,
         amount: valueToPay,

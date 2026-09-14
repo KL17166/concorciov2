@@ -19,7 +19,7 @@ const DEFAULT_GATEWAYS = [
         displayName: 'SigiloPay',
         baseUrl: 'https://app.sigilopay.com.br/api/v1',
         supportsPix: true,
-        supportsBoleto: true,
+        supportsBoleto: false,
         supportsCard: false,
     }
 ];
@@ -32,6 +32,12 @@ export const listGateways = async (req: Request, res: Response) => {
             const exists = await prisma.gatewayConfig.findFirst({ where: { name: gw.name } });
             if (!exists) {
                 await prisma.gatewayConfig.create({ data: gw });
+            } else if (gw.name === 'sigilopay' && exists.supportsBoleto) {
+                // Ensure sigilopay has supportsBoleto disabled in database
+                await prisma.gatewayConfig.update({
+                    where: { id: exists.id },
+                    data: { supportsBoleto: false, isDefaultBoleto: false }
+                });
             }
         }
 

@@ -30,7 +30,12 @@ export async function createBid(input: CreateBidInput) {
         throw Object.assign(new Error('Acesso negado: você só pode criar lances para seus próprios contratos'), { statusCode: 403 });
     }
 
-    const isAdesaoPaid = subscription.status === 'ACTIVE' && subscription.installments[0]?.status === 'PAID';
+    if (subscription.status === 'CANCELLED') {
+        throw Object.assign(new Error('Este contrato está cancelado e não aceita novos lances.'), { statusCode: 400 });
+    }
+
+    const firstInstallment = subscription.installments[0];
+    const isAdesaoPaid = firstInstallment?.status === 'PAID';
     if (!isAdesaoPaid) {
         throw Object.assign(new Error('É necessário realizar o pagamento da taxa de adesão para poder ofertar lances neste consórcio.'), { statusCode: 403 });
     }

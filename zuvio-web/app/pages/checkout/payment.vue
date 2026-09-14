@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useConsortiumStore } from '~/stores/consortium'
 import { useCheckoutStore } from '~/stores/checkout'
 import { formatCurrency } from '~~/shared/utils/currency'
+import QRCode from 'qrcode'
 import {
   ArrowLeft,
   QrCode,
@@ -17,8 +18,12 @@ import {
   Zap,
   Sparkles,
   ShieldCheck,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from 'lucide-vue-next'
+
+import { DEFAULT_PRODUCTS } from '~~/shared/utils/catalogData'
+import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
 
 definePageMeta({
   middleware: 'auth',
@@ -52,20 +57,31 @@ const timerProgressPct = computed(() => {
   return `${(totalSeconds.value / (30 * 60)) * 100}%`
 })
 
-const product = computed(() => {
-  return consortiumStore.selectedProduct || consortiumStore.products[0] || {
-    id: 'prod_cg_160',
-    name: 'Honda CG 160 Titan',
-    imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=400&q=80',
-    price: 18500
+const defaultProduct: Product = DEFAULT_PRODUCTS[0]!
+
+const product = computed<Product>(() => {
+  const queryProdId = route.query.productId ? String(route.query.productId) : null
+  if (queryProdId) {
+    const fromStore = consortiumStore.products.find(p => p.id === queryProdId)
+    if (fromStore) return fromStore
+    const fromDefault = DEFAULT_PRODUCTS.find(p => p.id === queryProdId)
+    if (fromDefault) return fromDefault
   }
+  return consortiumStore.selectedProduct || consortiumStore.products[0] || defaultProduct
 })
 
-const plan = computed(() => {
-  return consortiumStore.selectedPlan || {
+const plan = computed<ConsortiumPlan>(() => {
+  const queryPlanId = route.query.planId ? String(route.query.planId) : null
+  if (queryPlanId && product.value?.plans) {
+    const fromProd = product.value.plans.find(p => p.id === queryPlanId)
+    if (fromProd) return fromProd
+  }
+  return consortiumStore.selectedPlan || (product.value?.plans ? product.value.plans[0] : null) || {
     id: 'p_80',
     durationMonths: 80,
-    monthlyInstallment: 289.90
+    monthlyInstallment: 289.90,
+    adminFeeRate: 15,
+    fundRate: 3
   }
 })
 
@@ -80,6 +96,41 @@ const pixCode = computed(() => {
 const boletoLine = computed(() => {
   return checkoutStore.paymentData?.boletoLine || ''
 })
+
+const qrCodeImage = ref<string>('')
+const isGeneratingQr = ref(false)
+
+async function generateQrCode(code: string) {
+  if (!code) return
+  isGeneratingQr.value = true
+  try {
+    qrCodeImage.value = await QRCode.toDataURL(code, {
+      width: 320,
+      margin: 2,
+      color: {
+        dark: '#1E293B',
+        light: '#FFFFFF'
+      },
+      errorCorrectionLevel: 'M'
+    })
+  } catch (err) {
+    console.error('Erro ao gerar imagem do QR Code:', err)
+  } finally {
+    isGeneratingQr.value = false
+  }
+}
+
+watch(
+  [pixCode, () => checkoutStore.paymentData?.qrCode],
+  async ([code, qr]) => {
+    if (qr && (qr.startsWith('data:') || qr.startsWith('http'))) {
+      qrCodeImage.value = qr
+    } else if (code) {
+      await generateQrCode(code)
+    }
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   // Check method from query if available
@@ -224,50 +275,16 @@ function handleFinish() {
         <!-- QR Code Display Box -->
         <div class="qr-code-box">
           <div class="qr-frame">
-            <!-- Dynamic SVG QR Code Representation -->
-            <svg viewBox="0 0 100 100" class="svg-qr-code">
-              <!-- Corner Markers -->
-              <rect x="5" y="5" width="25" height="25" fill="#263238" rx="4" />
-              <rect x="10" y="10" width="15" height="15" fill="#FFFFFF" rx="2" />
-              <rect x="13" y="13" width="9" height="9" fill="#263238" rx="1" />
-
-              <rect x="70" y="5" width="25" height="25" fill="#263238" rx="4" />
-              <rect x="75" y="10" width="15" height="15" fill="#FFFFFF" rx="2" />
-              <rect x="78" y="13" width="9" height="9" fill="#263238" rx="1" />
-
-              <rect x="5" y="70" width="25" height="25" fill="#263238" rx="4" />
-              <rect x="10" y="75" width="15" height="15" fill="#FFFFFF" rx="2" />
-              <rect x="13" y="78" width="9" height="9" fill="#263238" rx="1" />
-
-              <!-- Data Pixels Pattern -->
-              <rect x="36" y="8" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="46" y="8" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="56" y="8" width="6" height="6" fill="#263238" rx="1" />
-
-              <rect x="8" y="36" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="18" y="36" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="28" y="36" width="6" height="6" fill="#263238" rx="1" />
-
-              <rect x="36" y="36" width="12" height="12" fill="#FF6D00" rx="3" />
-              <rect x="52" y="36" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="62" y="36" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="76" y="36" width="8" height="8" fill="#263238" rx="1" />
-
-              <rect x="36" y="52" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="46" y="52" width="14" height="6" fill="#263238" rx="1" />
-              <rect x="66" y="52" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="76" y="52" width="16" height="6" fill="#263238" rx="1" />
-
-              <rect x="36" y="66" width="8" height="8" fill="#263238" rx="1" />
-              <rect x="48" y="66" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="58" y="66" width="8" height="8" fill="#263238" rx="1" />
-              <rect x="70" y="66" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="80" y="66" width="12" height="12" fill="#FF6D00" rx="2" />
-
-              <rect x="36" y="80" width="12" height="6" fill="#263238" rx="1" />
-              <rect x="52" y="80" width="6" height="6" fill="#263238" rx="1" />
-              <rect x="62" y="80" width="14" height="6" fill="#263238" rx="1" />
-            </svg>
+            <img
+              v-if="qrCodeImage"
+              :src="qrCodeImage"
+              alt="QR Code Pix"
+              class="real-qr-code-img"
+            />
+            <div v-else class="qr-loading-placeholder">
+              <Loader2 :size="32" class="spin-icon" color="#FF6D00" />
+              <span class="qr-loading-text">Gerando QR Code...</span>
+            </div>
           </div>
           <span class="qr-instruction">Aponte a câmera do app do seu banco para o QR Code acima</span>
         </div>
@@ -559,18 +576,51 @@ function handleFinish() {
 }
 
 .qr-frame {
-  width: 180px;
-  height: 180px;
+  width: 200px;
+  height: 200px;
   border: 2px solid #E0E0E0;
   border-radius: 16px;
-  padding: 12px;
+  padding: 8px;
   background-color: #FFFFFF;
   margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
-.svg-qr-code {
+.real-qr-code-img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.qr-loading-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #757575;
+  height: 100%;
+  width: 100%;
+}
+
+.qr-loading-text {
+  font-size: 12px;
+  color: #757575;
+  font-weight: 500;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .qr-instruction {
@@ -689,29 +739,61 @@ function handleFinish() {
 }
 
 /* ── Dev Simulation ─────────────────────────────────────────────────────── */
+/* ── Real Status Check Action ────────────────────────────────────────────── */
 .dev-simulation-wrap {
-  margin-top: 24px;
-  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
 }
 
-.btn-simulate-confirm {
-  background: transparent;
-  border: 1px dashed #B0BEC5;
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #757575;
+.btn-check-status {
+  background-color: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 13px 22px;
+  font-size: 13.5px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #475569;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
+  gap: 9px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.btn-simulate-confirm:hover {
-  background-color: #ECEFF1;
-  color: #263238;
+.btn-check-status:hover:not(:disabled) {
+  background-color: #F8FAFC;
+  border-color: #CBD5E1;
+  color: #0F172A;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.btn-check-status:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-check-status:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: #F1F5F9;
+  border-color: #E2E8F0;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Confirmed Modal ────────────────────────────────────────────────────── */

@@ -157,16 +157,16 @@ async function runTests() {
                 enabled: true,
                 environment: 'sandbox',
                 supportsPix: true,
-                supportsBoleto: true,
+                supportsBoleto: false,
                 isDefaultPix: true,
-                isDefaultBoleto: true
+                isDefaultBoleto: false
             },
             update: {
                 enabled: true,
                 supportsPix: true,
-                supportsBoleto: true,
+                supportsBoleto: false,
                 isDefaultPix: true,
-                isDefaultBoleto: true
+                isDefaultBoleto: false
             }
         });
         console.log(`✅ Selected Test User: ${user.name} (ID: ${user.id})`);

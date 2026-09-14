@@ -122,6 +122,25 @@ export const getDashboard = async (req: Request, res: Response) => {
             });
         }
 
+        // Fetch system alerts & gateway failover notifications
+        let systemAlerts: any[] = [];
+        let unreadAlertsCount = 0;
+        try {
+            const [alerts, unread] = await Promise.all([
+                (prisma as any).systemAlert.findMany({
+                    take: 10,
+                    orderBy: { createdAt: 'desc' }
+                }),
+                (prisma as any).systemAlert.count({
+                    where: { read: false }
+                })
+            ]);
+            systemAlerts = alerts;
+            unreadAlertsCount = unread;
+        } catch (alertErr) {
+            logger.warn('Failed to query system alerts:', alertErr);
+        }
+
         res.render('pages/dashboard/index', {
             path: '/dashboard',
             stats: {
@@ -136,10 +155,55 @@ export const getDashboard = async (req: Request, res: Response) => {
             },
             recentContracts,
             recentPayments,
-            cashFlowData
+            cashFlowData,
+            systemAlerts,
+            unreadAlertsCount
         });
     } catch (error) {
         logger.error('Dashboard error:', error);
         res.status(500).send('Erro ao carregar dashboard');
+    }
+};
+
+// POST /admin/alerts/:id/read
+export const markAlertAsRead = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const adminUser = (req as any).user;
+
+        await (prisma as any).systemAlert.update({
+            where: { id },
+            data: {
+                read: true,
+                readAt: new Date(),
+                readBy: adminUser?.id || null
+            }
+        });
+
+        res.json({ success: true, message: 'Alerta marcado como lido' });
+    } catch (error) {
+        logger.error('Error marking alert as read:', error);
+        res.status(500).json({ success: false, message: 'Erro ao atualizar alerta' });
+    }
+};
+
+// POST /admin/alerts/read-all
+export const markAllAlertsAsRead = async (req: Request, res: Response) => {
+    try {
+        const adminUser = (req as any).user;
+
+        await (prisma as any).systemAlert.updateMany({
+            where: { read: false },
+            data: {
+                read: true,
+                readAt: new Date(),
+                readBy: adminUser?.id || null
+            }
+        });
+
+        res.json({ success: true, message: 'Todos os alertas foram marcados como lidos' });
+    } catch (error) {
+        logger.error('Error marking all alerts as read:', error);
+        res.status(500).json({ success: false, message: 'Erro ao atualizar alertas' });
     }
 };

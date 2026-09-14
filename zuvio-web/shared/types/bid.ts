@@ -6,7 +6,7 @@ export interface Bid {
   type: BidType
   percentage: number
   amount: number
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED'
+  status: 'PENDING' | 'APPROVED' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED' | 'CONTEMPLATED'
   isWinner?: boolean
   createdAt: string
   product?: {

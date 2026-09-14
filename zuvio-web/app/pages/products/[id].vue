@@ -165,6 +165,8 @@ function selectPlan(plan: ConsortiumPlan) {
 
 function handleContinue() {
   if (!product.value || !selectedPlan.value) return
+  consortiumStore.selectedProduct = product.value
+  consortiumStore.selectedPlan = selectedPlan.value
   router.push({
     path: '/checkout',
     query: {

@@ -230,7 +230,7 @@ async function processPayment() {
       }
     })
   } catch (err: any) {
-    errorMessage.value = err?.message || 'Erro ao gerar pagamento. Tente novamente.'
+    errorMessage.value = err?.data?.message || err?.data?.error || err?.message || 'Erro ao gerar pagamento. Tente novamente.'
   } finally {
     isSubmitting.value = false
   }

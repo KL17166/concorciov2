@@ -238,7 +238,6 @@ export const cancelContract = async (req: Request, res: Response) => {
         res.redirect(referer);
     }
 };
-};
 
 // POST /admin/contracts/:id/installments/:installmentId/pay - Dar baixa manual em parcela
 export const markInstallmentPaid = async (req: Request, res: Response) => {

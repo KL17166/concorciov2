@@ -1,0 +1,22 @@
+{
+  "name": "app-consorcio",
+  "version": "1.0.0",
+  "description": "WebView wrapper for Consórcio app",
+  "private": true,
+  "scripts": {
+    "build": "echo 'Static app - no build needed'",
+    "cap:init": "npx cap init \"Consórcio\" \"com.consorcio.app\" --web-dir www",
+    "cap:add": "npx cap add android",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android",
+    "cap:build": "npx cap sync android && cd android && gradlew.bat assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

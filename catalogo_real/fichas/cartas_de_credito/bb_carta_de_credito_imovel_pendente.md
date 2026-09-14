@@ -13,7 +13,7 @@ minDuration: 60
 maxDuration: 180
 adminFeeRate: 18.0
 imageUrls:
-  - https://www.bb.com.br/docs/portal/consorcios/images/consorcio-imoveis.png
+  - https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&auto=format&fit=crop&q=80
 description: >-
   Carta de crédito de R$ 300.000,00 da BB Consórcios para conquista da casa própria, apartamentos na planta, terrenos, construções, reformas ou imóveis comerciais. Permite a utilização do saldo do FGTS para lances ou amortização das parcelas (conforme regras da Caixa). A melhor alternativa ao financiamento bancário tradicional para construir patrimônio sólido sem pagar juros abusivos.
 specs:

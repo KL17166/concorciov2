@@ -57,9 +57,14 @@ export const useBidStore = defineStore('bid', {
         return res
       } catch (err: any) {
         console.error('Error creating bid:', err)
+        const errorMsg =
+          typeof err?.data?.message === 'string' && err.data.message.trim() ? err.data.message :
+          (typeof err?.data?.error === 'string' && err.data.error !== 'BAD_REQUEST' && err.data.error !== 'UNAUTHORIZED' && err.data.error !== 'FORBIDDEN' ? err.data.error : null) ||
+          (typeof err?.message === 'string' && err.message !== 'true' ? err.message : null) ||
+          'Erro ao registrar lance. Tente novamente.'
         return {
           success: false,
-          message: err?.data?.error || err?.message || 'Erro ao registrar lance'
+          message: errorMsg
         }
       } finally {
         this.isLoading = false
@@ -79,8 +84,8 @@ export const useBidStore = defineStore('bid', {
           headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
         })
         const index = this.bids.findIndex(b => b.id === bidId)
-        if (index !== -1) {
-          this.bids[index].status = 'CANCELLED'
+        if (index !== -1 && this.bids[index]) {
+          this.bids[index]!.status = 'CANCELLED'
         }
         return res
       } catch (err: any) {

@@ -13,8 +13,7 @@ minDuration: 12
 maxDuration: 36
 adminFeeRate: 12.0
 imageUrls:
-  - https://i.dell.com/is/image/DellContent/content/dam/ss2/product-images/dell-client-products/desktops/optiplex-desktops/optiplex-micro-plus-7020/media-gallery/desktop-optiplex-micro-plus-7020-gallery-1.psd?fmt=png-alpha&pscan=auto&scl=1&hei=402&wid=402
-  - https://i.dell.com/is/image/DellContent/content/dam/ss2/product-images/dell-client-products/desktops/optiplex-desktops/optiplex-micro-plus-7020/media-gallery/desktop-optiplex-micro-plus-7020-gallery-2.psd?fmt=png-alpha&pscan=auto&scl=1&hei=402&wid=402
+  - https://images.unsplash.com/photo-1547082299-de196ea013d6?w=800&auto=format&fit=crop&q=80
 description: >-
   O Dell OptiPlex 7020 Micro é o computador corporativo ultracompacto definitivo para escritórios, clínicas e estações de trabalho de alto nível. Equipado com processador Intel Core i5 de 14ª geração, 16 GB de RAM DDR5 de altíssima velocidade e SSD NVMe de 512 GB. Seu formato micro ocupa espaço mínimo na mesa, suporta montagem atrás do monitor (VESA) e oferece recursos avançados de segurança corporativa com chip TPM 2.0 e suporte vPro.
 specs:

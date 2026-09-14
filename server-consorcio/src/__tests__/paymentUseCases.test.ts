@@ -3,6 +3,7 @@ import { PaymentGatewayFactory } from '../integrations/payments/PaymentGatewayFa
 import { SandboxPaymentAdapter } from '../integrations/payments/SandboxPaymentAdapter';
 import { PixGoAdapter } from '../integrations/payments/PixGoAdapter';
 import { SigiloPayAdapter } from '../integrations/payments/SigiloPayAdapter';
+import { PaymentFailoverService } from '../services/paymentFailoverService';
 import { prisma } from '../config/database';
 
 jest.mock('../config/database', () => ({
@@ -11,10 +12,15 @@ jest.mock('../config/database', () => ({
             findUnique: jest.fn()
         },
         installment: {
-            findMany: jest.fn()
+            findMany: jest.fn(),
+            update: jest.fn()
         },
         gatewayConfig: {
-            findFirst: jest.fn()
+            findFirst: jest.fn(),
+            findMany: jest.fn()
+        },
+        systemAlert: {
+            create: jest.fn()
         }
     }
 }));
@@ -93,12 +99,13 @@ describe('Payment Use Cases & Gateways', () => {
 
     describe('PaymentGatewayFactory', () => {
         it('should return SandboxPaymentAdapter when gateway environment is sandbox', async () => {
-            (prisma.gatewayConfig.findFirst as jest.Mock).mockResolvedValue({
+            (prisma.gatewayConfig.findMany as jest.Mock).mockResolvedValue([{
                 name: 'pixgo',
                 environment: 'sandbox',
                 enabled: true,
-                apiKey: 'test-key'
-            });
+                isDefaultPix: true,
+                supportsPix: true
+            }]);
 
             const gateway = await PaymentGatewayFactory.getGateway('PIX');
             expect(gateway).toBeInstanceOf(SandboxPaymentAdapter);
@@ -106,33 +113,47 @@ describe('Payment Use Cases & Gateways', () => {
         });
 
         it('should return PixGoAdapter when provider is pixgo in production', async () => {
-            (prisma.gatewayConfig.findFirst as jest.Mock).mockResolvedValue({
+            (prisma.gatewayConfig.findMany as jest.Mock).mockResolvedValue([{
                 name: 'pixgo',
                 environment: 'production',
                 enabled: true,
-                apiKey: 'live-key'
-            });
+                isDefaultPix: true,
+                supportsPix: true
+            }]);
 
             const gateway = await PaymentGatewayFactory.getGateway('PIX');
             expect(gateway).toBeInstanceOf(PixGoAdapter);
             expect(gateway.name).toBe('pixgo');
         });
 
-        it('should return SigiloPayAdapter when provider is sigilopay in production', async () => {
-            (prisma.gatewayConfig.findFirst as jest.Mock).mockResolvedValue({
+        it('should return SigiloPayAdapter when provider is sigilopay in production for PIX', async () => {
+            (prisma.gatewayConfig.findMany as jest.Mock).mockResolvedValue([{
                 name: 'sigilopay',
                 environment: 'production',
                 enabled: true,
-                apiKey: 'live-key'
-            });
+                isDefaultPix: true,
+                supportsPix: true
+            }]);
 
-            const gateway = await PaymentGatewayFactory.getGateway('BOLETO');
+            const gateway = await PaymentGatewayFactory.getGateway('PIX');
             expect(gateway).toBeInstanceOf(SigiloPayAdapter);
             expect(gateway.name).toBe('sigilopay');
         });
 
+        it('should throw error when requesting BOLETO when active gateways do not support boleto', async () => {
+            (prisma.gatewayConfig.findMany as jest.Mock).mockResolvedValue([]);
+
+            await expect(PaymentGatewayFactory.getGateway('BOLETO'))
+                .rejects
+                .toMatchObject({
+                    message: 'Nenhum gateway de pagamento ativo no momento.',
+                    code: 'GATEWAY_UNAVAILABLE',
+                    statusCode: 503
+                });
+        });
+
         it('should throw error when gateway configuration is not found or disabled', async () => {
-            (prisma.gatewayConfig.findFirst as jest.Mock).mockResolvedValue(null);
+            (prisma.gatewayConfig.findMany as jest.Mock).mockResolvedValue([]);
 
             await expect(PaymentGatewayFactory.getGateway('PIX'))
                 .rejects
@@ -140,6 +161,98 @@ describe('Payment Use Cases & Gateways', () => {
                     message: 'Nenhum gateway de pagamento ativo no momento.',
                     code: 'GATEWAY_UNAVAILABLE'
                 });
+        });
+    });
+
+    describe('PaymentFailoverService', () => {
+        it('should failover to secondary gateway when primary fails and register warning alert', async () => {
+            // Configura duas gateways ativas: SigiloPay (padrão) e Sandbox (contingência)
+            (prisma.gatewayConfig.findMany as jest.Mock).mockResolvedValue([
+                {
+                    name: 'sigilopay',
+                    environment: 'production',
+                    enabled: true,
+                    isDefaultPix: true,
+                    supportsPix: true
+                },
+                {
+                    name: 'pixgo',
+                    environment: 'sandbox',
+                    enabled: true,
+                    isDefaultPix: false,
+                    supportsPix: true
+                }
+            ]);
+
+            // Força erro na primeira (ex: SigiloPayAdapter createPayment rejeita)
+            jest.spyOn(SigiloPayAdapter.prototype, 'createPayment').mockRejectedValueOnce(
+                new Error('Preço não pode ser maior que R$ 350,00')
+            );
+
+            const result = await PaymentFailoverService.executePaymentWithFailover({
+                installmentId: 'inst-123',
+                installmentNumber: 1,
+                amount: 5879.15,
+                method: 'PIX',
+                customer: {
+                    name: 'Mariana Oliveira',
+                    email: 'mariana@example.com',
+                    document: '12345678900'
+                }
+            });
+
+            expect(result).toBeDefined();
+            expect(result.copyPaste).toBeDefined();
+            expect(result.qrCode).toBeDefined();
+
+            // Verifica que o alerta foi gravado
+            expect((prisma as any).systemAlert.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    data: expect.objectContaining({
+                        type: 'GATEWAY_FAILOVER',
+                        severity: 'WARNING'
+                    })
+                })
+            );
+        });
+
+        it('should throw error and register CRITICAL alert when all gateways fail', async () => {
+            (prisma.gatewayConfig.findMany as jest.Mock).mockResolvedValue([
+                {
+                    name: 'sigilopay',
+                    environment: 'production',
+                    enabled: true,
+                    isDefaultPix: true,
+                    supportsPix: true
+                }
+            ]);
+
+            jest.spyOn(SigiloPayAdapter.prototype, 'createPayment').mockRejectedValueOnce(
+                new Error('Falha de conexão com gateway')
+            );
+
+            await expect(
+                PaymentFailoverService.executePaymentWithFailover({
+                    installmentId: 'inst-123',
+                    installmentNumber: 1,
+                    amount: 500,
+                    method: 'PIX',
+                    customer: {
+                        name: 'Mariana Oliveira',
+                        email: 'mariana@example.com',
+                        document: '12345678900'
+                    }
+                })
+            ).rejects.toThrow('Falha de conexão com gateway');
+
+            expect((prisma as any).systemAlert.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    data: expect.objectContaining({
+                        type: 'PAYMENT_FAILURE',
+                        severity: 'CRITICAL'
+                    })
+                })
+            );
         });
     });
 });

@@ -13,8 +13,7 @@ minDuration: 12
 maxDuration: 36
 adminFeeRate: 12.0
 imageUrls:
-  - https://br-store.acer.com/media/catalog/product/a/5/a515-57-top-01_1.png
-  - https://br-store.acer.com/media/catalog/product/a/5/a515-57-lateral-01_1.png
+  - https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=800&auto=format&fit=crop&q=80
 description: >-
   O Acer Aspire 5 A515-57-51W5 combina design elegante com tampa em alumínio e potência para qualquer rotina de trabalho. Equipado com processador Intel Core i5 de 12ª geração (12 núcleos), 8 GB de memória RAM DDR4 (expansível até 32GB) e SSD de 256 GB NVMe. Conta com tela Full HD IPS de 15,6 polegadas com tecnologia Acer ComfyView e teclado padrão ABNT2 com teclado numérico independente.
 specs:

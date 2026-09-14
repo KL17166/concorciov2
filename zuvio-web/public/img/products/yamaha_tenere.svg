@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgM" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B0F19"/>
+      <stop offset="100%" stop-color="#1E1B4B"/>
+    </linearGradient>
+    <linearGradient id="motoAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#FF6D00"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="500" rx="24" fill="url(#bgM)"/>
+  <circle cx="400" cy="240" r="220" fill="#38BDF8" opacity="0.15" filter="blur(50px)"/>
+
+  <!-- Badge -->
+  <rect x="40" y="40" width="140" height="32" rx="16" fill="url(#motoAccent)"/>
+  <text x="110" y="61" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" letter-spacing="1">TRAIL ADVENTURE</text>
+
+  <!-- Moto Silhouette & Chassis -->
+  <g>
+    <!-- Rear Wheel -->
+    <circle cx="220" cy="330" r="65" fill="#1E293B" stroke="#334155" stroke-width="6"/>
+    <circle cx="220" cy="330" r="42" fill="#0F172A" stroke="#38BDF8" stroke-width="4"/>
+
+    <!-- Front Wheel -->
+    <circle cx="580" cy="330" r="65" fill="#1E293B" stroke="#334155" stroke-width="6"/>
+    <circle cx="580" cy="330" r="42" fill="#0F172A" stroke="#38BDF8" stroke-width="4"/>
+
+    <!-- Frame & Tank -->
+    <path d="M220 330 L350 280 L440 220 L520 220 L580 330" stroke="#CBD5E1" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M360 250 C380 200 460 200 500 230 L380 280 Z" fill="url(#motoAccent)"/>
+    <path d="M490 200 L540 160 L570 170" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round" fill="none"/>
+
+    <!-- Headlight -->
+    <circle cx="560" cy="180" r="14" fill="#FFFFFF" opacity="0.95"/>
+    <polygon points="560,180 720,140 700,280" fill="#FFFFFF" opacity="0.12"/>
+  </g>
+
+  <!-- Title -->
+  <text x="40" y="440" fill="#F8FAFC" font-family="system-ui, sans-serif" font-size="28" font-weight="900">Yamaha Ténéré 700 2026</text>
+  <text x="40" y="468" fill="#A5B4FC" font-family="system-ui, sans-serif" font-size="15" font-weight="500">Motos 2026 · Parcelas Reduzidas · Contemplação Rápida</text>
+</svg>

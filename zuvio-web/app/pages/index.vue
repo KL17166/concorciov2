@@ -65,6 +65,19 @@ function handleContractAction(actionName: string, isAdesaoPaid: boolean) {
   }
 }
 
+function hasApprovedBidForContract(subscriptionId: string): boolean {
+  if (!subscriptionId) return false
+  return bidStore.bids.some(b => b.subscriptionId === subscriptionId && b.status === 'APPROVED')
+}
+
+function handleImageFallback(e: Event) {
+  const target = e.target as HTMLImageElement
+  if (target) {
+    target.onerror = null
+    target.src = '/img/products/corolla_cross.svg'
+  }
+}
+
 function handlePayAdhesion(contract: ActiveContract) {
   navigateTo('/consortium/adhesion')
 }
@@ -112,9 +125,10 @@ function handlePayAdhesion(contract: ActiveContract) {
               <!-- Product Info Row -->
               <div class="contract-product-row">
                 <img
-                  :src="contract.product.imageUrl"
+                  :src="contract.product.imageUrl || '/img/products/corolla_cross.svg'"
                   :alt="contract.product.name"
                   class="contract-thumb"
+                  @error="handleImageFallback"
                 />
                 <div class="contract-prod-details">
                   <h3 class="contract-prod-name">{{ contract.product.name }}</h3>
@@ -204,13 +218,13 @@ function handlePayAdhesion(contract: ActiveContract) {
                 <button
                   type="button"
                   class="action-pill-btn"
-                  :class="{ 'is-locked': !contract.isAdesaoPaid, 'has-bid-alert': bidStore.hasApprovedBid }"
+                  :class="{ 'is-locked': !contract.isAdesaoPaid, 'has-bid-alert': contract.isAdesaoPaid && hasApprovedBidForContract(contract.id) }"
                   @click="handleContractAction('Ofertar Lance', contract.isAdesaoPaid)"
                 >
                   <div class="action-icon-wrap">
                     <Gavel :size="22" />
                     <Lock v-if="!contract.isAdesaoPaid" :size="10" class="lock-sub-icon" />
-                    <span v-if="bidStore.hasApprovedBid" class="bid-alert-badge" title="Lance Aprovado!">!</span>
+                    <span v-if="contract.isAdesaoPaid && hasApprovedBidForContract(contract.id)" class="bid-alert-badge" title="Lance Aprovado!">!</span>
                   </div>
                   <span class="action-label">Ofertar Lance</span>
                 </button>
@@ -271,7 +285,12 @@ function handlePayAdhesion(contract: ActiveContract) {
               @click="openProductDetail(product)"
             >
               <div class="offer-image-box">
-                <img :src="product.imageUrl" :alt="product.name" class="offer-img" />
+                <img
+                  :src="product.imageUrl || '/img/products/corolla_cross.svg'"
+                  :alt="product.name"
+                  class="offer-img"
+                  @error="handleImageFallback"
+                />
                 <div v-if="product.isFeatured" class="offer-featured-tag">DESTAQUE</div>
               </div>
 
@@ -309,7 +328,12 @@ function handlePayAdhesion(contract: ActiveContract) {
             @click="openProductDetail(product)"
           >
             <div class="popular-img-box">
-              <img :src="product.imageUrl" :alt="product.name" class="popular-img" />
+              <img
+                :src="product.imageUrl || '/img/products/corolla_cross.svg'"
+                :alt="product.name"
+                class="popular-img"
+                @error="handleImageFallback"
+              />
               <div v-if="product.isPopular" class="popular-tag">POPULAR</div>
             </div>
 
@@ -557,14 +581,14 @@ function handlePayAdhesion(contract: ActiveContract) {
 
 .home-centered-content {
   width: 100%;
-  max-width: 600px; /* Perfectly sized for mobile-first app experience on web */
+  max-width: 680px; /* Perfectly sized for mobile & tablet */
   display: flex;
   flex-direction: column;
 }
 
 /* ── 1. Header ──────────────────────────────────────────────────────────── */
 .home-header {
-  padding: 20px;
+  padding: 16px 12px 6px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -576,7 +600,7 @@ function handlePayAdhesion(contract: ActiveContract) {
 }
 
 .greeting-title {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 800;
   color: #263238;
   line-height: 1.2;
@@ -591,20 +615,20 @@ function handlePayAdhesion(contract: ActiveContract) {
 }
 
 .greeting-subtitle {
-  font-size: 16px;
+  font-size: 15px;
   color: #757575;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 /* ── 2. Active Contract Carousel / Promo Banner ─────────────────────────── */
 .banner-section {
-  padding: 0 20px;
+  padding: 0 10px;
 }
 
 .active-contract-card {
   background: linear-gradient(135deg, #FF6D00 0%, #FF8F00 100%);
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: 18px;
+  padding: 16px 14px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   color: #FFFFFF;
   margin-bottom: 8px;
@@ -915,15 +939,15 @@ function handlePayAdhesion(contract: ActiveContract) {
 
 /* ── 3. Search Bar Button ───────────────────────────────────────────────── */
 .search-bar-wrapper {
-  padding: 16px 20px 0;
+  padding: 12px 10px 0;
   cursor: pointer;
 }
 
 .search-bar-pill {
   background: #FFFFFF;
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-  padding: 16px;
+  padding: 13px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -940,21 +964,21 @@ function handlePayAdhesion(contract: ActiveContract) {
 }
 
 .search-placeholder {
-  font-size: 16px;
+  font-size: 15px;
   color: #9E9E9E;
 }
 
 /* ── Section Titles ─────────────────────────────────────────────────────── */
 .section-title-wrap {
-  padding: 24px 20px 12px;
+  padding: 20px 12px 10px;
 }
 
 .spacer-top-32 {
-  padding-top: 32px;
+  padding-top: 24px;
 }
 
 .section-heading {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   color: #263238;
 }
@@ -963,7 +987,7 @@ function handlePayAdhesion(contract: ActiveContract) {
 .best-offers-scroll {
   width: 100%;
   overflow-x: auto;
-  padding: 0 20px;
+  padding: 0 10px;
   scrollbar-width: none;
 }
 
@@ -973,15 +997,15 @@ function handlePayAdhesion(contract: ActiveContract) {
 
 .best-offers-track {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   width: max-content;
   padding-bottom: 8px;
 }
 
 .offer-card {
-  width: 280px;
+  width: 260px;
   background: #FFFFFF;
-  border-radius: 20px;
+  border-radius: 18px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   cursor: pointer;
@@ -995,7 +1019,7 @@ function handlePayAdhesion(contract: ActiveContract) {
 
 .offer-image-box {
   position: relative;
-  height: 140px;
+  height: 135px;
   background: #EEEEEE;
 }
 
@@ -1007,28 +1031,28 @@ function handlePayAdhesion(contract: ActiveContract) {
 
 .offer-featured-tag {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 10px;
+  right: 10px;
   background: #FF6D00;
   color: #FFFFFF;
-  padding: 6px 10px;
-  border-radius: 8px;
+  padding: 5px 9px;
+  border-radius: 6px;
   font-size: 10px;
   font-weight: 800;
 }
 
 .offer-card-body {
-  padding: 16px;
+  padding: 14px;
 }
 
 .offer-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   color: #263238;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .offer-price-row {
@@ -1043,19 +1067,19 @@ function handlePayAdhesion(contract: ActiveContract) {
 }
 
 .price-label {
-  font-size: 12px;
+  font-size: 11px;
   color: #757575;
 }
 
 .price-val {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   color: #FF6D00;
 }
 
 .btn-arrow-icon {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   background: rgba(255, 109, 0, 0.12);
   color: #FF6D00;
@@ -1066,10 +1090,10 @@ function handlePayAdhesion(contract: ActiveContract) {
 
 /* ── 5. Popular Grid (2 Columns) ────────────────────────────────────────── */
 .popular-grid {
-  padding: 0 20px;
+  padding: 0 10px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
 }
 
 .popular-card {

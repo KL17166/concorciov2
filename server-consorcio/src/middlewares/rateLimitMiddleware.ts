@@ -37,7 +37,8 @@ export const createRateLimiter = (options: {
             if (current > options.maxRequests) {
                 logger.warn(`🛑 RATE LIMIT EXCEEDED: ${req.path} | Key: ${key} | Current: ${current}/${options.maxRequests}`);
                 return res.status(429).json({
-                    error: 'Muitas requisições',
+                    success: false,
+                    error: options.errorMessage,
                     message: options.errorMessage
                 });
             }
@@ -52,7 +53,7 @@ export const createRateLimiter = (options: {
 
 export const authRateLimiter = createRateLimiter({
     prefix: 'auth',
-    maxRequests: 5,
+    maxRequests: 10,
     windowSeconds: 15 * 60, // 15 minutes
     keyGenerator: (req) => {
         // Limit by CPF if provided in body, else by IP
@@ -63,12 +64,12 @@ export const authRateLimiter = createRateLimiter({
         }
         return `ip:${req.ip}`;
     },
-    errorMessage: 'Muitas tentativas de login. Aguarde 15 minutos e tente novamente.'
+    errorMessage: 'Limite de tentativas atingido, volte novamente mais tarde.'
 });
 
 export const transactionRateLimiter = createRateLimiter({
     prefix: 'transaction',
-    maxRequests: 3,
+    maxRequests: 5,
     windowSeconds: 60, // 1 minute
     keyGenerator: (req) => {
         if (req.user?.userId) {
@@ -76,5 +77,5 @@ export const transactionRateLimiter = createRateLimiter({
         }
         return `ip:${req.ip}`;
     },
-    errorMessage: 'Muitas transações seguidas. Aguarde 1 minuto e tente novamente.'
+    errorMessage: 'Limite de tentativas atingido, volte novamente mais tarde.'
 });

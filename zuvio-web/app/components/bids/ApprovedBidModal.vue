@@ -3,12 +3,14 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBidStore } from '~/stores/bid'
 import { useAuthStore } from '~/stores/auth'
+import { useConsortiumStore } from '~/stores/consortium'
 import { formatCurrency } from '~~/shared/utils/currency'
 import { Trophy, Sparkles, X, ArrowRight, CheckCircle2 } from 'lucide-vue-next'
 
 const router = useRouter()
 const bidStore = useBidStore()
 const authStore = useAuthStore()
+const consortiumStore = useConsortiumStore()
 
 const approvedBid = computed(() => bidStore.approvedBid)
 
@@ -19,6 +21,13 @@ const isVisible = computed(() => {
   if (typeof window !== 'undefined' && sessionStorage.getItem('dismissed_bid_interstitial') === 'true') {
     return false
   }
+
+  // Contract must exist, be active and have adesão paid
+  const targetContract = consortiumStore.activeContracts.find(c => c.id === approvedBid.value?.subscriptionId)
+  if (!targetContract || !targetContract.isAdesaoPaid) {
+    return false
+  }
+
   return true
 })
 

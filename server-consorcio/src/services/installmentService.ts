@@ -119,16 +119,14 @@ export async function markInstallmentAsPaid(
         // 3. If this is adesão (#1) and subscription is PENDING → activate or set PENDING_KYC
         let activated = false;
         let pendingKyc = false;
-        if (inst.number === 1 && inst.subscription.status === 'PENDING') {
-            const user = (inst.subscription as any).user;
-            if (user?.kycStatus === 'APPROVED') {
-                // KYC already approved → activate immediately
-                updateData.status = 'ACTIVE';
-                activated = true;
-            } else {
-                // KYC not yet approved → wait for admin review
+        if (inst.number === 1 && (inst.subscription.status === 'PENDING' || inst.subscription.status === 'PENDING_KYC')) {
+            const userKyc = (inst.subscription as any).user?.kycStatus;
+            if (userKyc && userKyc !== 'APPROVED') {
                 updateData.status = 'PENDING_KYC';
                 pendingKyc = true;
+            } else {
+                updateData.status = 'ACTIVE';
+                activated = true;
             }
         }
 

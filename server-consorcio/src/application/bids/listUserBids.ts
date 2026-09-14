@@ -5,6 +5,7 @@ export async function listUserBids(userId: string) {
 
     return bids.map((bid: any) => ({
         id: bid.id,
+        subscriptionId: bid.subscriptionId,
         type: bid.type,
         percentage: Number(bid.percentage),
         amount: Number(bid.amount),

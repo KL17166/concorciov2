@@ -1,6 +1,6 @@
 import { prisma } from '../../config/database';
 import { parseAddress } from '../../mappers/addressMapper';
-import { PaymentGatewayFactory } from '../../integrations/payments/PaymentGatewayFactory';
+import { PaymentFailoverService } from '../../services/paymentFailoverService';
 import { logger } from '../../config/logger';
 
 export interface GenerateBidPixInput {
@@ -44,10 +44,9 @@ export async function generateBidPix(input: GenerateBidPixInput) {
         parsedAddress = parseAddress(bid.subscription.user.address);
     }
 
-    const gateway = await PaymentGatewayFactory.getGateway('PIX');
     const amount = Number(bid.amount);
 
-    const paymentResult = await gateway.createPayment({
+    const paymentResult = await PaymentFailoverService.executePaymentWithFailover({
         installmentId: `bid-${bid.id}`,
         installmentNumber: 0,
         amount,
@@ -69,8 +68,8 @@ export async function generateBidPix(input: GenerateBidPixInput) {
         percentage: Number(bid.percentage),
         productName: bid.subscription.plan.product.name,
         qrCode: paymentResult.qrCode,
-        qrCodeText: paymentResult.qrCodeText,
-        pixCopiaECola: paymentResult.pixCopiaECola || paymentResult.qrCodeText,
-        expiresAt: paymentResult.expiresAt
+        qrCodeText: paymentResult.copyPaste,
+        pixCopiaECola: paymentResult.copyPaste,
+        expiresAt: paymentResult.expirationDate
     };
 }

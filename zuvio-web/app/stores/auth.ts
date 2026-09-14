@@ -19,7 +19,7 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   getters: {
-    userName: (state) => state.user?.name || 'Cliente Katari',
+    userName: (state) => state.user?.name || '',
     userRole: (state) => state.user?.role || 'CLIENT',
     isAdmin: (state) => state.user?.role === 'ADMIN' || state.user?.role === 'MASTER',
     isKycApproved: (state) => state.user?.kycStatus === 'APPROVED',
@@ -34,23 +34,45 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     /**
-     * Restore session from localStorage on client load
+     * Restore session from cookie or localStorage
      */
     initFromStorage() {
-      if (typeof window === 'undefined') return
-
+      // 1. Check cookies (works on both Server and Client)
       try {
-        const savedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
-        const savedUserStr = localStorage.getItem(STORAGE_KEYS.USER)
+        const tokenCookie = useCookie<string | null>(STORAGE_KEYS.TOKEN, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
+        const userCookie = useCookie<UserProfile | string | null>(STORAGE_KEYS.USER, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
 
-        if (savedToken && savedUserStr) {
-          this.token = savedToken
-          this.user = JSON.parse(savedUserStr)
+        if (tokenCookie.value && userCookie.value) {
+          this.token = tokenCookie.value
+          this.user = typeof userCookie.value === 'string' ? JSON.parse(userCookie.value) : userCookie.value
           this.isAuthenticated = true
+          return
         }
-      } catch (err) {
-        console.error('Failed to parse saved auth session:', err)
-        this.clearSession()
+      } catch (e) {
+        // Continue to localStorage fallback
+      }
+
+      // 2. Client-only localStorage fallback
+      if (typeof window !== 'undefined') {
+        try {
+          const savedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
+          const savedUserStr = localStorage.getItem(STORAGE_KEYS.USER)
+
+          if (savedToken && savedUserStr) {
+            this.token = savedToken
+            this.user = JSON.parse(savedUserStr)
+            this.isAuthenticated = true
+
+            // Sync to cookies
+            const tokenCookie = useCookie<string | null>(STORAGE_KEYS.TOKEN, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
+            const userCookie = useCookie<UserProfile | null>(STORAGE_KEYS.USER, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
+            tokenCookie.value = savedToken
+            userCookie.value = this.user
+          }
+        } catch (err) {
+          console.error('Failed to parse saved auth session:', err)
+          this.clearSession()
+        }
       }
     },
 
@@ -129,7 +151,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
-     * Store session state in memory and localStorage
+     * Store session state in memory, cookies, and localStorage
      */
     setSession(data: { token: string; user: UserProfile }) {
       this.token = data.token
@@ -137,6 +159,13 @@ export const useAuthStore = defineStore('auth', {
       this.signingSecret = null
       this.payloadSecret = null
       this.isAuthenticated = true
+
+      try {
+        const tokenCookie = useCookie<string | null>(STORAGE_KEYS.TOKEN, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
+        const userCookie = useCookie<UserProfile | null>(STORAGE_KEYS.USER, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
+        tokenCookie.value = data.token
+        userCookie.value = data.user
+      } catch (e) {}
 
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEYS.TOKEN, data.token)
@@ -160,7 +189,7 @@ export const useAuthStore = defineStore('auth', {
       }
 
       this.clearSession()
-      navigateTo('/login')
+      navigateTo('/auth/login')
     },
 
     clearSession() {
@@ -169,6 +198,13 @@ export const useAuthStore = defineStore('auth', {
       this.signingSecret = null
       this.payloadSecret = null
       this.isAuthenticated = false
+
+      try {
+        const tokenCookie = useCookie<string | null>(STORAGE_KEYS.TOKEN)
+        const userCookie = useCookie<UserProfile | null>(STORAGE_KEYS.USER)
+        tokenCookie.value = null
+        userCookie.value = null
+      } catch (e) {}
 
       if (typeof window !== 'undefined') {
         localStorage.removeItem(STORAGE_KEYS.TOKEN)

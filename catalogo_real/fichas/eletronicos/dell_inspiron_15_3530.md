@@ -13,8 +13,7 @@ minDuration: 12
 maxDuration: 36
 adminFeeRate: 12.0
 imageUrls:
-  - https://i.dell.com/is/image/DellContent/content/dam/ss2/product-images/dell-client-products/notebooks/inspiron-notebooks/15-3530-intel/media-gallery/black/notebook-inspiron-15-3530-black-gallery-1.psd?fmt=png-alpha&pscan=auto&scl=1&hei=402&wid=555
-  - https://i.dell.com/is/image/DellContent/content/dam/ss2/product-images/dell-client-products/notebooks/inspiron-notebooks/15-3530-intel/media-gallery/black/notebook-inspiron-15-3530-black-gallery-2.psd?fmt=png-alpha&pscan=auto&scl=1&hei=402&wid=555
+  - https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=800&auto=format&fit=crop&q=80
 description: >-
   O Dell Inspiron 15 3530 é o notebook perfeito para produtividade, estudos e trabalho em alto desempenho. Equipado com processador Intel Core i5 de 13ª geração (10 núcleos, até 4.60 GHz), 16 GB de memória RAM DDR4 e SSD NVMe de 512 GB ultrarrápido. Apresenta tela Full HD (1920x1080) de 15,6 polegadas com taxa de atualização de 120Hz e bordas finas WVA antirreflexo, teclado numérico integrado e bateria com tecnologia ExpressCharge.
 specs:

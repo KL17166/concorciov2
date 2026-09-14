@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Consórcio</string>
+    <string name="title_activity_main">Consórcio</string>
+    <string name="package_name">com.consorcio.app</string>
+    <string name="custom_url_scheme">com.consorcio.app</string>
+</resources>

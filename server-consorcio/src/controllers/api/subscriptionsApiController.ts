@@ -32,21 +32,6 @@ export const getSingleSubscription = async (req: Request, res: Response): Promis
 export const createClientSubscription = async (req: Request, res: Response): Promise<void> => {
     const user = req.user as AuthPayload;
     try {
-        // Validate Token in body matching header token
-        const authHeader = req.headers.authorization;
-        const headerToken = authHeader?.split(' ')[1];
-        const bodyToken = req.body?.token;
-
-        if (!bodyToken || bodyToken !== headerToken) {
-            logger.warn(`[Security] Token mismatch or missing in body. User: ${user.userId}`);
-            res.status(401).json({
-                success: false,
-                error: 'UNAUTHORIZED',
-                message: 'Token de autenticação inválido ou ausente no corpo da requisição'
-            });
-            return;
-        }
-
         const validation = CreateClientSubscriptionSchema.safeParse(req.body);
         if (!validation.success) {
             const firstError = validation.error.issues[0]?.message || 'Dados incompletos';

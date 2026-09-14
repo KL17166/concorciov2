@@ -1,9 +1,43 @@
+# Dependencies
 node_modules/
+**/node_modules/
+
+# Build outputs
 dist/
 build/
-.output/
 .nuxt/
-logs/
-*.log
+.output/
+
+# Environment variables
 .env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Archives
 *.zip
+*.tar.gz
+
+# Temp / scratch
+*.tmp
+test_output.txt
+
+# Images / media desnecessários na raiz
+4922891210192522415.jpg
+
+# Prisma generated
+prisma/generated/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Editor
+.vscode/
+.idea/

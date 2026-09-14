@@ -13,7 +13,7 @@ minDuration: 12
 maxDuration: 36
 adminFeeRate: 12.0
 imageUrls:
-  - https://www.lenovo.com/medias/lenovo-laptop-ideapad-1-15-amd-subseries-hero.png?context=bWFzdGVyfHJvb3R8MjkyNDQ1fGltYWdlL3BuZ3xoZWIvaDg5LzE2NzEwMjQ0MzY4NDE0LnBuZ3w4NTNmZGUwZDRlOTU5MDlmNTg5YTI5MDkxMjkyN2Q5NTI2OTljMzQ2ZTYyNTZkMGEwNjMwNTY0NTEwMWFlMmI5
+  - https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&auto=format&fit=crop&q=80
 description: >-
   O Lenovo IdeaPad 1 15 AMD é o notebook ideal para tarefas do dia a dia, navegação rápida e estudos. Alimentado pelo processador AMD Ryzen 5 7520U (4 núcleos / 8 threads até 4.3 GHz), 8 GB de memória RAM LPDDR5 e SSD NVMe de 512 GB. Possui tela antirreflexo de 15,6 polegadas, webcam HD com obturador de privacidade físico, áudio com certificação Dolby Audio e bateria com autonomia de até 9 horas de uso.
 specs:

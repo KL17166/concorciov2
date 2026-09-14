@@ -13,7 +13,7 @@ minDuration: 12
 maxDuration: 48
 adminFeeRate: 14.0
 imageUrls:
-  - https://www.bb.com.br/docs/portal/consorcios/images/consorcio-servicos.png
+  - https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&auto=format&fit=crop&q=80
 description: >-
   Carta de crédito de R$ 30.000,00 da BB Consórcios destinada à contratação dos mais diversos tipos de serviços: reformas residenciais, projetos de energia solar, cirurgias plásticas, tratamentos odontológicos, viagens internacionais, festas de casamento ou cursos de pós-graduação e intercâmbio. Flexibilidade total para realizar seus projetos pessoais com parcelas fixas sem juros.
 specs:

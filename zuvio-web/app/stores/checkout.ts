@@ -132,6 +132,7 @@ export const useCheckoutStore = defineStore('checkout', {
             userId: authStore.user?.id || '',
             productId: selectedProduct.id,
             planId: selectedPlan.id,
+            token: authStore.token || undefined,
             termsAccepted: true,
             documentFrontUrl: this.documents.front || undefined,
             documentBackUrl: this.documents.back || undefined,
@@ -170,7 +171,12 @@ export const useCheckoutStore = defineStore('checkout', {
 
         return { success: false, message: 'Erro ao criar contratação' }
       } catch (err: any) {
-        return { success: false, message: err?.data?.error || err?.message || 'Erro ao processar contratação' }
+        const errorMsg = 
+          typeof err?.data?.message === 'string' ? err.data.message :
+          (typeof err?.data?.error === 'string' && err.data.error !== 'BAD_REQUEST' && err.data.error !== 'UNAUTHORIZED' ? err.data.error : null) ||
+          err?.message || 
+          'Erro ao processar contratação. Tente novamente.'
+        return { success: false, message: errorMsg }
       } finally {
         this.isLoading = false
       }

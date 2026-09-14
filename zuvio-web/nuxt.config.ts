@@ -11,6 +11,12 @@ export default defineNuxtConfig({
     '@vite-pwa/nuxt'
   ],
 
+  vite: {
+    server: {
+      allowedHosts: true
+    }
+  },
+
   pwa: {
     manifest: {
       name: 'Katari Consórcios',

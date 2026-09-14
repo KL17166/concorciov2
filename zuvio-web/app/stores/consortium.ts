@@ -5,7 +5,7 @@ import { useAuthStore } from './auth'
 
 export const useConsortiumStore = defineStore('consortium', {
   state: () => ({
-    products: [] as Product[],
+    products: DEFAULT_PRODUCTS as Product[],
     activeContracts: [] as ActiveContract[],
     selectedProduct: null as Product | null,
     selectedPlan: null as ConsortiumPlan | null,
@@ -52,38 +52,35 @@ export const useConsortiumStore = defineStore('consortium', {
 
   actions: {
     async loadHomeData() {
-      this.isLoading = true
       const authStore = useAuthStore()
 
-      try {
-        // Fetch products via BFF
-        try {
-          const apiProducts = await $fetch<Product[]>('/api/products')
-          this.products = Array.isArray(apiProducts) && apiProducts.length > 0
-            ? apiProducts
-            : DEFAULT_PRODUCTS
-        } catch (_) {
-          this.products = DEFAULT_PRODUCTS
-        }
+      const promises: Promise<any>[] = [
+        $fetch<Product[]>('/api/products')
+          .then(apiProducts => {
+            if (Array.isArray(apiProducts) && apiProducts.length > 0) {
+              this.products = apiProducts
+            }
+          })
+          .catch(() => {
+            if (!this.products.length) this.products = DEFAULT_PRODUCTS
+          })
+      ]
 
-        // Fetch active contracts via BFF
-        if (authStore.isAuthenticated && authStore.user) {
-          try {
-            const apiContracts = await $fetch<ActiveContract[]>(
-              `/api/subscriptions/${authStore.user.id}`,
-              { headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {} }
-            )
-            this.activeContracts = Array.isArray(apiContracts) ? apiContracts : []
-          } catch (err) {
-            console.warn('Could not load contracts from backend:', err)
-            this.activeContracts = []
-          }
-        } else {
-          this.activeContracts = []
-        }
-      } finally {
-        this.isLoading = false
+      if (authStore.isAuthenticated && authStore.user) {
+        promises.push(
+          $fetch<ActiveContract[]>(`/api/subscriptions/${authStore.user.id}`, {
+            headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+          })
+            .then(apiContracts => {
+              this.activeContracts = Array.isArray(apiContracts) ? apiContracts : []
+            })
+            .catch(err => {
+              console.warn('Could not load contracts from backend:', err)
+            })
+        )
       }
+
+      await Promise.allSettled(promises)
     },
 
     selectProduct(product: Product) {
