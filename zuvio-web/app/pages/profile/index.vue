@@ -2,14 +2,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
-import { useConsortiumStore } from '~/stores/consortium'
-import { useBidStore } from '~/stores/bid'
+import { useKycStore } from '~/stores/kyc'
 import {
   ArrowLeft,
   User,
   FileText,
   CreditCard,
-  TrendingUp,
   ShieldCheck,
   Bell,
   HelpCircle,
@@ -19,7 +17,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock,
-  Sparkles
+  Sparkles,
+  Package
 } from 'lucide-vue-next'
 
 definePageMeta({
@@ -30,14 +29,48 @@ definePageMeta({
 
 const router = useRouter()
 const authStore = useAuthStore()
-const consortiumStore = useConsortiumStore()
-const bidStore = useBidStore()
+const kycStore = useKycStore()
 
 const isLogoutDialogOpen = ref(false)
 
-onMounted(async () => {
-  await bidStore.fetchUserBids()
-})
+// Caixinha "Meus dados" (expansível, edita e-mail/telefone)
+const isDataOpen = ref(false)
+const editEmail = ref('')
+const editPhone = ref('')
+const isSavingData = ref(false)
+const dataMsg = ref<{ ok: boolean; text: string } | null>(null)
+
+function toggleDataCard() {
+  isDataOpen.value = !isDataOpen.value
+  dataMsg.value = null
+  if (isDataOpen.value) {
+    editEmail.value = authStore.user?.email || ''
+    editPhone.value = authStore.user?.phone || ''
+  }
+}
+
+async function saveDataCard() {
+  dataMsg.value = null
+  const email = editEmail.value.trim()
+  const phone = editPhone.value.replace(/\D/g, '')
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    dataMsg.value = { ok: false, text: 'E-mail inválido.' }
+    return
+  }
+  if (phone.length > 0 && (phone.length < 10 || phone.length > 11)) {
+    dataMsg.value = { ok: false, text: 'Telefone inválido (DDD + número).' }
+    return
+  }
+  isSavingData.value = true
+  try {
+    const res = await authStore.updateProfile({ email, phone })
+    dataMsg.value = res.success
+      ? { ok: true, text: 'Dados atualizados!' }
+      : { ok: false, text: res.message || 'Não foi possível salvar.' }
+  } finally {
+    isSavingData.value = false
+  }
+}
 
 const user = computed(() => authStore.user || {
   id: 'dev_user',
@@ -61,17 +94,20 @@ const kycBadge = computed(() => {
   }
 })
 
-onMounted(async () => {
-  if (consortiumStore.activeContracts.length === 0) {
-    await consortiumStore.loadHomeData()
-  }
-})
-
 function handleLogout() {
-  authStore.logout()
   isLogoutDialogOpen.value = false
-  router.push('/auth/login')
+  authStore.logout()
 }
+
+onMounted(async () => {
+  // Status real do servidor (a sessão do login pode estar defasada)
+  try {
+    await kycStore.fetchStatus()
+    if (authStore.user && kycStore.status && kycStore.status !== 'NOT_SUBMITTED') {
+      authStore.user.kycStatus = kycStore.status as any
+    }
+  } catch (_) {}
+})
 </script>
 
 <template>
@@ -107,35 +143,63 @@ function handleLogout() {
         </div>
       </section>
 
-      <!-- 2. Active Contracts Card -->
-      <section
-        v-if="consortiumStore.hasActiveContracts"
-        class="contracts-summary-card"
-        @click="router.push('/consortium/statement')"
-      >
-        <div class="contract-card-left">
-          <div class="contract-icon-circle">
-            <CheckCircle2 :size="24" color="#4CAF50" />
-          </div>
-          <div class="contract-card-texts">
-            <h3 class="contract-title">
-              {{ consortiumStore.activeContracts.length === 1 ? '1 Contrato Ativo' : `${consortiumStore.activeContracts.length} Contratos Ativos` }}
-            </h3>
-            <span class="contract-subtitle">
-              {{ consortiumStore.activeContracts[0]?.product?.name || 'Consórcio Moto' }}
-            </span>
-          </div>
-        </div>
-        <ChevronRight :size="20" color="#9E9E9E" />
-      </section>
-
-      <!-- 3. Menu Navigation List -->
+      <!-- 2. Menu Navigation List -->
       <section class="profile-menu-section">
         <div class="menu-items-list">
+          <!-- Meus dados (expansível, edita e-mail/telefone) -->
+          <div class="profile-menu-card data-card" :class="{ open: isDataOpen }">
+            <div class="data-card-head" @click="toggleDataCard">
+              <div class="menu-icon-circle teal">
+                <User :size="20" color="#FF6D00" />
+              </div>
+              <div class="menu-texts">
+                <span class="menu-title">Meus dados</span>
+                <span class="menu-subtitle">{{ user.name }} • {{ authStore.userCpfFormatted || 'CPF' }}</span>
+              </div>
+              <ChevronRight :size="18" color="#B0BEC5" class="data-chevron" :class="{ open: isDataOpen }" />
+            </div>
+            <div v-if="isDataOpen" class="data-card-body">
+              <div class="data-read-row">
+                <span class="data-read-label">Nome</span>
+                <span class="data-read-value">{{ user.name }}</span>
+              </div>
+              <div class="data-read-row">
+                <span class="data-read-label">CPF</span>
+                <span class="data-read-value">{{ authStore.userCpfFormatted || '—' }}</span>
+              </div>
+              <label class="data-field">
+                <span class="data-field-label">E-mail</span>
+                <input v-model="editEmail" type="email" class="data-input" placeholder="voce@email.com" />
+              </label>
+              <label class="data-field">
+                <span class="data-field-label">Telefone (opcional)</span>
+                <input v-model="editPhone" type="tel" class="data-input" placeholder="(11) 98765-4321" />
+              </label>
+              <p v-if="dataMsg" class="data-msg" :class="{ ok: dataMsg.ok, err: !dataMsg.ok }">
+                {{ dataMsg.text }}
+              </p>
+              <button type="button" class="btn-save-data" :disabled="isSavingData" @click="saveDataCard">
+                {{ isSavingData ? 'Salvando...' : 'Salvar alterações' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Meus Contratos (cancelar / solicitar atendimento) -->
+          <div class="profile-menu-card" @click="router.push('/consortium/contracts')">
+            <div class="menu-icon-circle indigo">
+              <Package :size="20" color="#263238" />
+            </div>
+            <div class="menu-texts">
+              <span class="menu-title">Meus contratos</span>
+              <span class="menu-subtitle">Cancelar ou solicitar atendimento</span>
+            </div>
+            <ChevronRight :size="18" color="#B0BEC5" />
+          </div>
+
           <!-- Meus Contratos / Extrato -->
           <div class="profile-menu-card" @click="router.push('/consortium/statement')">
             <div class="menu-icon-circle blue">
-              <FileText :size="20" color="#2196F3" />
+              <FileText :size="20" color="#263238" />
             </div>
             <div class="menu-texts">
               <span class="menu-title">Extrato e Contratos</span>
@@ -147,7 +211,7 @@ function handleLogout() {
           <!-- Pagamentos -->
           <div class="profile-menu-card" @click="router.push('/consortium/payments')">
             <div class="menu-icon-circle green">
-              <CreditCard :size="20" color="#4CAF50" />
+              <CreditCard :size="20" color="#263238" />
             </div>
             <div class="menu-texts">
               <span class="menu-title">Pagamentos e Parcelas</span>
@@ -156,24 +220,10 @@ function handleLogout() {
             <ChevronRight :size="18" color="#B0BEC5" />
           </div>
 
-          <!-- Ofertar Lance -->
-          <div class="profile-menu-card" @click="router.push('/consortium/bids')">
-            <div class="menu-icon-circle orange" style="position: relative;">
-              <TrendingUp :size="20" color="#FF6D00" />
-              <span v-if="bidStore.hasApprovedBid" class="profile-bid-alert-badge">!</span>
-            </div>
-            <div class="menu-texts">
-              <span class="menu-title">Ofertar Lance</span>
-              <span class="menu-subtitle">{{ bidStore.hasApprovedBid ? '🎉 Você tem um lance aprovado!' : 'Simule lances e antecipe seu consórcio' }}</span>
-            </div>
-            <span v-if="bidStore.hasApprovedBid" class="badge-approved-pill">Aprovado</span>
-            <ChevronRight v-else :size="18" color="#B0BEC5" />
-          </div>
-
           <!-- Validação de Documentos / KYC -->
           <div class="profile-menu-card" @click="router.push('/profile/kyc')">
             <div class="menu-icon-circle purple">
-              <ShieldCheck :size="20" color="#9C27B0" />
+              <ShieldCheck :size="20" color="#263238" />
             </div>
             <div class="menu-texts">
               <span class="menu-title">Documentos e Identidade</span>
@@ -185,10 +235,10 @@ function handleLogout() {
           <!-- Sair -->
           <div class="profile-menu-card logout" @click="isLogoutDialogOpen = true">
             <div class="menu-icon-circle red">
-              <LogOut :size="20" color="#D32F2F" />
+              <LogOut :size="20" color="#263238" />
             </div>
             <div class="menu-texts">
-              <span class="menu-title red">Sair da Conta</span>
+              <span class="menu-title">Sair da Conta</span>
               <span class="menu-subtitle">Desconectar deste dispositivo</span>
             </div>
             <ChevronRight :size="18" color="#FFCDD2" />
@@ -206,7 +256,7 @@ function handleLogout() {
     <div v-if="isLogoutDialogOpen" class="modal-overlay" @click.self="isLogoutDialogOpen = false">
       <div class="logout-dialog-box">
         <div class="logout-icon-circle">
-          <LogOut :size="32" color="#D32F2F" />
+          <LogOut :size="32" color="#263238" />
         </div>
         <h3 class="logout-title">Sair da Conta</h3>
         <p class="logout-msg">Tem certeza de que deseja desconectar da sua conta?</p>
@@ -409,11 +459,120 @@ function handleLogout() {
   flex-shrink: 0;
 }
 
-.menu-icon-circle.blue { background-color: rgba(33, 150, 243, 0.1); }
-.menu-icon-circle.green { background-color: rgba(76, 175, 80, 0.1); }
+.menu-icon-circle.blue { background-color: #F5F5F5; }
+.menu-icon-circle.green { background-color: #F5F5F5; }
 .menu-icon-circle.orange { background-color: rgba(255, 109, 0, 0.1); }
-.menu-icon-circle.purple { background-color: rgba(156, 39, 176, 0.1); }
-.menu-icon-circle.red { background-color: rgba(244, 67, 54, 0.1); }
+.menu-icon-circle.purple { background-color: #F5F5F5; }
+.menu-icon-circle.red { background-color: #F5F5F5; }
+.menu-icon-circle.indigo { background-color: #F5F5F5; }
+.menu-icon-circle.teal { background-color: rgba(255, 109, 0, 0.1); }
+
+/* ── Caixinha Meus dados (expansível) ── */
+.profile-menu-card.data-card {
+  flex-direction: column;
+  align-items: stretch;
+  cursor: default;
+}
+
+.data-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.data-chevron {
+  transition: transform 0.2s ease;
+}
+
+.data-chevron.open {
+  transform: rotate(90deg);
+}
+
+.data-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #F0F0F0;
+}
+
+.data-read-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.data-read-label {
+  color: var(--color-text-muted, #757575);
+}
+
+.data-read-value {
+  font-weight: 700;
+  color: var(--color-secondary, #263238);
+}
+
+.data-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.data-field-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-text-muted, #757575);
+}
+
+.data-input {
+  height: 44px;
+  border-radius: 10px;
+  border: 1.5px solid #E0E0E0;
+  padding: 0 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--color-secondary, #263238);
+  background: #FAFAFA;
+}
+
+.data-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #FF6D00);
+  background: #FFFFFF;
+}
+
+.data-msg {
+  font-size: 12.5px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.data-msg.ok {
+  color: #2E7D32;
+}
+
+.data-msg.err {
+  color: #D32F2F;
+}
+
+.btn-save-data {
+  height: 46px;
+  border-radius: 12px;
+  border: none;
+  background: var(--color-primary, #FF6D00);
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-save-data:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .menu-texts {
   flex: 1;
@@ -505,7 +664,7 @@ function handleLogout() {
   height: 46px;
   border-radius: 12px;
   border: none;
-  background-color: #D32F2F;
+  background-color: #263238;
   color: #FFFFFF;
   font-weight: 700;
   cursor: pointer;

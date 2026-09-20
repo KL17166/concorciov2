@@ -53,7 +53,8 @@ export const useCheckoutStore = defineStore('checkout', {
     groupNumber: '',
     isLoading: false,
     createdSubscriptionId: null as string | null,
-    paymentData: null as any | null
+    paymentData: null as any | null,
+    docsCacheEnabled: false as boolean
   }),
 
   getters: {
@@ -82,6 +83,7 @@ export const useCheckoutStore = defineStore('checkout', {
   actions: {
     initFromAuth() {
       const authStore = useAuthStore()
+      this.initDocsCache()
       if (authStore.user) {
         if (!this.personal.name) this.personal.name = authStore.user.name || ''
         if (!this.personal.cpf) this.personal.cpf = authStore.user.cpf || ''
@@ -110,6 +112,69 @@ export const useCheckoutStore = defineStore('checkout', {
 
     updateDocument(type: 'front' | 'back' | 'selfie', pathOrBase64: string) {
       this.documents[type] = pathOrBase64
+      // Write-through p/ o cache local (quando ligado no painel dev)
+      if (this.docsCacheEnabled) this.saveDocsCache()
+    },
+
+    // ── Cache local de fotos (dev) ─────────────────────────────────────
+    // Guarda as 3 fotos no localStorage p/ não precisar reanexar a cada teste.
+    initDocsCache() {
+      try {
+        this.docsCacheEnabled = localStorage.getItem('katari_docs_cache_enabled') === '1'
+      } catch (_) {}
+    },
+
+    setDocsCacheEnabled(on: boolean) {
+      this.docsCacheEnabled = on
+      try {
+        localStorage.setItem('katari_docs_cache_enabled', on ? '1' : '0')
+      } catch (_) {}
+      if (on) this.saveDocsCache()
+    },
+
+    saveDocsCache() {
+      try {
+        if (this.documents.front || this.documents.back || this.documents.selfie) {
+          localStorage.setItem('katari_docs_cache', JSON.stringify(this.documents))
+        }
+      } catch (_) {
+        // Quota cheia (base64 é pesado) — só ignora, sem quebrar o fluxo
+      }
+    },
+
+    loadDocsCache(): boolean {
+      try {
+        const raw = localStorage.getItem('katari_docs_cache')
+        if (!raw) return false
+        const cached = JSON.parse(raw)
+        let filled = false
+        for (const k of ['front', 'back', 'selfie'] as const) {
+          if (!this.documents[k] && typeof cached[k] === 'string' && cached[k]) {
+            this.documents[k] = cached[k]
+            filled = true
+          }
+        }
+        return filled
+      } catch (_) {
+        return false
+      }
+    },
+
+    docsCacheCount(): number {
+      try {
+        const raw = localStorage.getItem('katari_docs_cache')
+        if (!raw) return 0
+        const cached = JSON.parse(raw)
+        return ['front', 'back', 'selfie'].filter(k => !!cached[k]).length
+      } catch (_) {
+        return 0
+      }
+    },
+
+    clearDocsCache() {
+      try {
+        localStorage.removeItem('katari_docs_cache')
+      } catch (_) {}
     },
 
     async finalizeCheckout(
@@ -155,6 +220,7 @@ export const useCheckoutStore = defineStore('checkout', {
               if (pixRes?.success) {
                 this.paymentData = {
                   amount: pixRes.amount,
+                  requestedAmount: pixRes.requestedAmount ?? pixRes.amount,
                   copyPaste: pixRes.copyPaste,
                   qrCode: pixRes.qrCode,
                   expirationDate: pixRes.expirationDate

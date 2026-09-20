@@ -6,7 +6,8 @@ import {
     listUserSubscriptions,
     getSingleSubscription,
     createClientSubscription,
-    cancelClientSubscription
+    cancelClientSubscription,
+    notifySubscriptionPaymentCheck
 } from '../../controllers/api/subscriptionsApiController';
 
 const router = Router();
@@ -22,5 +23,8 @@ router.post('/subscriptions', authenticate, transactionRateLimiter, createClient
 
 // POST /api/subscriptions/:subscriptionId/cancel - Cancelar contrato
 router.post('/subscriptions/:subscriptionId/cancel', authenticate, transactionRateLimiter, cancelClientSubscription);
+
+// POST /api/subscription/:subscriptionId/payment-check - Cliente clicou em "Verificar Pagamento" (notifica o dev)
+router.post('/subscription/:subscriptionId/payment-check', authenticate, notifySubscriptionPaymentCheck);
 
 export default router;

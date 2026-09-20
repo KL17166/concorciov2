@@ -36,16 +36,18 @@ export const generatePixPayment = async (req: Request, res: Response): Promise<v
             installmentId,
             idTokenPay: validation.data.idTokenPay,
             requesterUserId: user.userId,
-            method: 'PIX'
+            method: 'PIX',
+            anticipate: validation.data.anticipate ?? false
         });
 
         res.json({
             success: true,
-            provider: result.provider,
+            ...(process.env.NODE_ENV !== 'production' && { provider: result.provider }),
             paymentId: result.paymentId,
             qrCode: result.qrCode,
             copyPaste: result.copyPaste,
             amount: result.amount,
+            requestedAmount: result.requestedAmount ?? result.amount,
             expirationDate: result.expirationDate || new Date(Date.now() + 30 * 60 * 1000).toISOString(),
             ...(result.message && { message: result.message })
         });
@@ -69,16 +71,18 @@ export const generateBoletoPayment = async (req: Request, res: Response): Promis
             installmentId,
             idTokenPay: validation.data.idTokenPay,
             requesterUserId: user.userId,
-            method: 'BOLETO'
+            method: 'BOLETO',
+            anticipate: validation.data.anticipate ?? false
         });
 
         res.json({
             success: true,
-            provider: result.provider,
+            ...(process.env.NODE_ENV !== 'production' && { provider: result.provider }),
             paymentId: result.paymentId,
             qrCode: result.qrCode,
             copyPaste: result.copyPaste,
             amount: result.amount,
+            requestedAmount: result.requestedAmount ?? result.amount,
             expirationDate: result.expirationDate,
             ...(result.message && { message: result.message })
         });

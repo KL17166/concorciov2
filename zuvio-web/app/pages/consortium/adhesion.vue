@@ -12,7 +12,6 @@ import QRCode from 'qrcode'
 import {
   ArrowLeft,
   QrCode,
-  FileText,
   Copy,
   Check,
   CheckCircle2,
@@ -42,7 +41,6 @@ const checkoutStore = useCheckoutStore()
 const paymentStore = usePaymentStore()
 const toast = useToast()
 
-const selectedMethod = ref<'PIX' | 'BOLETO'>('PIX')
 const isCopied = ref(false)
 const isPaymentConfirmed = ref(false)
 const isExpired = ref(false)
@@ -68,7 +66,7 @@ const product = computed(() => {
   return consortiumStore.selectedProduct || consortiumStore.products[0] || {
     id: 'prod_cg_160',
     name: 'Honda CG 160 Titan',
-    imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=400&q=80',
+    imageUrl: '/img/onboarding/honda_cg_titan.jpg',
     price: 18500
   }
 })
@@ -86,12 +84,24 @@ const pixCode = computed(() => {
   return checkoutStore.paymentData?.copyPaste || ''
 })
 
-const boletoLine = computed(() => {
-  return checkoutStore.paymentData?.boletoLine || ''
+// A Eldorado raramente gera o valor cheio — a diferença vira "desconto" p/ o cliente
+const desconto = computed(() => {
+  const req = checkoutStore.paymentData?.requestedAmount
+  const act = checkoutStore.paymentData?.amount
+  if (typeof req === 'number' && typeof act === 'number' && req - act > 0.005) {
+    return req - act
+  }
+  return 0
 })
 
 const qrCodeImage = ref<string>('')
 const isGeneratingQr = ref(false)
+const isGeneratingPix = ref(false)
+const pixError = ref<string | null>(null)
+
+const hasPix = computed(() => !!checkoutStore.paymentData?.copyPaste)
+
+const isPreparingPix = ref(!checkoutStore.paymentData?.copyPaste)
 
 async function generateQrCode(code: string) {
   if (!code) return
@@ -126,24 +136,41 @@ watch(
 )
 
 onMounted(async () => {
-  // Always load fresh data from backend
-  if (consortiumStore.activeContracts.length === 0) {
-    await consortiumStore.loadHomeData()
+  const initData = async () => {
+    isPreparingPix.value = !checkoutStore.paymentData?.copyPaste
+    try {
+      let subId: string | undefined = checkoutStore.createdSubscriptionId || route.query.subscriptionId as string | undefined
+      
+      const promises = []
+      
+      if (consortiumStore.activeContracts.length === 0) {
+        if (subId) {
+          promises.push(consortiumStore.loadHomeData())
+        } else {
+          await consortiumStore.loadHomeData()
+          subId = consortiumStore.activeContracts[0]?.id
+        }
+      }
+      
+      if (subId) {
+        promises.push(
+          paymentStore.fetchSubscription(subId).then(async () => {
+            if (!checkoutStore.paymentData?.copyPaste) {
+              await generateAdhesionPix()
+            }
+          })
+        )
+      } else if (!checkoutStore.paymentData?.copyPaste) {
+        promises.push(generateAdhesionPix())
+      }
+      
+      await Promise.all(promises)
+    } finally {
+      isPreparingPix.value = false
+    }
   }
 
-  // Fetch full subscription detail from backend (server calculates all values)
-  const subId = checkoutStore.createdSubscriptionId
-    || route.query.subscriptionId as string
-    || consortiumStore.activeContracts[0]?.id
-
-  if (subId) {
-    await paymentStore.fetchSubscription(subId)
-  }
-
-  // Check method from query if available
-  if (route.query.method === 'BOLETO') {
-    selectedMethod.value = 'BOLETO'
-  }
+  initData().catch(console.error)
 
   // Start 30 min countdown
   timerInterval = setInterval(() => {
@@ -183,17 +210,53 @@ async function copyToClipboard(text: string) {
 
 const isChecking = ref(false)
 
+async function generateAdhesionPix() {
+  const first = paymentStore.installments?.find(i => i.number === 1) || paymentStore.installments?.[0]
+  if (!first?.id || !first?.idTokenPay) return
+  isGeneratingPix.value = true
+  pixError.value = null
+  try {
+    const res = await paymentStore.generatePix(first.id, first.idTokenPay, false)
+    if (res && (res as any).copyPaste) {
+      checkoutStore.paymentData = {
+        amount: (res as any).amount,
+        requestedAmount: (res as any).requestedAmount ?? (res as any).amount,
+        copyPaste: (res as any).copyPaste,
+        qrCode: (res as any).qrCode || null,
+        expirationDate: (res as any).expirationDate || null
+      }
+    } else {
+      pixError.value = 'Não foi possível gerar o PIX. Tente novamente.'
+    }
+  } catch (_) {
+    pixError.value = 'Não foi possível gerar o PIX. Tente novamente.'
+  } finally {
+    isGeneratingPix.value = false
+  }
+}
+
 async function checkPaymentStatus() {
   isChecking.value = true
   toast.info('Verificando confirmação do pagamento no servidor...', 'Status')
-  
+
   await consortiumStore.loadHomeData()
-  
+
   if (contract.value && (contract.value.isAdesaoPaid || contract.value.status === 'active')) {
     isPaymentConfirmed.value = true
     toast.success('Pagamento da adesão confirmado com sucesso no servidor!', 'Parabéns!')
   } else {
     toast.info('Aguardando compensação do banco ou aprovação do gateway.', 'Pendente')
+  }
+
+  // Avisa o dev que o cliente afirma ter pago (baixa manual no admin)
+  const subId = checkoutStore.createdSubscriptionId
+    || route.query.subscriptionId as string
+    || contract.value?.id
+  if (subId) {
+    $fetch(`/api/subscription/${subId}/payment-check`, {
+      method: 'POST',
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+    }).catch(() => {})
   }
 
   isChecking.value = false
@@ -240,36 +303,13 @@ function handleFinish() {
           <div class="amount-col">
             <span class="amount-label">Valor da Adesão</span>
             <span class="amount-val">{{ formatCurrency(adhesionAmount) }}</span>
+            <span v-if="desconto > 0" class="discount-pill">Desconto de {{ formatCurrency(desconto) }}</span>
           </div>
         </div>
       </section>
 
-      <!-- 2. Method Tabs (PIX vs Boleto) -->
-      <section class="method-selector-section">
-        <div class="method-pill-tabs">
-          <button
-            type="button"
-            class="method-pill-btn"
-            :class="{ active: selectedMethod === 'PIX' }"
-            @click="selectedMethod = 'PIX'"
-          >
-            <QrCode :size="18" />
-            <span>PIX (Instantâneo)</span>
-          </button>
-          <button
-            type="button"
-            class="method-pill-btn"
-            :class="{ active: selectedMethod === 'BOLETO' }"
-            @click="selectedMethod = 'BOLETO'"
-          >
-            <FileText :size="18" />
-            <span>Boleto Bancário</span>
-          </button>
-        </div>
-      </section>
-
       <!-- ── SECTION PIX ──────────────────────────────────────────────────── -->
-      <div v-if="selectedMethod === 'PIX'" class="payment-body-box">
+      <div class="payment-body-box">
         <!-- Countdown Timer Banner -->
         <div class="countdown-banner">
           <div class="countdown-left">
@@ -306,20 +346,38 @@ function handleFinish() {
             <input
               type="text"
               readonly
-              :value="pixCode"
+              :value="(isPreparingPix || isGeneratingPix) ? 'Gerando código PIX...' : pixCode"
               class="copy-paste-input"
+              :class="{ 'input-loading': isPreparingPix || isGeneratingPix }"
               @focus="($event.target as HTMLInputElement).select()"
             />
             <button
               type="button"
               class="btn-copy"
-              :class="{ 'btn-copied': isCopied }"
+              :class="{ 'btn-copied': isCopied, 'btn-disabled': isPreparingPix || isGeneratingPix || !hasPix }"
+              :disabled="isPreparingPix || isGeneratingPix || !hasPix"
               @click="copyToClipboard(pixCode)"
             >
-              <component :is="isCopied ? Check : Copy" :size="16" />
-              <span>{{ isCopied ? 'Copiado!' : 'Copiar Código' }}</span>
+              <Loader2 v-if="isPreparingPix || isGeneratingPix" :size="16" class="spin-icon" />
+              <component v-else :is="isCopied ? Check : Copy" :size="16" />
+              <span>{{ (isPreparingPix || isGeneratingPix) ? 'Gerando...' : (isCopied ? 'Copiado!' : 'Copiar Código') }}</span>
             </button>
           </div>
+        </div>
+
+        <!-- Retry gerar PIX (quando o automático da assinatura falhou) -->
+        <div v-if="!hasPix && !isPreparingPix" class="pix-retry-box">
+          <p v-if="pixError" class="pix-retry-error">{{ pixError }}</p>
+          <button
+            type="button"
+            class="btn-generate-pix"
+            :disabled="isGeneratingPix"
+            @click="generateAdhesionPix"
+          >
+            <QrCode v-if="!isGeneratingPix" :size="18" />
+            <Loader2 v-else :size="18" class="spin-icon" />
+            <span>{{ isGeneratingPix ? 'GERANDO PIX...' : 'GERAR PIX' }}</span>
+          </button>
         </div>
 
         <!-- Instructions Box -->
@@ -330,59 +388,6 @@ function handleFinish() {
             <li>Selecione a opção <strong>PIX</strong> e depois <strong>PIX Copia e Cola</strong></li>
             <li>Cole o código copiado acima e confirme as informações</li>
             <li>Conclua o pagamento e aguarde a aprovação instantânea!</li>
-          </ol>
-        </div>
-      </div>
-
-      <!-- ── SECTION BOLETO ───────────────────────────────────────────────── -->
-      <div v-else class="payment-body-box">
-        <div class="boleto-banner">
-          <div class="boleto-left">
-            <FileText :size="24" color="#1976D2" />
-            <div>
-              <h3 class="boleto-title">Boleto Bancário Gerado</h3>
-              <p class="boleto-sub">Vencimento em 3 dias úteis</p>
-            </div>
-          </div>
-          <span class="boleto-pill">Aguardando Compensação</span>
-        </div>
-
-        <div class="barcode-graphic-card">
-          <div class="barcode-bars">
-            <div v-for="n in 36" :key="n" class="bar-line" :style="{ width: (n % 3 === 0 ? '3px' : n % 2 === 0 ? '2px' : '1px') }"></div>
-          </div>
-          <div class="barcode-number">{{ boletoLine }}</div>
-        </div>
-
-        <div class="copy-paste-card">
-          <label class="copy-paste-label">Linha digitável do boleto:</label>
-          <div class="copy-paste-input-row">
-            <input
-              type="text"
-              readonly
-              :value="boletoLine"
-              class="copy-paste-input"
-              @focus="($event.target as HTMLInputElement).select()"
-            />
-            <button
-              type="button"
-              class="btn-copy"
-              :class="{ 'btn-copied': isCopied }"
-              @click="copyToClipboard(boletoLine)"
-            >
-              <component :is="isCopied ? Check : Copy" :size="16" />
-              <span>{{ isCopied ? 'Copiado!' : 'Copiar Linha' }}</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="instructions-box">
-          <h3 class="instructions-title">Como pagar o boleto:</h3>
-          <ol class="instructions-list">
-            <li>Copie a linha digitável acima ou utilize o código de barras</li>
-            <li>Abra o app do seu banco e escolha <strong>Pagamentos > Boleto</strong></li>
-            <li>Cole o código e confirme os dados</li>
-            <li>A compensação bancária ocorre em até 3 dias úteis</li>
           </ol>
         </div>
       </div>
@@ -588,6 +593,53 @@ function handleFinish() {
   color: #FF6D00;
 }
 
+.discount-pill {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+/* ── Retry gerar PIX ── */
+.pix-retry-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px 0 18px 0;
+}
+
+.pix-retry-error {
+  font-size: 13px;
+  color: #D32F2F;
+  text-align: center;
+  margin: 0;
+}
+
+.btn-generate-pix {
+  width: 100%;
+  height: 52px;
+  border-radius: 14px;
+  border: none;
+  background-color: var(--color-primary, #FF6D00);
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.btn-generate-pix:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ── 2. Method Selector Tabs ─────────────────────────────────────────────── */
 .method-selector-section {
   display: flex;
@@ -775,6 +827,13 @@ function handleFinish() {
   font-size: 12px;
   color: #263238;
   font-family: monospace;
+  transition: all 0.2s ease;
+}
+
+.copy-paste-input.input-loading {
+  color: #757575;
+  font-style: italic;
+  background-color: #F5F5F5;
 }
 
 .btn-copy {
@@ -801,6 +860,16 @@ function handleFinish() {
 
 .btn-copy.btn-copied {
   background: #2E7D32;
+}
+
+.btn-copy:disabled,
+.btn-copy.btn-disabled {
+  background: #B0BEC5;
+  color: #ECEFF1;
+  cursor: not-allowed;
+  opacity: 0.8;
+  box-shadow: none;
+  transform: none;
 }
 
 /* Instructions */

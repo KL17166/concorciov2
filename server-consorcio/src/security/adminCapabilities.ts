@@ -24,6 +24,8 @@ export type AdminCapability =
     | 'integrations.manage'
     | 'security.view'
     | 'security.manage'
+    | 'support.view'
+    | 'support.manage'
     | 'account.security';
 
 const CAPABILITIES: Record<AdminRole, readonly AdminCapability[]> = {
@@ -34,18 +36,19 @@ const CAPABILITIES: Record<AdminRole, readonly AdminCapability[]> = {
         'payments.manage', 'bids.view', 'bids.manage', 'catalog.view',
         'catalog.manage', 'reports.view', 'compliance.view', 'compliance.review',
         'integrations.view', 'integrations.manage', 'security.view',
-        'security.manage', 'account.security'
+        'security.manage', 'support.view', 'support.manage', 'account.security'
     ],
     MANAGER: [
         'dashboard.view', 'people.view', 'people.create', 'people.edit_profile',
         'people.change_email', 'contracts.view', 'contracts.manage',
         'payments.view', 'payments.manage', 'bids.view', 'bids.manage',
         'catalog.view', 'catalog.manage', 'reports.view', 'compliance.view',
-        'compliance.review', 'integrations.view', 'account.security'
+        'compliance.review', 'integrations.view', 'support.view', 'support.manage', 'account.security'
     ],
     SUPPORT: [
         'dashboard.view', 'people.view', 'contracts.view', 'payments.view',
-        'bids.view', 'catalog.view', 'compliance.view', 'account.security'
+        'bids.view', 'catalog.view', 'compliance.view', 'support.view',
+        'support.manage', 'account.security'
     ],
     CLIENT: []
 };

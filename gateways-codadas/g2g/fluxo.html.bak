@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G2G — Fluxo de Checkout Validado (wow-gold)</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2d3748;
+    --txt:#e6edf3; --dim:#8b949e; --acc:#58a6ff; --ok:#3fb950; --warn:#d29922;
+    --req:#a371f7; --res:#3fb950; --drv:#f0883e; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif;margin:0;padding:0 0 80px}
+  header{padding:28px 24px 16px;max-width:1080px;margin:0 auto}
+  header h1{font-size:22px;margin:0 0 6px}
+  header p{color:var(--dim);margin:4px 0;font-size:14px}
+  .pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:3px 12px;font-size:12px;margin:2px 4px 2px 0;color:var(--dim)}
+  .pill b{color:var(--txt)}
+  nav.steps{position:sticky;top:0;z-index:10;background:#0d1117ee;border-bottom:1px solid var(--line);padding:10px 12px;display:flex;gap:6px;overflow-x:auto;backdrop-filter:blur(6px)}
+  nav.steps a{flex:0 0 auto;text-decoration:none;color:var(--dim);font-size:12px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--panel)}
+  nav.steps a.active,nav.steps a:hover{color:var(--txt);border-color:var(--acc)}
+  nav.steps a .n{display:inline-block;background:var(--acc);color:#04101f;font-weight:700;border-radius:6px;padding:0 6px;margin-right:6px;font-size:11px}
+  main{max-width:1080px;margin:0 auto;padding:0 24px}
+  section.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin:18px 0;overflow:hidden}
+  .chead{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .num{background:var(--acc);color:#04101f;font-weight:800;border-radius:8px;padding:2px 10px;font-size:14px}
+  .chead h2{font-size:16px;margin:0}
+  .chead .fn{color:var(--dim);font-size:13px;width:100%}
+  .cbody{padding:0 18px 18px}
+  .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px;font-weight:700}
+  .lbl.req{color:var(--req)} .lbl.res{color:var(--res)} .lbl.deriva{color:var(--drv)}
+  pre{background:#0a0d12;border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.55;margin:0}
+  .m-get{color:var(--ok);font-weight:700}.m-post{color:var(--req);font-weight:700}.m-ws{color:var(--warn);font-weight:700}
+  .st{display:inline-block;background:#0a0d12;border:1px solid var(--ok);color:var(--ok);border-radius:6px;padding:1px 8px;font-family:var(--mono);font-size:12px;margin-left:8px}
+  .chip{display:inline-block;font-family:var(--mono);font-size:12px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 8px;margin:2px 4px 2px 0}
+  .arrow{color:var(--drv);font-weight:700}
+  .note{background:var(--panel2);border-left:3px solid var(--warn);padding:8px 12px;font-size:13px;color:var(--dim);border-radius:0 8px 8px 0;margin-top:10px}
+  .note b{color:var(--txt)}
+  details{margin-top:8px}
+  details summary{cursor:pointer;color:var(--acc);font-size:13px}
+  button.copy{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;float:right}
+  button.copy:hover{border-color:var(--acc)}
+  #livebtn{background:var(--ok);color:#04140a;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:800;cursor:pointer;margin-top:12px}
+  #livebtn:disabled{opacity:.5;cursor:wait}
+  #livehint{font-size:12px;color:var(--dim);margin-left:10px}
+  #livebudget{background:#0a0d12;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px;width:130px;margin:12px 8px 0 0;font-family:var(--mono)}
+  #livebudget:focus{outline:none;border-color:var(--acc)}
+  #livechar,#liveqty{background:#0a0d12;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px;margin:12px 8px 0 0;font-family:var(--mono)}
+  #livechar{width:190px} #liveqty{width:110px}
+  #livechar:focus,#liveqty:focus{outline:none;border-color:var(--acc)}
+  #buylivebtn{background:transparent;color:var(--warn);border:1px solid var(--warn);border-radius:10px;padding:10px 18px;font-size:14px;font-weight:800;cursor:pointer;margin-top:12px}
+  #buylivebtn:disabled{opacity:.5;cursor:wait}
+  .paybtn{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;margin-top:12px}
+  .paybtn.sel{background:#0e2a16;color:var(--ok);border-color:var(--ok)}
+  .paybtn:disabled{background:#14181f;color:#5a6572;border-color:#2a3139;cursor:not-allowed;opacity:.7}
+  .gatecheck{font-size:12px;color:var(--dim);margin:10px 0 0}
+  .gatecheck input{vertical-align:-2px}
+  .lrow{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .lrow:last-child{border-bottom:none}
+  .ldot{flex:0 0 auto;width:22px;text-align:center}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .lms{color:var(--dim);font-family:var(--mono);font-size:12px;margin-left:auto;flex:0 0 auto}
+  .ldata{color:var(--dim);font-family:var(--mono);font-size:12px;width:100%;margin-top:2px;word-break:break-word}
+  .verdict{border:1px solid var(--warn);background:#221a08;border-radius:12px;padding:16px 18px;margin:18px 0}
+  .verdict h2{margin:0 0 8px;font-size:16px}
+  .verdict code{font-family:var(--mono);background:#0a0d12;padding:2px 8px;border-radius:6px}
+  footer{max-width:1080px;margin:0 auto;padding:0 24px;color:var(--dim);font-size:13px}
+  .tok{color:#f0883e}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎯 G2G — Fluxo de checkout validado <span style="color:var(--dim);font-weight:400">wow-gold · BRL · captura 20260908_150049 + HAR 26-09-08 16-11-57</span></h1>
+  <p>Cada request é consequência da anterior. <b>Toda execução do passo 6 cria um pedido REAL <i>to_pay</i></b> — é o comportamento correto, não efeito colateral. Clique nas etapas para navegar. Tokens mascarados (<span class="tok">laranja</span>).</p>
+  <div>
+    <span class="pill">meta <b>R$ 3.500</b></span>
+    <span class="pill">produto <b>Silvermoon [EU] Alliance · K Gold</b></span>
+    <span class="pill">vendedor <b>EternalStock (493848)</b></span>
+    <span class="pill">compra-teste <b>200un = R$ 49,69 · to_pay</b></span>
+    <span class="pill">user <b>1004386074</b></span>
+    <span class="pill">comportamento <b>cada run = 1 pedido novo (expira ~2h)</b></span>
+  </div>
+  <div>
+    <span style="font-size:13px;color:var(--dim)">R$</span>
+    <input id="livebudget" type="number" value="3500" min="1" step="0.01" aria-label="Orçamento em BRL">
+    <button id="livebtn">▶ Ver funcionando em tempo real</button>
+    <span id="livehint">executa os passos 1–4b ao vivo contra a API local (somente leitura, não compra)</span>
+  </div>
+  <div>
+    <input id="livechar" placeholder="Personagem p/ entrega" aria-label="Nome do personagem">
+    <input id="liveqty" type="number" placeholder="Qtd (vazio=auto)" min="200" step="1" aria-label="Quantidade">
+    <button id="paypixbtn" class="paybtn">PIX (tazapay)</button>
+    <button id="paycardbtn" class="paybtn" disabled title="Libera depois de fechar o Pix (passo 11)">Cartão (em breve)</button>
+    <button id="buylivebtn">▶ Comprar ao vivo (pedido real to_pay — passos 1–8)</button>
+  </div>
+  <div class="gatecheck"><label><input type="checkbox" id="liveconfirm"> entendo que <b>cada clique cria um pedido REAL to_pay novo</b> (expira em ~2h, sem executar pagamento — é assim mesmo, o código está certo)</label></div>
+</header>
+
+<main id="livemain" hidden>
+<section class="card" id="livepanel">
+  <div class="chead"><span class="num" style="background:var(--ok)">▶</span><h2>Ao vivo — executando agora</h2>
+    <span class="fn" id="livestatus">conectando…</span></div>
+  <div class="cbody" id="liverows"></div>
+</section>
+</main>
+
+<nav class="steps" id="stepnav">
+  <a href="#p1"><span class="n">1</span>authenticate</a>
+  <a href="#p2"><span class="n">2</span>search</a>
+  <a href="#p3"><span class="n">3</span>offer detail</a>
+  <a href="#p4"><span class="n">4b</span>product_settings</a>
+  <a href="#p5"><span class="n">5</span>histories</a>
+  <a href="#p6"><span class="n">6</span>buy-now</a>
+  <a href="#p7"><span class="n">7</span>websocket</a>
+  <a href="#p8"><span class="n">8</span>summary</a>
+  <a href="#p8b"><span class="n">8b</span>escolher PIX</a>
+  <a href="#p9"><span class="n">9</span>pix: submit→redirect</a>
+  <a href="#p10"><span class="n">10</span>tazapay checkout</a>
+  <a href="#p11"><span class="n">11</span>cpf→copia-e-cola</a>
+</nav>
+
+<main>
+
+<!-- 1 -->
+<section class="card" id="p1">
+  <div class="chead"><span class="num">1</span><h2>Bootstrap de sessão</h2>
+    <span class="fn">Troca os 38 cookies do navegador por um JWT curto (~15 min). Sem ele, tudo depois falha — inclusive com <i>status 0</i> no offer detail.</span></div>
+  <div class="cbody">
+    <div class="lbl req">Request — POST https://www.g2g.com/api/authenticate-user</div>
+    <pre>{
+  "body": {},
+  "cookies_enviados": 38
+}</pre>
+    <div class="lbl res">Response — 200</div>
+    <pre>{
+  "code": 2000,
+  "payload": {
+    "user": {
+      "accessToken": "<span class="tok">eyJhbGciOiJIUzI1NiIs…(259 chars, JWT iat→exp ≈ 15min)</span>",
+      "userInfo": {
+        "userId": "1004386074",
+        "username": "SR77"
+        <span style="color:var(--dim)">// nome/email omitidos (PII)</span>
+      }
+    }
+  }
+}</pre>
+    <div class="lbl deriva">Deriva →</div>
+    <div><span class="chip">accessToken</span><span class="arrow">→</span><span class="chip">header <b>authorization</b> em toda sls.g2g.com</span>
+    <span class="chip">userId 1004386074</span><span class="arrow">→</span><span class="chip">path /gcart/{userId}/… e ?buyer_id=</span></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="card" id="p2">
+  <div class="chead"><span class="num">2</span><h2>Busca — ranking por unidade</h2>
+    <span class="fn">Fonte da verdade do <b>estimado</b>: <i>converted_unit_price</i> em BRL (já convertido). Nunca o display em USD.</span></div>
+  <div class="cbody">
+    <div class="lbl req">Request — <span class="m-get">GET</span> https://sls.g2g.com/v3/offer/search?seo_term=wow-gold&amp;country=BR&amp;currency=BRL&amp;page_size=100&amp;page=1&amp;sort=recommended_v2&amp;v=v2</div>
+    <div class="lbl res">Response — 200 · 100 ofertas <span class="st">ex: topo EternalStock</span></div>
+    <pre>{
+  "offer_id": "G1744088751310KJ",
+  "username": "EternalStock",
+  "seller_id": "493848",
+  "converted_unit_price": 0.248443,
+  "offer_currency": "USD",
+  "available_qty": 29735667,
+  "min_qty": 200,
+  "relation_id": "lgc_1_2299_ac3f85c1-7562-437e-b125-e89576b9a38e"
+}</pre>
+    <div class="lbl deriva">Deriva →</div>
+    <div><span class="chip">offer_id / seller_id / relation_id</span><span class="arrow">→</span><span class="chip">passos 3, 5, 6</span>
+    <span class="chip">converted_unit_price 0.248443</span><span class="arrow">→</span><span class="chip">units = ⌊3500 / preço⌋</span></div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="card" id="p3">
+  <div class="chead"><span class="num">3</span><h2>Offer detail — números frescos</h2>
+    <span class="fn">Preço/estoque flutuam (câmbio). Sempre refetch antes do buy-now. Traz também os métodos de entrega.</span></div>
+  <div class="cbody">
+    <div class="lbl req">Request — <span class="m-get">GET</span> https://sls.g2g.com/v3/offer/G1744088792265KM?currency=BRL&amp;country=BR&amp;include_out_of_stock=1&amp;is_precheckout_page=1&amp;setState=false&amp;tree_version=v2</div>
+    <div class="lbl res">Response — 200</div>
+    <pre>{
+  "offer_id": "G1744088792265KM",
+  "relation_id": "lgc_1_2299_ac3f85c1-7562-437e-b125-e89576b9a38e",
+  "service_id": "lgc_service_1",
+  "brand_id": "lgc_game_2299",
+  "region_id": "ac3f85c1-7562-437e-b125-e89576b9a38e",
+  "available_qty": 9253171,
+  "min_qty": 200,
+  "unit_price": 0.0479,
+  "offer_currency": "USD",
+  "converted_unit_price": 0.24844293,
+  "unit_name": "K Gold",
+  "delivery_method_details": [
+    { "code": "guild_bank" }, { "code": "mail" <span style="color:var(--ok)">← escolhido</span> },
+    { "code": "auction_house" }, { "code": "face_to_face_trade" }
+  ]
+}</pre>
+    <div class="lbl deriva">Deriva →</div>
+    <div><span class="chip">relation_id</span><span class="arrow">→</span><span class="chip">passo 5</span>
+    <span class="chip">service_id + brand_id</span><span class="arrow">→</span><span class="chip">passo 4b</span>
+    <span class="chip">delivery_method_id (mail)</span><span class="arrow">→</span><span class="chip">passo 6</span></div>
+    <div class="note"><b>Conta da meta:</b> 3500 / 0.24844293 ≈ 14.087 un. A compra-teste usou <b>2000 un</b> (2000 × 0.24844293 = 496,89).</div>
+  </div>
+</section>
+
+<!-- 4b -->
+<section class="card" id="p4">
+  <div class="chead"><span class="num">4b</span><h2>Product settings — de onde sai o collection_id <span style="color:var(--dim);font-size:12px">(descoberta desta captura)</span></h2>
+    <span class="fn">Endpoint dedicado por service/brand. Cada delivery_method tem seus form_attributes.</span></div>
+  <div class="cbody">
+    <div class="lbl req">Request — <span class="m-get">GET</span> https://sls.g2g.com/offer/product_settings/service/lgc_service_1/brand/lgc_game_2299/product_settings</div>
+    <div class="lbl res">Response — 200</div>
+    <pre>payload.results[0]  <span style="color:var(--dim)">// product_settings_type: delivery_method</span>
+  └─ product_settings_id = 8bd2d339… <span style="color:var(--dim)">// == delivery_method_id (mail) do detail</span>
+     └─ form_attributes[0] = {
+          "attribute_key": "delivery_info_1",
+          "collection_id": "4fc60dc7",
+          "label": { "en": "World Of Warcraft - Character Name" }
+        }</pre>
+    <div class="lbl deriva">Deriva →</div>
+    <div><span class="chip">collection_id 4fc60dc7</span><span class="arrow">→</span><span class="chip">delivery_info[] no passo 6</span></div>
+    <div class="note"><b>O <i>value</i> (ex “LEA”) é INPUT do comprador</b> — nome do personagem. Não nasce de API nenhuma; a API exige como <b>parâmetro por compra</b> (<span style="font-family:var(--mono)">characterName</span>).</div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="card" id="p5">
+  <div class="chead"><span class="num">5</span><h2>Checkout histories — trava de carrinho</h2>
+    <span class="fn">Precisa voltar vazio. Repare: o “product” aqui é o relation_id do passo 3.</span></div>
+  <div class="cbody">
+    <div class="lbl req">Request — <span class="m-get">GET</span> https://sls.g2g.com/gcart/1004386074/product/lgc_1_2299_ac3f85c1-7562-437e-b125-e89576b9a38e/checkout_histories</div>
+    <div class="lbl res">Response — 200</div>
+    <pre>{ "checkout_histories": [] }   <span style="color:var(--ok)">✔ vazio = pode comprar</span></pre>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="card" id="p6">
+  <div class="chead"><span class="num">6</span><h2>Buy-now — cria 1 pedido REAL por execução</h2>
+    <span class="fn">Ordem de chaves idêntica à do frontend. <i>unit_price</i> vai na moeda da oferta (USD); o total em BRL sai no passo 8. <b>Não é idempotente: cada POST gera <i>auth_token</i> + <i>order_id</i> novos.</b></span></div>
+  <div class="cbody">
+    <div class="lbl req">Request — <span class="m-post">POST</span> https://sls.g2g.com/gcart/buy-now <button class="copy" data-copy="rawbuy">copiar</button></div>
+    <pre id="rawbuy">{
+  "product_type": "Offer",
+  "product": {
+    "offer_id": "G1744088792265KM",
+    "quantity": 2000,
+    "unit_price": 0.0479,
+    "currency": "USD",
+    "seller_id": "493848"
+  },
+  "currency": "BRL",
+  "language": "pt",
+  "user_id": "1004386074",
+  "checkout_info": {
+    "delivery_method_details": {
+      "delivery_method_id": "8bd2d339-44a1-4564-b19c-ba932f33cfb7",
+      "delivery_info": [
+        { "collection_id": "4fc60dc7", "value": "LEA" }
+      ],
+      "remember": false
+    },
+    "gp_checkout_info": {
+      "buyer_gp_balance": 0, "gp_used": 0,
+      "gp_used_in_checkout_currency": 0
+    }
+  }
+}</pre>
+    <div class="lbl res">Response — 200 (confirmado no HAR 41M)</div>
+    <pre>{
+  "code": 2000,
+  "payload": {
+    "auth_token": "<span class="tok">1a03…8ec5 (32hex, uso único)</span>",
+    "checkout_version": "v4"
+  }
+}</pre>
+    <div class="lbl deriva">Deriva →</div>
+    <div><span class="chip">auth_token</span><span class="arrow">→</span><span class="chip">query ?token= do passo 7 (mesmo valor, validado)</span></div>
+    <div class="note">HAR <span style="font-family:var(--mono)">www.g2g.com_Archive [26-09-08 16-11-57]</span> [236] trouxe o body que faltava na captura antiga: <span style="font-family:var(--mono)">auth_token fcb4…12f3 + checkout_version v4</span> (200un, value <span style="font-family:var(--mono)">l3w</span>). <b>Cada POST = 1 pedido novo:</b> <span style="font-family:var(--mono)">1788894440354GMGK</span> (2000un) → <span style="font-family:var(--mono)">1788897862001VSXQ</span> (200un = 49.69) → <span style="font-family:var(--mono)">1788898616101ZWXU</span> (200un = 49.69, run da API). O token antigo nunca reutiliza.</div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="card" id="p7">
+  <div class="chead"><span class="num">7</span><h2>WebSocket — nasce 1 pedido novo por token</h2>
+    <span class="fn">URL exata do código do frontend (sem path). Um frame com order_id → fecha e segue pro pagamento. <b>Token de uso único: reutilizar dá timeout/erro.</b></span></div>
+  <div class="cbody">
+    <div class="lbl req">Conexão — <span class="m-ws">WSS</span> wss://gcart-ws.g2g.com?token=<span class="tok">1a03…8ec5</span></div>
+    <div class="lbl res">Frame recebido — type: message</div>
+    <pre>{
+  "order_id": "1788894440354GMGK",
+  "pipwave_token": "<span class="tok">le14…XNQa (32)</span>",
+  "pipwave_api_key": "<span class="tok">FUN3…B6UL (40)</span>",
+  "redirect_url": "https://secure.pipwave.com/pay?…",
+  "code": 2000,
+  "type": "message"
+}</pre>
+    <div class="lbl deriva">Deriva →</div>
+    <div><span class="chip">order_id</span><span class="arrow">→</span><span class="chip">passo 8 + /secure/payment?order_id=…</span></div>
+    <div class="note">Regras do frontend espelhadas no código: <b>message_code presente = erro</b>; sem order_id = erro; <b>payment_status “paid”</b> = vai pra tela de sucesso. Ruído ignorado na captura: Firebase anônimo e <b>sardine.ai (antifraude)</b> — comportamento esperado.</div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="card" id="p8">
+  <div class="chead"><span class="num">8</span><h2>Summary — o total REAL</h2>
+    <span class="fn">Fonte da verdade da meta. É este total que decide parar em ≥ 3500, não o estimado da busca.</span></div>
+  <div class="cbody">
+    <div class="lbl req">Request — <span class="m-get">GET</span> https://sls.g2g.com/order/1788894440354GMGK/summary?include_items=1&amp;buyer_id=1004386074&amp;include_ga_info=1</div>
+    <div class="lbl res">Response — 200</div>
+    <pre>{
+  "order_id": "1788894440354GMGK",
+  "payment_status": "to_pay",
+  "sub_total": "496.89",
+  "checkout_total_amount": "496.89",
+  "total": "496.89",
+  "checkout_currency": "BRL",
+  "auto_cancel_at": 1788901640000,   <span style="color:var(--dim)">// ≈ +2h, expira sozinho</span>
+  "order_items": [{
+    "seller_id": "493848",
+    "items": [{
+      "offer_id": "G1744088792265KM",
+      "purchased_qty": 2000,
+      "offer_unit_price": "0.05",
+      "offer_currency": "USD",
+      "unit_name": "K Gold"
+    }]
+  }]
+}</pre>
+  </div>
+</section>
+
+<!-- 8b -->
+<section class="card" id="p8b">
+  <div class="chead"><span class="num">8b</span><h2>Escolha do método — clicar em PIX</h2>
+    <span class="fn">A tela de pagamento abre no <b>cartão</b> por padrão (<span style="font-family:var(--mono)">autoopen_cat: cat_1</span>). É aqui que você <b>clica em PIX</b>. O menu vem do <span style="font-family:var(--mono)">get-config</span>.</span></div>
+  <div class="cbody">
+    <div class="lbl req">Request — <span class="m-post">POST</span> https://api.pipwave.com/payment/sdk/{pipwave_token}/get-config</div>
+    <pre>{
+  "timestamp": 1788907377,
+  "api_key": "FUN3…B6UL",
+  "referrer_url": "https://www.g2g.com//categories/wow-gold",
+  "location_url": "https://www.g2g.com/secure/payment?order_id=…&amp;pipwave_token=<span class="tok">6WuT…cqlH</span>&amp;…"
+}</pre>
+    <div class="lbl res">Response — 200 · o cardápio (payable_amount 49.72 BRL)</div>
+    <pre>cat_1  Credit &amp; Debit Card   <span style="color:var(--dim)">← abre sozinho (autoopen)</span>
+  ├─ id 891 · airwallex.visa_mor · Visa
+  └─ id 892 · airwallex.mastercard_mor · Mastercard
+cat_13 Cryptocurrency (13 moedas: BTC, ETH, USDT×5, USDC×4, Binance Pay…)
+cat_2  Online Banking
+  └─ <b>id 856 · tazapay.PIX-QR · PIX</b>  <span style="color:var(--ok)">← CLICA AQUI</span></pre>
+    <div class="lbl deriva">Deriva →</div>
+    <div><span class="chip">clicar em PIX (id 856)</span><span class="arrow">→</span><span class="chip">get-payment-method-details (passo 9)</span></div>
+    <div class="note">Sem esse clique nada anda: o <span style="font-family:var(--mono)">submit-payment</span> só existe depois de escolher o método. No cartão o clique seria em <span style="font-family:var(--mono)">airwallex.visa_mor / mastercard_mor</span> (passo do 3DS vem depois).</div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="card" id="p9">
+  <div class="chead"><span class="num">9</span><h2>Pix — submit → redirect (ramo pagamento)</h2>
+    <span class="fn">Escolhendo <b>PIX</b> no pagamento, o SDK da pipwave fecha a config e manda pra "outra tela". Verificado na extensão (request <b>+ response</b>, coisa que o HAR não trouxe).</span></div>
+  <div class="cbody">
+    <div class="lbl req">Request — <span class="m-post">POST</span> https://api.pipwave.com/payment/sdk/{pipwave_token}/get-payment-method-details</div>
+    <pre>{
+  "timestamp": 1788907331,
+  "api_key": "FUN3…B6UL",
+  "version": "pipwave HPP v1.0 pwsdk v2.1.0",
+  "payment_method_code": "tazapay.PIX-QR"
+}</pre>
+    <div class="lbl res">Response — 200 (total com taxa)</div>
+    <pre>{
+  "status": 200,
+  "message": {
+    "amount": {
+      "surcharge": 2.98, "tax": 0, "total": 52.7,
+      "total_formatted": "&lt;span…&gt;52.70&lt;/span&gt; BRL",
+      "currency": "BRL", "handling_fees": "2.98", "final_total": "52.70"
+    },
+    "required_param": [], "checkbox_param": []
+  },
+  "code": "200"
+}</pre>
+    <div class="lbl req">Request — <span class="m-post">POST</span> …/submit-payment <button class="copy" data-copy="rawpix">copiar</button></div>
+    <pre id="rawpix">{
+  "timestamp": 1788907338,
+  "api_key": "FUN3…B6UL",
+  "version": "pipwave HPP v1.0 pwsdk v2.1.0",
+  "payment_method_code": "tazapay.PIX-QR",
+  "user_input": {
+    "pw-phone-verification-token": "",
+    "disclaimer_message_agreement": "1",
+    "tazapay_session_id": "8a33…aa41"
+  }
+}</pre>
+    <div class="lbl res">Response — 200</div>
+    <pre>{
+  "status": 200, "message": "",
+  "redirect_url": "https://secure.pipwave.com/load?token=<span class="tok">Qsxk…bqYX</span>",
+  "params": [], "code": "200"
+}</pre>
+    <div class="lbl deriva">Deriva →</div>
+    <div><span class="chip">tazapay_session_id</span><span class="arrow">→</span><span class="chip">device-intel shield-fp (ja foi no passo anterior)</span>
+    <span class="chip">redirect_url</span><span class="arrow">→</span><span class="chip">302 load?token= → load/checkout?pw_id=…&amp;token_id=… (passo 10)</span></div>
+    <div class="note">Ordem exata: <span style="font-family:var(--mono)">get-config → device-intel → get-payment-method-details → submit-payment → prepayment-check</span> (<span style="font-family:var(--mono)">challenge: null</span> no Pix) → <b>302</b>. <span style="font-family:var(--mono)">pw_id</span> real visto: <span style="font-family:var(--mono)">pw20260909072713965</span>. Cada token gera <span style="font-family:var(--mono)">pw_id</span> novo.</div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="card" id="p10">
+  <div class="chead"><span class="num">10</span><h2>Tazapay checkout — a "outra tela"</h2>
+    <span class="fn">Checkout hospedado da Tazapay. É aqui que pede o <b>CPF</b> e depois cospe o Pix copia-e-cola.</span></div>
+  <div class="cbody">
+    <div class="lbl req">Navegação — <span class="m-get">GET</span> https://checkout.tazapay.com/transaction/{id}</div>
+    <pre>id ex real: ymVXJICIWZMwmpJIw-3K4qea5NrSw2Mihj6QvcT-R1M=
+shell: main-D7kwmRAm.js · Main-tRGMWr4_.js · shieldHelper · paymentNomenclature
+pollers: PaymentDetailPoller · PaymentAwaiting (ficam perguntando o status)</pre>
+    <div class="lbl deriva">Deriva →</div>
+    <div><span class="chip">tela de CPF</span><span class="arrow">→</span><span class="chip">POST com cpf → response com BR Code (passo 11)</span></div>
+    <div class="note">Antifraude já conta aqui: <span style="font-family:var(--mono)">device_score 50 · is_bot true</span> no Chromium do Playwright (não bloqueou o Pix). No cartão pode pesar no challenge.</div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="card" id="p11">
+  <div class="chead"><span class="num">11</span><h2>CPF → Pix copia-e-cola <span style="color:var(--warn);font-size:12px">(captura pendente ao vivo)</span></h2>
+    <span class="fn">O que queremos extrair: o request que leva o <b>CPF</b> e o response que devolve o <b>BR Code copia-e-cola</b> (+ QR).</span></div>
+  <div class="cbody">
+    <div class="lbl req">Alvo — POST do CPF (ver nome exato ao vivo)</div>
+    <pre>{
+  "…": "endpoint sai do chunk carregado na hora (não está nos bundles estáticos)",
+  "envia": "cpf (+ nome/email/telefone se pedir)",
+  "volta": "brcode / qr_code / copia-e-cola + expiração"
+}</pre>
+    <div class="lbl deriva">Como capturar →</div>
+    <div><span class="chip">janela nova</span><span class="arrow">→</span><span class="chip">extensão hooka o fetch/XHR (pega body, diferente de navegação)</span>
+    <span class="chip">popup EXPORT_HAR</span><span class="arrow">→</span><span class="chip">me manda que eu colo o Raw aqui</span></div>
+    <div class="note">Quando o response do BR Code chegar, eu atualizo este passo com o Raw exato + os campos, igual fiz no passo 9.</div>
+  </div>
+</section>
+
+<div class="verdict">
+  <h2>🧾 Veredito desta validação — <span style="color:var(--ok)">CÓDIGO CERTO: CADA RUN CRIA 1 PEDIDO to_pay</span></h2>
+  <div><code>PENDING — 200un K Gold | to_pay 49.69 BRL, expira via auto_cancel_at (~2h) | HTTP 200</code></div>
+  <div style="margin-top:8px"><code>HAR 16-11-57 [236/251]: 1788897862001VSXQ | 49.69 BRL to_pay | HTTP 200</code></div>
+  <div style="margin-top:4px"><code>API live: 1788898616101ZWXU | 49.69 BRL to_pay | HTTP 200</code></div>
+  <p style="color:var(--dim);font-size:13px">Não é <b>APPROVED</b> nem <b>DECLINED</b>: nenhum pagamento foi executado — o fluxo foi validado até a criação do pedido <i>to_pay</i>, que expira sozinho. <b>Rodar de novo = pedir de novo, por design:</b> o backend gera <i>auth_token</i> e <i>order_id</i> novos a cada <span style="font-family:var(--mono)">POST /gcart/buy-now</span>. Para a meta de R$ 3.500, o código recalcula <span style="font-family:var(--mono)">units = ⌊budget / converted_unit_price⌋</span> com o preço fresco do passo 3 e confirma no total do passo 8.</p>
+</div>
+
+</main>
+
+<footer>
+  <p>Evidências: <span style="font-family:var(--mono)">captures/20260908_150049/</span> (buy-now_request_raw.txt · ws_frames.jsonl · summary_*.json) · <span style="font-family:var(--mono)">www.g2g.com_Archive [26-09-08 16-11-57].har</span> ([236] buy-now 200un l3w → auth_token+checkout_version v4 · [251] summary 49.69 BRL) · API live <span style="font-family:var(--mono)">1788898616101ZWXU = 49.69 BRL to_pay</span> · Código: <span style="font-family:var(--mono)">src/g2g.ts</span> · API: <span style="font-family:var(--mono)">POST /api/optimize-g2g</span> (cotação, só leitura) · <span style="font-family:var(--mono)">POST /api/buy-g2g {"characterName": …}</span> (cria 1 pedido real to_pay por chamada, por design) · Pix: <span style="font-family:var(--mono)">www.g2g.com.har</span> (302 load/checkout?pw_id=…) + extensão <span style="font-family:var(--mono)">auto_22-43-57</span> (submit/prepayment bodies, redirect_url, challenge null)</p>
+</footer>
+
+<script>
+  // destaca etapa ativa + botão copiar
+  const links=[...document.querySelectorAll('#stepnav a')];
+  const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+  addEventListener('scroll',()=>{
+    let cur=0;
+    secs.forEach((s,i)=>{ if(s && s.getBoundingClientRect().top<160) cur=i; });
+    links.forEach((a,i)=>a.classList.toggle('active',i===cur));
+  },{passive:true});
+  document.querySelectorAll('button.copy').forEach(b=>b.addEventListener('click',()=>{
+    const el=document.getElementById(b.dataset.copy);
+    navigator.clipboard.writeText(el.innerText).then(()=>{b.textContent='copiado!';setTimeout(()=>b.textContent='copiar',1500);});
+  }));
+
+  // ---- AO VIVO: consome GET /api/optimize-g2g/live (SSE) ----
+  const API='http://localhost:3001';
+  const btn=document.getElementById('livebtn'), lm=document.getElementById('livemain'),
+        rows=document.getElementById('liverows'), st=document.getElementById('livestatus');
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  function row(id,html){ let d=document.getElementById(id); if(!d){ d=document.createElement('div'); d.className='lrow'; d.id=id; rows.appendChild(d);} d.innerHTML=html; return d; }
+  function renderStep(e){
+    const d=JSON.stringify(e.data);
+    row('r-'+e.step,`<span class="ldot">✅</span><span><b>${esc(e.name)}</b><div class="ldata">${esc(d)}</div></span><span class="lms">${e.ms}ms</span>`);
+    st.textContent='executando: '+e.name+'…';
+  }
+  btn.addEventListener('click',()=>{
+    const budget=Math.max(1,Number(document.getElementById('livebudget').value)||3500);
+    btn.disabled=true; lm.hidden=false; rows.innerHTML=''; st.textContent='conectando em '+API+'…';
+    lm.scrollIntoView({behavior:'smooth'});
+    let got=false;
+    const es=new EventSource(API+'/api/optimize-g2g/live?budget='+encodeURIComponent(budget)+'&seoTerm=wow-gold');
+    const timer=setTimeout(()=>{ if(!got){ es.close(); st.textContent='API offline? Suba com:  cd /home/d/Documents/g2g && npm run api'; btn.disabled=false; } },8000);
+    es.onmessage=ev=>{
+      got=true; clearTimeout(timer);
+      const e=JSON.parse(ev.data);
+      if(e.type==='start'){ st.textContent=`budget R$ ${e.budget} · ${esc(e.seoTerm)} · ${esc(e.currency)}/${esc(e.country)}`; row('r-start','<span class="ldot">🚀</span><span>iniciando fluxo (somente leitura)…</span>'); }
+      else if(e.type==='step'){ renderStep(e); }
+      else if(e.type==='done'){
+        clearTimeout(timer); es.close(); btn.disabled=false;
+        st.textContent=`concluído em ${e.totalMs}ms`;
+        const b=e.best;
+        row('r-done',`<span class="ldot">🏆</span><span><b>${esc(b.sellerName)}</b> · ${b.unitsToBuy.toLocaleString('pt-BR')} un ≈ R$ ${b.totalCost.toFixed(2)} <span style="color:var(--warn)">(estimado — o total real só sai no summary do passo 8)</span><div class="ldata">offer ${esc(b.offerId)} · estoque ${b.inStock.toLocaleString('pt-BR')} · mín ${b.minQty}</div></span><span class="lms">${e.totalMs}ms</span>`);
+      }
+      else if(e.type==='error'){ clearTimeout(timer); es.close(); btn.disabled=false; st.textContent='erro: '+e.error; }
+    };
+    es.onerror=()=>{ if(!got){ clearTimeout(timer); es.close(); st.textContent='API offline? Suba com:  cd /home/d/Documents/g2g && npm run api'; btn.disabled=false; } };
+  });
+
+  // ---- Escolha do método: PIX ativo, cartão cinza (libera após passo 11) ----
+  let payMethod=null;
+  const pixbtn=document.getElementById('paypixbtn');
+  pixbtn.addEventListener('click',()=>{
+    payMethod='pix';
+    pixbtn.classList.add('sel');
+    st.textContent='método: PIX (tazapay) — segue passos 8b → 9 → 10 → 11';
+    lm.hidden=false;
+  });
+
+  // ---- COMPRA AO VIVO: passos 1-8 reais (cria pedido to_pay) ----
+  const bbtn=document.getElementById('buylivebtn');
+  bbtn.addEventListener('click',()=>{
+    const char=document.getElementById('livechar').value.trim();
+    const qty=document.getElementById('liveqty').value.trim();
+    const ok=document.getElementById('liveconfirm').checked;
+    if(payMethod!=='pix'){ st.textContent='aperta o botão PIX acima primeiro (cartão libera após o passo 11).'; lm.hidden=false; lm.scrollIntoView({behavior:'smooth'}); return; }
+    if(!char){ st.textContent='digite o nome do personagem para entrega.'; lm.hidden=false; lm.scrollIntoView({behavior:'smooth'}); return; }
+    if(!ok){ st.textContent='marque a confirmação de pedido real antes de comprar.'; lm.hidden=false; lm.scrollIntoView({behavior:'smooth'}); return; }
+    const budget=Math.max(1,Number(document.getElementById('livebudget').value)||3500);
+    bbtn.disabled=true; btn.disabled=true; lm.hidden=false; rows.innerHTML='';
+    st.textContent='iniciando compra real…'; lm.scrollIntoView({behavior:'smooth'});
+    let got=false;
+    let url=API+'/api/buy-g2g/live?characterName='+encodeURIComponent(char)+'&budget='+encodeURIComponent(budget)+'&seoTerm=wow-gold';
+    if(qty) url+='&quantity='+encodeURIComponent(qty);
+    const es=new EventSource(url);
+    const timer=setTimeout(()=>{ if(!got){ es.close(); st.textContent='API offline? Suba com:  cd /home/d/Documents/g2g && npm run api'; bbtn.disabled=false; btn.disabled=false; } },10000);
+    es.onmessage=ev=>{
+      got=true; clearTimeout(timer);
+      const e=JSON.parse(ev.data);
+      if(e.type==='start'){ st.textContent='⚠️ '+e.aviso; row('r-start','<span class="ldot">🚀</span><span>iniciando <b>compra real</b>…</span>'); }
+      else if(e.type==='step'){ renderStep(e); }
+      else if(e.type==='done'){
+        clearTimeout(timer); es.close(); bbtn.disabled=false; btn.disabled=false;
+        st.textContent=`pedido ${e.orderId} · ${e.paymentStatus} · em ${e.totalMs}ms — agora paga no PIX (passos 8b→11): get-config, clica PIX id 856, submit, tazapay, CPF, copia-e-cola`;
+        row('r-done',`<span class="ldot">🧾</span><span><b>TOTAL REAL (summary, passo 8): R$ ${e.real} ${esc(e.currency)}</b> <span style="color:var(--dim)">(estimado era R$ ${e.estimado})</span><div class="ldata">order ${esc(e.orderId)} · status ${esc(e.paymentStatus)} · pipwave ${esc(e.pipwaveToken)}</div></span><span class="lms">${e.totalMs}ms</span>`);
+      }
+      else if(e.type==='error'){ clearTimeout(timer); es.close(); bbtn.disabled=false; btn.disabled=false; st.textContent='erro: '+e.error; }
+    };
+    es.onerror=()=>{ if(!got){ clearTimeout(timer); es.close(); st.textContent='API offline? Suba com:  cd /home/d/Documents/g2g && npm run api'; bbtn.disabled=false; btn.disabled=false; } };
+  });
+</script>
+</body>
+</html>

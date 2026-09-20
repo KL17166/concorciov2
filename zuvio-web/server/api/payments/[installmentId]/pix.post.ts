@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
 
   return proxyToBackend<PixPaymentResponse>(event, `/api/payments/${installmentId}/pix`, {
     method: 'POST',
-    body: { idTokenPay: body.idTokenPay },
+    body: { idTokenPay: body.idTokenPay, anticipate: body.anticipate ?? false },
     forwardAuth: true
   })
 })

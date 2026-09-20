@@ -17,6 +17,7 @@
   position: sticky;
   top: 0;
   z-index: 30;
+  border-radius: 0 0 47px 47px;
 }
 
 .appbar-back-btn {
@@ -106,20 +107,42 @@
   justify-content: center;
 }
 
-.stat-icon-circle.green { background-color: rgba(76, 175, 80, 0.1); }
-.stat-icon-circle.orange { background-color: rgba(255, 152, 0, 0.1); }
-.stat-icon-circle.grey { background-color: rgba(158, 158, 158, 0.1); }
-.stat-icon-circle.blue { background-color: rgba(33, 150, 243, 0.1); }
+.stat-icon-circle.green {
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.stat-icon-circle.orange {
+  background-color: rgba(255, 152, 0, 0.1);
+}
+
+.stat-icon-circle.grey {
+  background-color: rgba(158, 158, 158, 0.1);
+}
+
+.stat-icon-circle.blue {
+  background-color: rgba(33, 150, 243, 0.1);
+}
 
 .stat-number {
   font-size: 20px;
   font-weight: 700;
 }
 
-.stat-number.green { color: #4CAF50; }
-.stat-number.orange { color: #FF9800; }
-.stat-number.grey { color: #9E9E9E; }
-.stat-number.blue { color: #2196F3; }
+.stat-number.green {
+  color: #4CAF50;
+}
+
+.stat-number.orange {
+  color: #FF9800;
+}
+
+.stat-number.grey {
+  color: #9E9E9E;
+}
+
+.stat-number.blue {
+  color: #2196F3;
+}
 
 .stat-label {
   font-size: 12px;
@@ -146,7 +169,9 @@
   color: var(--color-secondary, #263238);
 }
 
-.due-text.paid-off { color: #4CAF50; }
+.due-text.paid-off {
+  color: #4CAF50;
+}
 
 .due-amount-pill {
   padding: 4px 10px;
@@ -430,9 +455,17 @@
   flex-shrink: 0;
 }
 
-.sandwich-icon-wrap.green { background-color: rgba(76, 175, 80, 0.1); }
-.sandwich-icon-wrap.blue { background-color: rgba(33, 150, 243, 0.1); }
-.sandwich-icon-wrap.orange { background-color: rgba(255, 109, 0, 0.1); }
+.sandwich-icon-wrap.green {
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.sandwich-icon-wrap.blue {
+  background-color: rgba(33, 150, 243, 0.1);
+}
+
+.sandwich-icon-wrap.orange {
+  background-color: rgba(255, 109, 0, 0.1);
+}
 
 .sandwich-header-texts {
   display: flex;
@@ -636,9 +669,17 @@
   font-weight: 600;
 }
 
-.installment-status-pill.paid { color: #4CAF50; }
-.installment-status-pill.future { color: #2196F3; }
-.installment-status-pill.current { color: var(--color-primary, #FF6D00); }
+.installment-status-pill.paid {
+  color: #4CAF50;
+}
+
+.installment-status-pill.future {
+  color: #2196F3;
+}
+
+.installment-status-pill.current {
+  color: var(--color-primary, #FF6D00);
+}
 
 /* ── 10. Adhesion Block Guard ────────────────────────────────────────────── */
 .adhesion-guard-container {
@@ -646,15 +687,17 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 32px;
+  min-height: calc(100dvh - 230px);
+  padding: 32px;
   text-align: center;
 }
 
 .guard-lock-circle {
-  width: 100px;
-  height: 100px;
+  width: 112px;
+  height: 112px;
   border-radius: 50%;
-  background-color: #FFF3E0;
+  background-color: #F5F5F5;
+  border: 1px solid #E0E0E0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -730,8 +773,13 @@
 }
 
 @keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
 }
 
 .modal-handle {
@@ -978,18 +1026,34 @@
   font-weight: 700;
 }
 
-.sub-item-top.green { color: #4CAF50; }
-.sub-item-top.orange { color: #FF9800; }
-.sub-item-top.blue { color: #2196F3; }
+.sub-item-top.green {
+  color: #4CAF50;
+}
+
+.sub-item-top.orange {
+  color: #FF9800;
+}
+
+.sub-item-top.blue {
+  color: #2196F3;
+}
 
 .sub-item-label {
   font-size: 12px;
   font-weight: 500;
 }
 
-.sub-item-label.green { color: rgba(76, 175, 80, 0.8); }
-.sub-item-label.orange { color: rgba(255, 152, 0, 0.8); }
-.sub-item-label.blue { color: rgba(33, 150, 243, 0.8); }
+.sub-item-label.green {
+  color: rgba(76, 175, 80, 0.8);
+}
+
+.sub-item-label.orange {
+  color: rgba(255, 152, 0, 0.8);
+}
+
+.sub-item-label.blue {
+  color: rgba(33, 150, 243, 0.8);
+}
 
 .summary-vertical-divider {
   width: 1px;
@@ -1032,9 +1096,17 @@
   flex-shrink: 0;
 }
 
-.distribution-icon-box.green { background-color: rgba(76, 175, 80, 0.1); }
-.distribution-icon-box.blue { background-color: rgba(33, 150, 243, 0.1); }
-.distribution-icon-box.orange { background-color: rgba(255, 152, 0, 0.1); }
+.distribution-icon-box.green {
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.distribution-icon-box.blue {
+  background-color: rgba(33, 150, 243, 0.1);
+}
+
+.distribution-icon-box.orange {
+  background-color: rgba(255, 152, 0, 0.1);
+}
 
 .distribution-name {
   flex: 1;
@@ -1086,8 +1158,14 @@
   z-index: 2;
 }
 
-.timeline-dot.paid { background-color: #4CAF50; }
-.timeline-dot.pending { background-color: #FF9800; }
+.timeline-dot.paid {
+  background-color: #4CAF50;
+}
+
+.timeline-dot.pending {
+  background-color: #FF9800;
+}
+
 .timeline-dot.active-first {
   width: 24px;
   height: 24px;
@@ -1143,8 +1221,13 @@
   font-weight: 700;
 }
 
-.timeline-item-price.paid { color: #4CAF50; }
-.timeline-item-price.pending { color: #FF9800; }
+.timeline-item-price.paid {
+  color: #4CAF50;
+}
+
+.timeline-item-price.pending {
+  color: #FF9800;
+}
 
 /* ── 14. Bids Screen Components ──────────────────────────────────────────── */
 .bid-header-card {
@@ -1300,13 +1383,11 @@
   border-radius: 10px;
   outline: none;
   cursor: pointer;
-  background: linear-gradient(
-    to right,
-    #FF6D00 0%,
-    #FF6D00 var(--slider-progress, 55%),
-    #FFE0B2 var(--slider-progress, 55%),
-    #FFE0B2 100%
-  );
+  background: linear-gradient(to right,
+      #FF6D00 0%,
+      #FF6D00 var(--slider-progress, 55%),
+      #FFE0B2 var(--slider-progress, 55%),
+      #FFE0B2 100%);
   border: none;
   padding: 0;
   margin: 12px 0 6px 0;

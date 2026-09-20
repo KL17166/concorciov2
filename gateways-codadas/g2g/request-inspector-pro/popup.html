@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request Inspector Pro</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg: #0d0f14;
+      --bg2: #141720;
+      --bg3: #1c2030;
+      --surface: #1e2235;
+      --surface2: #252a3d;
+      --border: #2a3050;
+      --accent: #6c63ff;
+      --accent2: #ff6584;
+      --green: #00e5a0;
+      --yellow: #ffd166;
+      --red: #ff4757;
+      --orange: #ff9f43;
+      --blue: #54a0ff;
+      --text: #e8ecf5;
+      --text2: #8892b0;
+      --text3: #4a5278;
+      --payment: #ff6584;
+      --api: #6c63ff;
+      --analytics: #ffd166;
+      --static: #4a5278;
+      --other: #8892b0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      width: 780px;
+      min-height: 500px;
+      max-height: 650px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: linear-gradient(135deg, var(--bg2), var(--bg3));
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .header-info h1 {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text);
+    }
+
+    .header-info p {
+      font-size: 10px;
+      color: var(--text2);
+      margin-top: 1px;
+    }
+
+    .header-stats {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .stat-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text2);
+    }
+
+    .stat-chip .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text3);
+    }
+
+    .stat-chip.payment .dot { background: var(--payment); }
+    .stat-chip.total .dot { background: var(--accent); }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 11px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.3px;
+    }
+
+    .btn:active { transform: scale(0.96); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover { background: #7c74ff; }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--red);
+      border-color: var(--red);
+    }
+    .btn-danger:hover { background: rgba(255,71,87,0.1); }
+
+    .btn-success {
+      background: transparent;
+      color: var(--green);
+      border-color: var(--green);
+    }
+    .btn-success:hover { background: rgba(0,229,160,0.1); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text2);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover { background: var(--surface); color: var(--text); }
+
+    .btn-capture {
+      background: var(--green);
+      color: #0d1117;
+      border-color: var(--green);
+    }
+    .btn-capture.paused {
+      background: transparent;
+      color: var(--red);
+      border-color: var(--red);
+    }
+    .btn-capture:hover { filter: brightness(1.1); }
+
+    .recording-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+
+    .filter-btn {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text3);
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+    }
+
+    .filter-btn.active { color: white; }
+    .filter-btn[data-f="ALL"].active { background: var(--accent); border-color: var(--accent); }
+    .filter-btn[data-f="PAYMENT"].active { background: var(--payment); border-color: var(--payment); }
+    .filter-btn[data-f="API"].active { background: var(--api); border-color: var(--api); }
+    .filter-btn[data-f="ANALYTICS"].active { background: var(--analytics); border-color: var(--yellow); color: #000; }
+    .filter-btn[data-f="OTHER"].active { background: var(--bg3); border-color: var(--text3); color: var(--text2); }
+
+    .search-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      width: 180px;
+      transition: border-color 0.15s;
+    }
+    .search-box:focus { border-color: var(--accent); }
+    .search-box::placeholder { color: var(--text3); }
+
+    /* ── SPLIT LAYOUT ── */
+    .split {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── REQUEST LIST ── */
+    .req-list {
+      width: 300px;
+      flex-shrink: 0;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .req-list::-webkit-scrollbar { width: 4px; }
+    .req-list::-webkit-scrollbar-track { background: transparent; }
+    .req-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .req-item {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(42,48,80,0.5);
+      cursor: pointer;
+      /* SEM transition — evita flickering ao re-renderizar */
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .req-item:hover { background: var(--surface); }
+    .req-item:active { background: var(--surface2); }
+    .req-item.selected { background: var(--surface2); border-left: 3px solid var(--accent); }
+    .req-item.payment-req { border-left: 3px solid var(--payment); }
+    .req-item.payment-req.selected { border-left: 3px solid var(--accent); }
+
+    .req-item-top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .method-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      flex-shrink: 0;
+    }
+
+    .method-GET { background: rgba(84,160,255,0.2); color: var(--blue); }
+    .method-POST { background: rgba(108,99,255,0.2); color: var(--accent); }
+    .method-PUT { background: rgba(255,159,67,0.2); color: var(--orange); }
+    .method-DELETE { background: rgba(255,71,87,0.2); color: var(--red); }
+    .method-PATCH { background: rgba(255,209,102,0.2); color: var(--yellow); }
+    .method-OPTIONS { background: rgba(74,82,120,0.2); color: var(--text3); }
+
+    .status-badge {
+      font-size: 9px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .status-2xx { background: rgba(0,229,160,0.15); color: var(--green); }
+    .status-3xx { background: rgba(255,209,102,0.15); color: var(--yellow); }
+    .status-4xx { background: rgba(255,71,87,0.2); color: var(--red); }
+    .status-5xx { background: rgba(255,71,87,0.3); color: var(--red); }
+    .status-0 { background: rgba(74,82,120,0.2); color: var(--text3); }
+
+    .req-url {
+      font-size: 10px;
+      color: var(--text2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 250px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .req-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9px;
+      color: var(--text3);
+    }
+
+    .cat-badge {
+      font-size: 8px;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 2px;
+      text-transform: uppercase;
+    }
+    .cat-PAYMENT { background: rgba(255,101,132,0.2); color: var(--payment); }
+    .cat-API { background: rgba(108,99,255,0.2); color: var(--api); }
+    .cat-ANALYTICS { background: rgba(255,209,102,0.15); color: var(--yellow); }
+    .cat-STATIC { background: rgba(74,82,120,0.15); color: var(--text3); }
+    .cat-OTHER { background: rgba(136,146,176,0.1); color: var(--text3); }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--text3);
+      gap: 8px;
+      font-size: 11px;
+    }
+    .empty-state .icon { font-size: 32px; }
+
+    /* ── DETAIL PANEL ── */
+    .detail-panel {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+
+    .detail-panel::-webkit-scrollbar { width: 4px; }
+    .detail-panel::-webkit-scrollbar-track { background: transparent; }
+    .detail-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .detail-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text3);
+      gap: 10px;
+    }
+    .detail-empty .icon { font-size: 48px; }
+    .detail-empty p { font-size: 12px; }
+
+    /* Tabs */
+    .detail-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .tab-btn {
+      padding: 8px 14px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text3);
+      font-family: 'Inter', sans-serif;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-btn:hover:not(.active) { color: var(--text2); background: var(--surface); }
+
+    .tab-content { display: none; padding: 12px; }
+    .tab-content.active { display: block; }
+
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text3);
+      margin-bottom: 8px;
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    .kv-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .kv-table tr { border-bottom: 1px solid rgba(42,48,80,0.4); }
+    .kv-table tr:last-child { border-bottom: none; }
+    .kv-table tr:hover { background: var(--surface); }
+
+    .kv-table td:first-child {
+      color: var(--text3);
+      padding: 4px 8px 4px 0;
+      width: 40%;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    .kv-table td:last-child {
+      color: var(--text);
+      padding: 4px 0;
+      word-break: break-all;
+    }
+
+    .highlight-payment { color: var(--payment) !important; font-weight: 600; }
+    .highlight-warning { color: var(--yellow) !important; }
+    .highlight-error { color: var(--red) !important; }
+    .highlight-ok { color: var(--green) !important; }
+
+    .code-block {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .code-block::-webkit-scrollbar { width: 3px; height: 3px; }
+    .code-block::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .alert-box {
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 10px;
+      margin-bottom: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .alert-warning { background: rgba(255,209,102,0.1); border: 1px solid rgba(255,209,102,0.3); color: var(--yellow); }
+    .alert-error { background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.3); color: var(--red); }
+    .alert-info { background: rgba(108,99,255,0.1); border: 1px solid rgba(108,99,255,0.3); color: var(--accent); }
+    .alert-success { background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.3); color: var(--green); }
+
+    /* URL info box */
+    .url-box {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text);
+      word-break: break-all;
+      line-height: 1.5;
+      cursor: text;
+      user-select: all;
+    }
+
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text2);
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+    }
+    .copy-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .timing-bar {
+      background: var(--bg2);
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .timing-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.3s ease;
+    }
+
+    /* ANALYSIS PANEL */
+    .analysis-section { margin-bottom: 16px; }
+    .risk-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: var(--surface);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+    .risk-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .risk-high .risk-dot { background: var(--red); }
+    .risk-medium .risk-dot { background: var(--yellow); }
+    .risk-low .risk-dot { background: var(--green); }
+
+    /* STATUS BAR */
+    .statusbar {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      padding: 4px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 9px;
+      color: var(--text3);
+      flex-shrink: 0;
+    }
+    .statusbar .sep { color: var(--text3); opacity: 0.4; }
+
+    .progress-bar-wrap {
+      height: 2px;
+      background: var(--border);
+      flex: 1;
+      border-radius: 1px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.3s;
+      border-radius: 1px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">🔍</div>
+  <div class="header-info">
+    <h1>Request Inspector Pro</h1>
+    <p>Debug de Requisições HTTP · Análise de Pagamentos</p>
+  </div>
+  <div class="header-stats">
+    <div class="stat-chip total">
+      <div class="dot"></div>
+      <span id="stat-total">0</span> total
+    </div>
+    <div class="stat-chip payment">
+      <div class="dot"></div>
+      <span id="stat-payment">0</span> payment
+    </div>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button class="btn btn-capture" id="btn-capture">
+    <div class="recording-dot"></div>
+    Capturando
+  </button>
+  <button class="btn btn-danger" id="btn-clear">🗑 Limpar</button>
+  <button class="btn btn-success" id="btn-export-json">⬇ JSON</button>
+  <button class="btn btn-ghost" id="btn-export-har">⬇ HAR</button>
+  <button class="btn btn-ghost" id="btn-copy-all">📋 Copiar Tudo</button>
+
+  <input class="search-box" id="search-box" type="text" placeholder="🔎 Filtrar URL..." />
+
+  <div class="filter-group">
+    <button class="filter-btn active" data-f="ALL">ALL</button>
+    <button class="filter-btn" data-f="PAYMENT">💳 PAY</button>
+    <button class="filter-btn" data-f="API">API</button>
+    <button class="filter-btn" data-f="ANALYTICS">📊</button>
+    <button class="filter-btn" data-f="OTHER">…</button>
+  </div>
+</div>
+
+<!-- SPLIT -->
+<div class="split">
+
+  <!-- REQUEST LIST -->
+  <div class="req-list" id="req-list">
+    <div class="empty-state">
+      <div class="icon">📡</div>
+      <div>Aguardando requisições...</div>
+      <div style="font-size:9px;color:var(--text3)">Navegue no site para capturar</div>
+    </div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div class="detail-panel" id="detail-panel">
+    <div class="detail-empty">
+      <div class="icon">👆</div>
+      <p>Selecione uma requisição para ver detalhes</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <span id="sb-status">● Capturando</span>
+  <span class="sep">|</span>
+  <span id="sb-selected">Nenhuma selecionada</span>
+  <span class="sep">|</span>
+  <span id="sb-filter">Filtro: ALL</span>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+  </div>
+  <span id="sb-mem" style="margin-left:4px">0 / 2000</span>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

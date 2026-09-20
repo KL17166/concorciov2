@@ -75,24 +75,36 @@ export const getAdminKycDocument = async (req: Request, res: Response) => {
 
 export const getKycQueue = async (req: Request, res: Response) => {
     try {
+        const rawFilter = (req.query.filter as string) || 'pending';
+        const filter = ['pending', 'approved', 'rejected'].includes(rawFilter) ? rawFilter : 'pending';
+        const statusMap: Record<string, string> = { pending: 'SUBMITTED', approved: 'APPROVED', rejected: 'REJECTED' };
+
         const pendingUsers = await prisma.user.findMany({
             where: {
                 role: 'CLIENT',
-                kycStatus: 'SUBMITTED',
+                kycStatus: statusMap[filter],
             },
             include: {
                 subscriptions: {
-                    where: { status: 'PENDING_KYC' },
+                    where: filter === 'pending' ? { status: 'PENDING_KYC' } : {},
                     include: {
                         plan: { include: { product: true } },
                         installments: { where: { number: 1 }, take: 1 },
                     },
                 },
             },
-            orderBy: { updatedAt: 'desc' },
+            orderBy: filter === 'pending' ? { updatedAt: 'desc' } : { kycReviewedAt: 'desc' },
+            take: 100,
         });
 
-        const recentlyReviewed = await prisma.user.findMany({
+        const counts = await prisma.user.groupBy({
+            by: ['kycStatus'],
+            where: { role: 'CLIENT' },
+            _count: { kycStatus: true },
+        });
+        const countOf = (s: string) => counts.find(c => c.kycStatus === s)?._count.kycStatus || 0;
+
+        const recentlyReviewed = filter === 'pending' ? await prisma.user.findMany({
             where: {
                 role: 'CLIENT',
                 kycStatus: { in: ['APPROVED', 'REJECTED'] },
@@ -100,12 +112,18 @@ export const getKycQueue = async (req: Request, res: Response) => {
             },
             orderBy: { kycReviewedAt: 'desc' },
             take: 20,
-        });
+        }) : [];
 
         res.render('pages/kyc/index', {
             path: '/kyc',
+            filter,
             pendingUsers,
             recentlyReviewed,
+            counts: {
+                pending: countOf('SUBMITTED'),
+                approved: countOf('APPROVED'),
+                rejected: countOf('REJECTED'),
+            },
         });
     } catch (error) {
         logger.error('KYC queue error:', error);
@@ -268,6 +286,43 @@ export const rejectKyc = async (req: Request, res: Response) => {
         logger.error('KYC reject error:', error);
         (req as any).flash?.('error', 'Erro ao rejeitar KYC');
         res.redirect('/admin/kyc');
+    }
+};
+
+// ── POST /admin/kyc/:userId/reopen ─────────────────────────────────────────────
+// Devolve um KYC rejeitado para a fila (o cliente pode ter reenviado docs).
+export const reopenKyc = async (req: Request, res: Response) => {
+    try {
+        const userId = param(req.params.userId);
+        const adminId = (req as any).session?.user?.id || 'unknown';
+
+        const user = await prisma.user.findUnique({ where: { id: userId }, select: { kycStatus: true } });
+        if (!user) {
+            (req as any).flash?.('error', 'Usuário não encontrado');
+            return res.redirect('/admin/kyc?filter=rejected');
+        }
+        if (user.kycStatus !== 'REJECTED') {
+            (req as any).flash?.('error', 'Só é possível reabrir KYC rejeitado');
+            return res.redirect('/admin/kyc');
+        }
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                kycStatus: 'SUBMITTED',
+                kycReviewedAt: null,
+                kycReviewedBy: adminId,
+                kycRejectReason: null,
+            },
+        });
+
+        logger.info(`KYC REOPENED: user ${userId} by admin ${adminId}`);
+        (req as any).flash?.('success', 'KYC devolvido para a fila de análise.');
+        res.redirect('/admin/kyc');
+    } catch (error) {
+        logger.error('KYC reopen error:', error);
+        (req as any).flash?.('error', 'Erro ao reabrir KYC');
+        res.redirect('/admin/kyc?filter=rejected');
     }
 };
 

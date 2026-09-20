@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "Request Inspector Pro",
+  "version": "1.0.2",
+  "description": "Captura e bloqueia requisicoes anti-fraude para debug de pagamentos",
+  "permissions": [
+    "webRequest",
+    "webRequestAuthProvider",
+    "storage",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "downloads",
+    "alarms",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "block_antifraud",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

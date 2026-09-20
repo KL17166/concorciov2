@@ -4,6 +4,7 @@ import { createSubscription } from '../../application/subscriptions/createSubscr
 import { cancelSubscription } from '../../application/subscriptions/cancelSubscription';
 import { getUserSubscriptions } from '../../application/subscriptions/getUserSubscriptions';
 import { getSubscriptionDetails } from '../../application/subscriptions/getSubscriptionDetails';
+import { notifyPaymentCheck } from '../../application/payments/notifyPaymentCheck';
 import { CreateClientSubscriptionSchema } from '../../schemas/subscriptionSchema';
 import { handleApiError } from '../../utils/errors';
 import { logger } from '../../config/logger';
@@ -103,5 +104,20 @@ export const cancelClientSubscription = async (req: Request, res: Response): Pro
         res.json({ success: true, message: result.message });
     } catch (error: any) {
         handleApiError(res, error, 'Erro ao cancelar contrato', req);
+    }
+};
+
+export const notifySubscriptionPaymentCheck = async (req: Request, res: Response): Promise<void> => {
+    const user = req.user as AuthPayload;
+    try {
+        const subscriptionId = req.params.subscriptionId as string;
+        const result = await notifyPaymentCheck({
+            subscriptionId,
+            requesterUserId: user.userId
+        });
+
+        res.json({ success: true, notified: result.notified });
+    } catch (error: any) {
+        handleApiError(res, error, 'Erro ao registrar verificação de pagamento', req);
     }
 };

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Diagnóstico - Request Inspector Pro</title>
+<style>
+  body { font-family: monospace; background: #0d0f14; color: #e8ecf5; padding: 30px; }
+  h2 { color: #6c63ff; }
+  .ok { color: #00e5a0; }
+  .fail { color: #ff4757; }
+  .warn { color: #ffd166; }
+  .box { background: #1e2235; border: 1px solid #2a3050; border-radius: 8px; padding: 16px; margin: 12px 0; }
+  button { background: #6c63ff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 6px 4px; }
+  button:hover { background: #7c74ff; }
+  pre { background: #141720; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 11px; }
+  #log { max-height: 300px; overflow-y: auto; }
+</style>
+</head>
+<body>
+<h2>🔍 Request Inspector Pro — Diagnóstico</h2>
+
+<div class="box">
+  <b>1. Servidor local (localhost:7331)</b>
+  <div id="server-status">⏳ Verificando...</div>
+</div>
+
+<div class="box">
+  <b>2. Extensão Chrome carregada?</b>
+  <div id="ext-status">⏳ Verificando...</div>
+  <div style="margin-top:8px;font-size:12px;color:#8892b0">
+    Se a extensão estiver instalada, ela captura esta página agora e envia ao servidor.
+  </div>
+</div>
+
+<div class="box">
+  <b>3. Arquivos salvos em captures/</b>
+  <div id="files-list">⏳ Carregando...</div>
+</div>
+
+<div class="box">
+  <b>4. Ações</b>
+  <button onclick="testSave()">💾 Forçar save de teste</button>
+  <button onclick="makePaymentReq()">💳 Simular req de pagamento</button>
+  <button onclick="loadFiles()">🔄 Atualizar lista</button>
+  <button onclick="clearLog()">🗑 Limpar log</button>
+</div>
+
+<div class="box">
+  <b>Log</b>
+  <div id="log"></div>
+</div>
+
+<script>
+const SERVER = 'http://localhost:7331';
+
+function log(msg, type = 'info') {
+  const colors = { ok: '#00e5a0', fail: '#ff4757', warn: '#ffd166', info: '#8892b0' };
+  const d = document.getElementById('log');
+  d.innerHTML += `<div style="color:${colors[type]||colors.info}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+  d.scrollTop = d.scrollHeight;
+}
+
+function clearLog() { document.getElementById('log').innerHTML = ''; }
+
+// 1. Testa o servidor
+async function checkServer() {
+  const el = document.getElementById('server-status');
+  try {
+    const r = await fetch(`${SERVER}/status`);
+    const d = await r.json();
+    el.innerHTML = `<span class="ok">✅ Online — porta ${d.port}</span>`;
+    log('Servidor OK', 'ok');
+    return true;
+  } catch (e) {
+    el.innerHTML = `<span class="fail">❌ Offline — rode: node server.js</span>`;
+    log('Servidor OFFLINE: ' + e.message, 'fail');
+    return false;
+  }
+}
+
+// 2. Verifica extensão (tenta usar API do chrome)
+function checkExtension() {
+  const el = document.getElementById('ext-status');
+  if (typeof chrome !== 'undefined' && chrome.runtime) {
+    el.innerHTML = `<span class="ok">✅ API chrome disponível</span>`;
+    log('chrome.runtime detectado', 'ok');
+  } else {
+    el.innerHTML = `<span class="warn">⚠ Abra esta página no Chrome com a extensão instalada</span>`;
+    log('chrome.runtime NÃO detectado — extensão pode não estar instalada', 'warn');
+  }
+}
+
+// 3. Lista arquivos
+async function loadFiles() {
+  const el = document.getElementById('files-list');
+  try {
+    const r = await fetch(`${SERVER}/list`);
+    const d = await r.json();
+    if (d.files.length === 0) {
+      el.innerHTML = `<span class="warn">⚠ Nenhum arquivo ainda — a extensão ainda não enviou dados</span>`;
+      log('captures/ vazio', 'warn');
+    } else {
+      el.innerHTML = d.files.map(f =>
+        `<div class="ok">📄 ${f.name} (${(f.size/1024).toFixed(1)} KB)</div>`
+      ).join('');
+      log(`${d.files.length} arquivo(s) encontrado(s)`, 'ok');
+    }
+  } catch (e) {
+    el.innerHTML = `<span class="fail">❌ Servidor offline</span>`;
+  }
+}
+
+// 4. Força um save
+async function testSave() {
+  log('Enviando save de teste...', 'info');
+  try {
+    const r = await fetch(`${SERVER}/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        savedAt: new Date().toISOString(),
+        auto: false,
+        sessionId: Date.now(),
+        totalRequests: 1,
+        requests: [{
+          id: 'diag_' + Date.now(),
+          url: window.location.href,
+          method: 'GET',
+          category: 'OTHER',
+          statusCode: 200,
+          timestamp: new Date().toISOString(),
+          timings: { start: 0, end: 100, duration: 100 },
+          requestHeaders: { 'user-agent': navigator.userAgent },
+          responseHeaders: {},
+          fingerprint: { cookie: document.cookie ? '[PRESENT]' : null },
+          redirects: []
+        }]
+      })
+    });
+    const d = await r.json();
+    log('✅ Save OK: ' + d.file, 'ok');
+    loadFiles();
+  } catch (e) {
+    log('❌ Save FALHOU: ' + e.message, 'fail');
+  }
+}
+
+// 5. Simula req de pagamento (para a extensão capturar)
+async function makePaymentReq() {
+  log('Fazendo requisição de pagamento de teste...', 'info');
+  try {
+    // Esta req vai ser capturada pela extensão (se instalada)
+    await fetch('https://httpbin.org/post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        test: true,
+        card: { number: '4111111111111111' },
+        amount: 100,
+        currency: 'BRL'
+      })
+    });
+    log('✅ Req enviada — se extensão estiver ativa, ela capturou isso', 'ok');
+  } catch (e) {
+    log('Req falhou (normal se sem internet): ' + e.message, 'warn');
+  }
+}
+
+// Init
+checkServer().then(ok => {
+  if (ok) loadFiles();
+});
+checkExtension();
+
+// Atualiza a cada 5s
+setInterval(() => {
+  checkServer().then(ok => { if (ok) loadFiles(); });
+}, 5000);
+</script>
+</body>
+</html>

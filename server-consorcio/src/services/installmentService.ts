@@ -79,19 +79,21 @@ export async function markInstallmentAsPaid(
             };
         }
 
-        // Fix 3: Enforce sequential installment order — all prior installments must be PAID
+        // Fix 3: Ordem — a adesão (#1) precisa estar paga antes das demais.
+        // (Antecipação explícita pode furar a sequência, mas nunca a adesão.)
         if (inst.number > 1) {
-            const priorUnpaid = await tx.installment.count({
+            const adhesion = await tx.installment.findFirst({
                 where: {
                     subscriptionId: inst.subscriptionId,
-                    number: { lt: inst.number },
+                    number: 1,
                     status: { notIn: ['PAID', 'CANCELLED'] }
-                }
+                },
+                select: { id: true }
             });
-            if (priorUnpaid > 0) {
+            if (adhesion) {
                 return {
                     success: false,
-                    message: `Há parcelas anteriores em aberto. Pague as parcelas anteriores primeiro.`,
+                    message: `Pague a adesão antes das demais parcelas.`,
                     activated: false,
                     completed: false
                 };
@@ -107,6 +109,16 @@ export async function markInstallmentAsPaid(
                 paymentMethod: options.paymentMethod || 'ADMIN_MANUAL'
             }
         });
+
+        // 1b. Marca a tentativa de PIX como paga (as anteriores já expiram ao regerar)
+        try {
+            await (tx as any).paymentAttempt.updateMany({
+                where: { installmentId, status: 'ACTIVE' },
+                data: { status: 'PAID' }
+            });
+        } catch (_) {
+            // Tabela pode não existir em bancos antigos — não quebra a baixa
+        }
 
         // 2. Update subscription: atomic increment/decrement
         // These generate SQL: SET "paidInstallments" = "paidInstallments" + 1

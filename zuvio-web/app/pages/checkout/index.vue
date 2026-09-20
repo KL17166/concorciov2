@@ -21,7 +21,8 @@ import {
   AlertCircle,
   UploadCloud,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  PackageX
 } from 'lucide-vue-next'
 
 definePageMeta({
@@ -41,6 +42,10 @@ const isAddressExpanded = ref(false)
 const isManualAddressMode = ref(false)
 const cepSuccessMsg = ref<string | null>(null)
 const formError = ref<string | null>(null)
+// Deep-link/refresh com ?productId de um produto que não existe no catálogo
+// (ex.: catálogo ainda não carregado ou id inválido) — mostra erro dedicado
+// em vez do formulário sem produto.
+const productNotFound = ref(false)
 
 // Step 0 - Personal
 // name e cpf são SOMENTE LEITURA — puxados do cadastro, não podem ser alterados no checkout
@@ -82,13 +87,7 @@ function syncUserData() {
   }
 }
 
-watch(
-  () => authStore.user,
-  () => { syncUserData() },
-  { deep: true, immediate: true }
-)
-
-// Step 1 - Address
+// Step 1 - Address (declaradas antes do watcher immediate abaixo)
 const cep = ref('')
 const street = ref('')
 const number = ref('')
@@ -102,10 +101,23 @@ const docFront = ref<string | null>(null)
 const docBack = ref<string | null>(null)
 const selfie = ref<string | null>(null)
 
+// O watcher precisa ficar DEPOIS de todas as refs acima: com immediate:true
+// ele executa syncUserData() já no setup, e antes dava TDZ
+// ("Cannot access 'cep' before initialization" → 500 no SSR).
+watch(
+  () => authStore.user,
+  () => { syncUserData() },
+  { deep: true, immediate: true }
+)
+
 const route = useRoute()
 
 onMounted(async () => {
   await checkoutStore.initFromAuth()
+
+  // Garante o catálogo real antes de resolver o ?productId (a store inicia
+  // com DEFAULT_PRODUCTS; sem isso o deep-link/refresh não achava o produto).
+  await consortiumStore.ensureProductsLoaded()
 
   // Sync selectedProduct and selectedPlan from route query if present
   if (route.query.productId) {
@@ -118,6 +130,10 @@ onMounted(async () => {
         const pl = prod.plans.find(p => p.id === planId)
         if (pl) consortiumStore.selectedPlan = pl
       }
+    } else {
+      // Id da URL não existe no catálogo (nem na API nem no fallback)
+      productNotFound.value = true
+      return
     }
   }
 
@@ -212,7 +228,7 @@ async function fetchAddressFromViaCep(cleanCep: string) {
   try {
     const res = await $fetch<any>(`https://viacep.com.br/ws/${cleanCep}/json/`)
     if (res.erro) {
-      formError.value = 'CEP nÃ£o encontrado. Por favor, preencha o endereÃ§o manualmente abaixo.'
+      formError.value = 'CEP não encontrado. Por favor, preencha o endereço manualmente abaixo.'
       isAddressExpanded.value = true
       isManualAddressMode.value = true
     } else {
@@ -220,7 +236,7 @@ async function fetchAddressFromViaCep(cleanCep: string) {
       district.value = res.bairro || ''
       city.value = res.localidade || ''
       state.value = (res.uf || '').toUpperCase()
-      cepSuccessMsg.value = 'EndereÃ§o localizado! Informe o nÃºmero da residÃªncia.'
+      cepSuccessMsg.value = 'Endereço localizado! Informe o número da residência.'
       isAddressExpanded.value = true
       isManualAddressMode.value = false
 
@@ -231,7 +247,7 @@ async function fetchAddressFromViaCep(cleanCep: string) {
       }, 150)
     }
   } catch (_) {
-    formError.value = 'Erro ao consultar CEP. Preencha o endereÃ§o manualmente abaixo.'
+    formError.value = 'Erro ao consultar CEP. Preencha o endereço manualmente abaixo.'
     isAddressExpanded.value = true
     isManualAddressMode.value = true
   } finally {
@@ -271,7 +287,7 @@ function validateCurrentStep(): boolean {
 
   if (currentStep.value === 1) {
     if (cep.value.replace(/\D/g, '').length !== 8) {
-      formError.value = 'Informe um CEP vÃ¡lido com 8 dÃ­gitos.'
+      formError.value = 'Informe um CEP válido com 8 dígitos.'
       return false
     }
     if (!isAddressExpanded.value) {
@@ -283,7 +299,7 @@ function validateCurrentStep(): boolean {
       return false
     }
     if (!number.value.trim()) {
-      formError.value = 'Informe o nÃºmero da residÃªncia.'
+      formError.value = 'Informe o número da residência.'
       const numInput = document.getElementById('number-input')
       numInput?.focus()
       return false
@@ -363,7 +379,7 @@ function handleContinue() {
       <button class="appbar-back-btn" aria-label="Voltar" @click="currentStep > 0 ? currentStep-- : router.back()">
         <ArrowLeft :size="22" color="#263238" />
       </button>
-      <h1 class="appbar-title">ContrataÃ§Ã£o</h1>
+      <h1 class="appbar-title">Contratação</h1>
       <div class="appbar-spacer"></div>
     </header>
 
@@ -387,7 +403,7 @@ function handleContinue() {
             <Check v-if="currentStep > 1" :size="18" color="#FFFFFF" />
             <MapPin v-else :size="18" :color="currentStep >= 1 ? '#FFFFFF' : '#9E9E9E'" />
           </div>
-          <span class="step-label">EndereÃ§o</span>
+          <span class="step-label">Endereço</span>
         </div>
 
         <div class="step-connector" :class="{ active: currentStep >= 2 }"></div>
@@ -402,7 +418,7 @@ function handleContinue() {
       </div>
     </div>
 
-    <main class="checkout-content-container">
+    <main v-if="!productNotFound" class="checkout-content-container">
       <!-- Error Message Banner -->
       <div v-if="formError" class="checkout-error-banner">
         <AlertCircle :size="18" color="#D32F2F" />
@@ -415,7 +431,7 @@ function handleContinue() {
         <span>{{ cepSuccessMsg }}</span>
       </div>
 
-      <!-- â”€â”€ STEP 0: DADOS PESSOAIS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <!-- ── STEP 0: DADOS PESSOAIS ────────────────────────────────────────── -->
       <section v-if="currentStep === 0" class="step-card-box">
         <div class="step-card-header">
           <h2 class="step-title">Dados Pessoais</h2>
@@ -487,12 +503,12 @@ function handleContinue() {
         </div>
       </section>
 
-      <!-- â”€â”€ STEP 1: ENDEREÃ‡O â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <!-- ── STEP 1: ENDEREÇO ─────────────────────────────────────────────── -->
       <section v-if="currentStep === 1" class="step-card-box">
         <div class="step-card-header">
-          <h2 class="step-title">EndereÃ§o Residencial</h2>
+          <h2 class="step-title">Endereço Residencial</h2>
           <p class="step-subtitle">
-            {{ isAddressExpanded ? 'Confira os dados e informe o nÃºmero da residÃªncia' : 'Digite seu CEP para carregar o endereÃ§o automaticamente' }}
+            {{ isAddressExpanded ? 'Confira os dados e informe o número da residência' : 'Digite seu CEP para carregar o endereço automaticamente' }}
           </p>
         </div>
 
@@ -507,7 +523,7 @@ function handleContinue() {
                 class="btn-text-action"
                 @click="isAddressExpanded = true; isManualAddressMode = true"
               >
-                Preencher endereÃ§o manualmente
+                Preencher endereço manualmente
               </button>
             </div>
             <div class="input-wrapper">
@@ -550,11 +566,11 @@ function handleContinue() {
                 </div>
               </div>
 
-              <!-- NÃºmero & Bairro -->
+              <!-- Número & Bairro -->
               <div class="form-row-two">
                 <div class="input-group flex-1">
                   <label class="input-label" for="number-input">
-                    NÃºmero <span class="required-star">*</span>
+                    Número <span class="required-star">*</span>
                   </label>
                   <div class="input-wrapper">
                     <Hash :size="18" class="input-icon" />
@@ -634,11 +650,11 @@ function handleContinue() {
         </div>
       </section>
 
-      <!-- â”€â”€ STEP 2: DOCUMENTOS / KYC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <!-- ── STEP 2: DOCUMENTOS / KYC ──────────────────────────────────────── -->
       <section v-if="currentStep === 2" class="step-card-box">
         <div class="step-card-header">
-          <h2 class="step-title">Documentos de IdentificaÃ§Ã£o</h2>
-          <p class="step-subtitle">Envie fotos nÃ­tidas do seu documento (RG ou CNH) e uma selfie</p>
+          <h2 class="step-title">Documentos de Identificação</h2>
+          <p class="step-subtitle">Envie fotos nítidas do seu documento (RG ou CNH) e uma selfie</p>
         </div>
 
         <div class="docs-upload-list">
@@ -710,7 +726,7 @@ function handleContinue() {
               </div>
               <div class="doc-info-col">
                 <span class="doc-name">Selfie com o Documento</span>
-                <span class="doc-desc">{{ selfie ? 'Foto anexada com sucesso' : 'Segure o documento prÃ³ximo ao rosto' }}</span>
+                <span class="doc-desc">{{ selfie ? 'Foto anexada com sucesso' : 'Segure o documento próximo ao rosto' }}</span>
                 <span v-if="selfie" class="doc-status-pill"><Check :size="12" /> Anexado</span>
               </div>
               <div class="doc-action-icon">
@@ -723,8 +739,20 @@ function handleContinue() {
       </section>
     </main>
 
+    <!-- Produto da URL não existe no catálogo -->
+    <main v-else class="checkout-content-container">
+      <div class="not-found-card">
+        <PackageX :size="64" color="#B0BEC5" />
+        <h2>Produto não encontrado</h2>
+        <p>O produto deste link não está mais disponível no catálogo.<br />Volte e escolha novamente.</p>
+        <button class="not-found-back-btn" @click="router.push('/')">
+          Voltar ao Catálogo
+        </button>
+      </div>
+    </main>
+
     <!-- Bottom Actions Bar -->
-    <footer class="checkout-footer-bar">
+    <footer v-if="!productNotFound" class="checkout-footer-bar">
       <div class="footer-buttons-row">
         <button
           v-if="currentStep > 0"
@@ -755,11 +783,18 @@ function handleContinue() {
   flex-direction: column;
 }
 
-/* â”€â”€ Stepper Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Neste fluxo só a stepper-bar de baixo tem radius; o header fica reto e sem borda */
+.appbar-header {
+  border-radius: 0;
+  border-bottom: none;
+}
+
+/* Stepper Bar */
 .checkout-stepper-bar {
   background-color: #FFFFFF;
   border-bottom: 1px solid var(--color-border, #E0E0E0);
-  padding: 16px 24px;
+  padding: 0px 27px 16px 27px;
+  border-radius: 0 0 55px 55px;
 }
 
 .stepper-track {
@@ -828,7 +863,7 @@ function handleContinue() {
   background-color: var(--color-primary, #FF6D00);
 }
 
-/* â”€â”€ Content Container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Content Container ─────────────────────────────────────────────────── */
 .checkout-content-container {
   flex: 1;
   max-width: 600px;
@@ -862,7 +897,7 @@ function handleContinue() {
   margin: 0;
 }
 
-/* â”€â”€ Form Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Form Inputs ────────────────────────────────────────────────────────── */
 .form-grid {
   display: flex;
   flex-direction: column;
@@ -986,7 +1021,7 @@ function handleContinue() {
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
 }
 
-/* â”€â”€ Smooth Expand Animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Smooth Expand Animation ────────────────────────────────────────────── */
 .slide-expand-enter-active,
 .slide-expand-leave-active {
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1057,7 +1092,7 @@ function handleContinue() {
   100% { transform: rotate(360deg); }
 }
 
-/* â”€â”€ Feedback Banners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Feedback Banners ───────────────────────────────────────────────────── */
 .checkout-error-banner {
   display: flex;
   align-items: center;
@@ -1086,7 +1121,7 @@ function handleContinue() {
   margin-bottom: 20px;
 }
 
-/* â”€â”€ Documents Upload Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Documents Upload Cards ─────────────────────────────────────────────── */
 .docs-upload-list {
   display: flex;
   flex-direction: column;
@@ -1180,7 +1215,7 @@ function handleContinue() {
   border: 1px solid #E0E0E0;
 }
 
-/* â”€â”€ Footer Actions Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Footer Actions Bar ─────────────────────────────────────────────────── */
 .checkout-footer-bar {
   position: fixed;
   bottom: 0;
@@ -1237,6 +1272,46 @@ function handleContinue() {
 
 .btn-checkout-next:hover {
   background-color: #E65100;
+}
+
+/* ── Produto da URL não encontrado ─────────────────────────────────────── */
+.not-found-card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border, #E0E0E0);
+  border-radius: 20px;
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.not-found-card h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-secondary, #263238);
+  margin: 8px 0 0 0;
+}
+
+.not-found-card p {
+  font-size: 14px;
+  color: var(--color-text-muted, #757575);
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+}
+
+.not-found-back-btn {
+  padding: 14px 28px;
+  background: var(--color-primary, #FF6D00);
+  color: #FFFFFF;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  margin-top: 8px;
 }
 </style>
 

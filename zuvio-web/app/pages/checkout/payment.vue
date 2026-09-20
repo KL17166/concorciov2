@@ -3,22 +3,19 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useConsortiumStore } from '~/stores/consortium'
 import { useCheckoutStore } from '~/stores/checkout'
+import { useAuthStore } from '~/stores/auth'
 import { formatCurrency } from '~~/shared/utils/currency'
 import QRCode from 'qrcode'
 import {
   ArrowLeft,
-  QrCode,
-  FileText,
   Copy,
   Check,
   CheckCircle2,
   Clock,
-  AlertTriangle,
   RefreshCw,
   Zap,
   Sparkles,
   ShieldCheck,
-  ExternalLink,
   Loader2
 } from 'lucide-vue-next'
 
@@ -35,8 +32,8 @@ const router = useRouter()
 const route = useRoute()
 const consortiumStore = useConsortiumStore()
 const checkoutStore = useCheckoutStore()
+const authStore = useAuthStore()
 
-const selectedMethod = ref<'PIX' | 'BOLETO'>('PIX')
 const isCopied = ref(false)
 const isPaymentConfirmed = ref(false)
 const isExpired = ref(false)
@@ -89,12 +86,18 @@ const paymentAmount = computed(() => {
   return checkoutStore.paymentData?.amount || plan.value.monthlyInstallment || 289.90
 })
 
-const pixCode = computed(() => {
-  return checkoutStore.paymentData?.copyPaste || ''
+// A Eldorado raramente gera o valor cheio — a diferença vira "desconto" p/ o cliente
+const desconto = computed(() => {
+  const req = checkoutStore.paymentData?.requestedAmount
+  const act = checkoutStore.paymentData?.amount
+  if (typeof req === 'number' && typeof act === 'number' && req - act > 0.005) {
+    return req - act
+  }
+  return 0
 })
 
-const boletoLine = computed(() => {
-  return checkoutStore.paymentData?.boletoLine || ''
+const pixCode = computed(() => {
+  return checkoutStore.paymentData?.copyPaste || ''
 })
 
 const qrCodeImage = ref<string>('')
@@ -132,11 +135,9 @@ watch(
   { immediate: true }
 )
 
-onMounted(() => {
-  // Check method from query if available
-  if (route.query.method === 'BOLETO') {
-    selectedMethod.value = 'BOLETO'
-  }
+onMounted(async () => {
+  // Garante o catálogo real para o computed `product` não cair no fallback errado
+  await consortiumStore.ensureProductsLoaded()
 
   // Start 30 min countdown
   timerInterval = setInterval(() => {
@@ -190,6 +191,13 @@ async function checkPaymentStatus() {
     if (contract && (contract.isAdesaoPaid || contract.status === 'active')) {
       isPaymentConfirmed.value = true
     }
+    // Avisa o dev que o cliente afirma ter pago (baixa manual no admin)
+    if (subId) {
+      $fetch(`/api/subscription/${subId}/payment-check`, {
+        method: 'POST',
+        headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+      }).catch(() => {})
+    }
   } catch (_) {}
   isVerifying.value = false
 }
@@ -232,34 +240,13 @@ function handleFinish() {
           <div class="amount-col">
             <span class="amount-label">Valor da Adesão</span>
             <span class="amount-val">{{ formatCurrency(paymentAmount) }}</span>
+            <span v-if="desconto > 0" class="discount-pill">Desconto de {{ formatCurrency(desconto) }}</span>
           </div>
         </div>
       </section>
 
-      <!-- 2. Method Tabs (PIX vs Boleto) -->
-      <section class="method-selector-section">
-        <div class="method-pill-tabs">
-          <button
-            class="method-pill-btn"
-            :class="{ active: selectedMethod === 'PIX' }"
-            @click="selectedMethod = 'PIX'"
-          >
-            <QrCode :size="18" />
-            <span>PIX (Instantâneo)</span>
-          </button>
-          <button
-            class="method-pill-btn"
-            :class="{ active: selectedMethod === 'BOLETO' }"
-            @click="selectedMethod = 'BOLETO'"
-          >
-            <FileText :size="18" />
-            <span>Boleto Bancário</span>
-          </button>
-        </div>
-      </section>
-
       <!-- ── SECTION PIX ──────────────────────────────────────────────────── -->
-      <div v-if="selectedMethod === 'PIX'" class="payment-body-box">
+      <div class="payment-body-box">
         <!-- Countdown Timer Banner -->
         <div class="countdown-banner">
           <div class="countdown-left">
@@ -333,39 +320,6 @@ function handleFinish() {
           <button class="btn-check-status" :disabled="isVerifying" @click="checkPaymentStatus">
             <RefreshCw :size="16" :class="{ 'spin-icon': isVerifying }" />
             <span>{{ isVerifying ? 'Consultando confirmação no servidor...' : 'Verificar Pagamento no Servidor' }}</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- ── SECTION BOLETO ───────────────────────────────────────────────── -->
-      <div v-else class="payment-body-box">
-        <div class="boleto-header-card">
-          <FileText :size="32" color="#1565C0" />
-          <div class="boleto-header-texts">
-            <h3 class="boleto-title">Boleto Bancário</h3>
-            <span class="boleto-sub">Compensação em até 3 dias úteis</span>
-          </div>
-        </div>
-
-        <div class="copy-paste-card">
-          <div class="copy-paste-header">
-            <span class="copy-label">Linha Digitável</span>
-            <span v-if="isCopied" class="copied-badge"><Check :size="12" /> Copiado!</span>
-          </div>
-          <div class="copy-box" @click="copyToClipboard(boletoLine)">
-            <p class="pix-raw-text">{{ boletoLine }}</p>
-          </div>
-          <button class="btn-copy-pix" @click="copyToClipboard(boletoLine)">
-            <Copy v-if="!isCopied" :size="18" />
-            <Check v-else :size="18" />
-            <span>{{ isCopied ? 'LINHA COPIADA!' : 'COPIAR LINHA DIGITÁVEL' }}</span>
-          </button>
-        </div>
-
-        <div class="dev-simulation-wrap">
-          <button class="btn-check-status" :disabled="isVerifying" @click="checkPaymentStatus">
-            <RefreshCw :size="16" :class="{ 'spin-icon': isVerifying }" />
-            <span>{{ isVerifying ? 'Consultando compensação no servidor...' : 'Verificar Pagamento no Servidor' }}</span>
           </button>
         </div>
       </div>
@@ -480,6 +434,17 @@ function handleFinish() {
   font-size: 18px;
   font-weight: 800;
   color: var(--color-primary, #FF6D00);
+}
+
+.discount-pill {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  font-size: 11.5px;
+  font-weight: 800;
 }
 
 /* ── Method Selector Tabs ───────────────────────────────────────────────── */

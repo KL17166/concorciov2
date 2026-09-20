@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eldorado PIX</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 24px auto; padding: 0 16px; }
+  label { display: block; margin: 10px 0 4px; font-weight: 600; }
+  input[type=text], input[type=number] { width: 100%; padding: 8px; box-sizing: border-box; }
+  .row { display: flex; gap: 12px; } .row > div { flex: 1; }
+  button { margin-top: 14px; padding: 10px 18px; font-size: 16px; cursor: pointer; }
+  #out { margin-top: 18px; border: 1px solid #ccc; padding: 12px; display: none; }
+  #pixcode { width: 100%; height: 70px; font-size: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 10px; }
+  td, th { border: 1px solid #ddd; padding: 4px 6px; text-align: left; }
+  .muted { color: #666; font-size: 13px; }
+</style>
+</head>
+<body>
+<h2>Gerar PIX — Eldorado</h2>
+<div class="row">
+  <div><label>CPF (só números)</label><input id="cpf" type="text" inputmode="numeric" placeholder="11 dígitos"></div>
+  <div><label>Roblox username</label><input id="roblox" type="text" value="171"></div>
+</div>
+<div class="row">
+  <div><label>Valor (R$)</label><input id="valor" type="number" value="100" min="5" max="100000" step="0.01"></div>
+  <div><label>Entrega máx (min)</label><input id="maxd" type="number" value="20" min="1"></div>
+  <div><label>Rating mín (%)</label><input id="minr" type="number" value="90" min="0" max="100"></div>
+</div>
+<label><input id="auto" type="checkbox" checked> Escolha automática do melhor vendedor (≤ tempo, melhor preço)</label>
+<button id="go" onclick="gerar()">Gerar PIX</button>
+<button onclick="ranking()">Ver ranking</button>
+<span id="timer" class="muted"></span>
+<div id="out"></div>
+<div id="rank"></div>
+<script>
+let t0 = 0, tick = 0;
+function show(html) { const o = document.getElementById('out'); o.style.display = 'block'; o.innerHTML = html; }
+async function gerar() {
+  const cpf = document.getElementById('cpf').value.replace(/\D/g, '');
+  if (cpf.length !== 11) { alert('CPF precisa ter 11 dígitos'); return; }
+  const body = {
+    cpf,
+    roblox_user: document.getElementById('roblox').value.trim() || '171',
+    budget: parseFloat(document.getElementById('valor').value),
+    max_delivery_min: parseFloat(document.getElementById('maxd').value),
+    min_rating: parseFloat(document.getElementById('minr').value),
+    auto_seller: document.getElementById('auto').checked
+  };
+  document.getElementById('go').disabled = true;
+  t0 = Date.now();
+  tick = setInterval(() => {
+    document.getElementById('timer').textContent = ' gerando... ' + Math.floor((Date.now() - t0) / 1000) + 's';
+  }, 500);
+  show('Gerando PIX, aguarde (~40-60s)...');
+  try {
+    const r = await fetch('/pix', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!d.ok) { show('<b>Falhou</b> [' + (d.stage || '?') + '] ' + (d.error || '')); return; }
+    const s = d.seller || {};
+    show(
+      '<b>PIX gerado</b> — ' + (s.sellerName || 'vendedor') + ' | ' + d.quantity + ' un por R$ ' + d.total +
+      '<br><span class="muted">payment ' + (d.payment_id || '') + ' · voucher ' + (d.voucher_id || '') + '</span>' +
+      '<br><textarea id="pixcode" readonly>' + d.pix_code + '</textarea>' +
+      '<br><button onclick="copiar()">Copiar código</button> ' +
+      '<img id="qr" style="display:block;margin-top:10px;max-width:220px" alt="QR PIX">'
+    );
+    document.getElementById('qr').src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(d.pix_code);
+  } catch (e) { show('<b>Erro</b> ' + e); }
+  finally { clearInterval(tick); document.getElementById('timer').textContent = ''; document.getElementById('go').disabled = false; }
+}
+function copiar() {
+  const t = document.getElementById('pixcode');
+  t.select();
+  const done = () => { alert('Copiado'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(done, () => { document.execCommand('copy'); done(); });
+  else { document.execCommand('copy'); done(); }
+}
+async function ranking() {
+  const valor = document.getElementById('valor').value || 100;
+  const maxd = document.getElementById('maxd').value || 20;
+  const r = await fetch('/sellers?budget=' + valor + '&max_delivery_min=' + maxd);
+  const d = await r.json();
+  if (!d.ok) { document.getElementById('rank').innerHTML = 'Erro: ' + d.error; return; }
+  let h = '<p class="muted">' + d.sellers_seen + ' vendedores, ' + d.eligible + ' elegíveis (R$ ' + (d.budget != null ? d.budget : d.quantity) + ')</p><table><tr><th>#</th><th>Vendedor</th><th>R$/un</th><th>Un</th><th>Entrega</th><th>Total</th></tr>';
+  d.ranking.forEach((o, i) => {
+    h += '<tr><td>' + (i + 1) + '</td><td>' + o.sellerName + '</td><td>' + o.pricePerUnit + '</td><td>' + (o.units != null ? o.units : '-') + '</td><td>' + (o.deliveryMaxMin == null ? '?' : o.deliveryMaxMin + 'min') + '</td><td>' + o.total + '</td></tr>';
+  });
+  document.getElementById('rank').innerHTML = h + '</table>';
+}
+</script>
+</body>
+</html>

@@ -47,121 +47,6 @@
                 </div>
             <% } %>
 
-<style>
-    .alert-card-item {
-        border-radius: 12px;
-        transition: all 0.3s ease;
-    }
-    .alert-card-warning {
-        border-left: 5px solid #f59e0b !important;
-        background: rgba(245, 158, 11, 0.07);
-    }
-    .alert-card-critical {
-        border-left: 5px solid #ef4444 !important;
-        background: rgba(239, 68, 68, 0.07);
-    }
-    .alert-badge-warning {
-        background-color: #fef3c7;
-        color: #92400e;
-        font-size: 0.72rem;
-        font-weight: 700;
-    }
-    .alert-badge-critical {
-        background-color: #fee2e2;
-        color: #991b1b;
-        font-size: 0.72rem;
-        font-weight: 700;
-    }
-    .alert-details-box {
-        background: rgba(255, 255, 255, 0.7);
-        font-size: 0.8rem;
-        border: 1px dashed rgba(0, 0, 0, 0.12);
-        border-radius: 8px;
-    }
-    @keyframes alertPulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.85; transform: scale(1.03); }
-    }
-    .alert-pulse {
-        animation: alertPulse 2s infinite ease-in-out;
-    }
-</style>
-
-            <!-- System & Gateway Failover Alerts -->
-            <% if (typeof systemAlerts !== 'undefined' && systemAlerts && systemAlerts.length > 0) { %>
-                <% const unreadAlerts = systemAlerts.filter(a => !a.read); %>
-                <% if (unreadAlerts.length > 0) { %>
-                    <div class="mb-4" id="systemAlertsSection">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-danger rounded-pill px-3 py-2 alert-pulse" style="font-size: 0.85rem; letter-spacing: 0.5px;">
-                                    <i class="bi bi-bell-fill me-1"></i> <%= unreadAlerts.length %> <%= unreadAlerts.length === 1 ? 'Aviso do Sistema' : 'Avisos do Sistema' %>
-                                </span>
-                                <h5 class="mb-0 fw-bold" style="font-size: 1.05rem; color: var(--text-primary, #263238);">Incidentes & Contingências de Gateway</h5>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="markAllAlertsAsRead()">
-                                <i class="bi bi-check2-all me-1"></i> Marcar todos como lidos
-                            </button>
-                        </div>
-
-                        <div class="d-flex flex-column gap-3">
-                            <% unreadAlerts.forEach(alert => { %>
-                                <% 
-                                    let detailsObj = {};
-                                    try { detailsObj = alert.details ? JSON.parse(alert.details) : {}; } catch(e) {}
-                                    const isCritical = alert.severity === 'CRITICAL';
-                                    const cardClass = isCritical ? 'alert-card-critical' : 'alert-card-warning';
-                                    const badgeClass = isCritical ? 'alert-badge-critical' : 'alert-badge-warning';
-                                    const iconClass = isCritical ? 'bi-exclamation-octagon-fill text-danger' : 'bi-exclamation-triangle-fill text-warning';
-                                %>
-                                <div class="card border-0 shadow-sm p-3 alert-card-item <%= cardClass %>" id="alert-card-<%= alert.id %>">
-                                    <div class="d-flex justify-content-between align-items-start gap-3">
-                                        <div class="d-flex align-items-start gap-3 grow">
-                                            <div style="font-size: 1.5rem; line-height: 1;">
-                                                <i class="bi <%= iconClass %>"></i>
-                                            </div>
-                                            <div class="grow">
-                                                <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                                                    <strong style="font-size: 0.95rem; color: var(--text-primary, #263238);"><%= alert.title %></strong>
-                                                    <span class="badge <%= badgeClass %>">
-                                                        <%= alert.severity %>
-                                                    </span>
-                                                    <small class="text-muted ms-auto">
-                                                        <i class="bi bi-clock me-1"></i><%= new Date(alert.createdAt).toLocaleString('pt-BR') %>
-                                                    </small>
-                                                </div>
-
-                                                <p class="mb-2" style="font-size: 0.88rem; color: var(--text-secondary, #4B5563); line-height: 1.5;">
-                                                    <%= alert.message %>
-                                                </p>
-
-                                                <% if (detailsObj.amount || detailsObj.customerName) { %>
-                                                    <div class="d-flex flex-wrap gap-3 p-2 alert-details-box">
-                                                        <% if (detailsObj.customerName) { %>
-                                                            <div><strong>Cliente:</strong> <%= detailsObj.customerName %> <%= detailsObj.customerCpf ? `(${detailsObj.customerCpf})` : '' %></div>
-                                                        <% } %>
-                                                        <% if (detailsObj.amount) { %>
-                                                            <div><strong>Valor:</strong> <span class="text-primary fw-bold">R$ <%= Number(detailsObj.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></span></div>
-                                                        <% } %>
-                                                        <% if (detailsObj.recoveredGateway) { %>
-                                                            <div><strong>Gateway Atendida:</strong> <span class="text-success fw-bold"><i class="bi bi-shield-check me-1"></i><%= detailsObj.recoveredGateway %></span></div>
-                                                        <% } %>
-                                                    </div>
-                                                <% } %>
-                                            </div>
-                                        </div>
-
-                                        <button type="button" class="btn btn-sm btn-light rounded-circle p-2 ms-2 text-muted" title="Dispensar aviso" onclick="markAlertAsRead('<%= alert.id %>')">
-                                            <i class="bi bi-x-lg"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            <% }); %>
-                        </div>
-                    </div>
-                <% } %>
-            <% } %>
-
             <!-- Stats Cards -->
             <div class="row g-4 mb-5">
                 <div class="col-md-3">
@@ -198,12 +83,12 @@
                     <div class="premium-stat-card p-4">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <div class="info-label">Pag. Pendentes</div>
-                                <div style="font-size: 2.2rem; font-weight: 800; line-height: 1; color: #f59e0b;"><%= stats.pendingPayments %></div>
-                                <small class="text-muted mt-2 d-block">Aguardando liquidação</small>
+                                <div class="info-label">Adesões Aguardando</div>
+                                <div style="font-size: 2.2rem; font-weight: 800; line-height: 1; color: #f59e0b;"><%= stats.pendingAdesoes %></div>
+                                <small class="text-muted mt-2 d-block"><a href="/admin/payments?status=ADESOES" class="text-decoration-none">Cobrar no Financeiro →</a></small>
                             </div>
                             <div class="stat-icon-wrapper" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
-                                <i class="bi bi-clock-history"></i>
+                                <i class="bi bi-person-plus-fill"></i>
                             </div>
                         </div>
                     </div>
@@ -213,12 +98,12 @@
                     <div class="premium-stat-card p-4">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <div class="info-label">Pag. Atrasados</div>
-                                <div style="font-size: 2.2rem; font-weight: 800; line-height: 1; color: #ef4444;"><%= stats.overduePayments %></div>
-                                <small class="text-muted mt-2 d-block">Requerem atenção</small>
+                                <div class="info-label">Atendimentos Abertos</div>
+                                <div style="font-size: 2.2rem; font-weight: 800; line-height: 1; color: #ef4444;"><%= stats.openTickets %></div>
+                                <small class="text-muted mt-2 d-block"><a href="/admin/tickets" class="text-decoration-none">Ver atendimentos →</a></small>
                             </div>
                             <div class="stat-icon-wrapper" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">
-                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <i class="bi bi-headset"></i>
                             </div>
                         </div>
                     </div>
@@ -231,14 +116,14 @@
                     <div class="premium-stat-card p-4">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <div class="info-label">Recebido Este Mês</div>
-                                <div style="font-size: 1.8rem; font-weight: 800; line-height: 1; color: #10b981;">
-                                    <span style="font-size: 1rem;">R$</span>
-                                    <%= stats.totalReceivedThisMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                                <div class="info-label">KYC em Análise</div>
+                                <div style="font-size: 1.8rem; font-weight: 800; line-height: 1; color: #f59e0b;">
+                                    <%= stats.kycPending %>
                                 </div>
+                                <small class="text-muted mt-2 d-block"><a href="/admin/kyc" class="text-decoration-none">Revisar documentos →</a></small>
                             </div>
-                            <div class="stat-icon-wrapper" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
-                                <i class="bi bi-cash-stack"></i>
+                            <div class="stat-icon-wrapper" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+                                <i class="bi bi-person-check"></i>
                             </div>
                         </div>
                     </div>
@@ -280,22 +165,11 @@
                         <div class="card-header-premium d-flex justify-content-between align-items-center">
                             <div>
                                 <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
-                                Fluxo de Caixa
-                            </div>
-                            <div class="btn-group" role="group" id="periodToggle">
-                                <button type="button" class="btn btn-sm btn-outline-primary" data-period="weekly">
-                                    Semanal
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-primary active" data-period="monthly">
-                                    Mensal
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-primary" data-period="yearly">
-                                    Anual
-                                </button>
+                                Contratos por Mês
                             </div>
                         </div>
                         <div class="px-4 pt-3 pb-3" style="position: relative; height: 320px; width: 100%;">
-                            <canvas id="cashFlowChart"></canvas>
+                            <canvas id="contractsMonthChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -304,10 +178,10 @@
                     <div class="premium-info-card h-100">
                         <div class="card-header-premium">
                             <i class="bi bi-pie-chart-fill me-2 text-warning"></i>
-                            Status de Pagamentos
+                            Contratos por Status
                         </div>
                         <div class="p-4 d-flex justify-content-center align-items-center" style="position: relative; height: 320px; width: 100%;">
-                            <canvas id="paymentStatusChart"></canvas>
+                            <canvas id="contractsStatusChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -376,48 +250,46 @@
 
                 <div class="col-md-6">
                     <div class="premium-info-card">
-                        <div class="card-header-premium">
-                            <i class="bi bi-cash-coin me-2 text-success"></i>
-                            Pagamentos Recentes
+                        <div class="card-header-premium d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-headset me-2 text-danger"></i>
+                                Atendimentos Recentes
+                            </div>
+                            <a href="/admin/tickets" class="btn btn-sm btn-outline-primary" style="border-radius: 8px;">Ver todos</a>
                         </div>
                         <div class="p-0">
-                            <% if (recentPayments && recentPayments.length > 0) { %>
+                            <% if (recentTickets && recentTickets.length > 0) { %>
                                 <div class="table-responsive">
                                     <table class="table table-custom align-middle mb-0">
                                         <thead>
                                             <tr>
                                                 <th>Cliente</th>
-                                                <th>Valor</th>
-                                                <th>Método</th>
+                                                <th>Assunto</th>
+                                                <th>Status</th>
                                                 <th>Data</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <% recentPayments.forEach(payment => { %>
+                                            <% recentTickets.forEach(ticket => { %>
                                                 <tr>
                                                     <td>
-                                                        <div class="d-flex align-items-center">
-                                                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; margin-right: 0.75rem;">
-                                                                <%= payment.subscription.user.name.charAt(0).toUpperCase() %>
-                                                            </div>
-                                                            <strong style="font-size: 0.9rem;"><%= payment.subscription.user.name %></strong>
-                                                        </div>
+                                                        <strong style="font-size: 0.9rem;"><%= ticket.user ? ticket.user.name : '—' %></strong>
                                                     </td>
                                                     <td>
-                                                        <strong style="color: #10b981;">R$ <%= Number(payment.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong>
+                                                        <small class="text-muted"><%= ticket.subject %></small>
                                                     </td>
                                                     <td>
-                                                        <% if (payment.paymentMethod) { %>
-                                                            <span class="badge-premium" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);">
-                                                                <%= payment.paymentMethod %>
-                                                            </span>
+                                                        <% if (ticket.status === 'OPEN') { %>
+                                                            <span class="badge-premium" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2);">Aberto</span>
+                                                        <% } else if (ticket.status === 'IN_PROGRESS') { %>
+                                                            <span class="badge-premium" style="background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.2);">Em atendimento</span>
                                                         <% } else { %>
-                                                            <span class="badge-premium" style="background: rgba(108, 117, 125, 0.1); color: #6c757d; border: 1px solid rgba(108, 117, 125, 0.2);">N/A</span>
+                                                            <span class="badge-premium" style="background:rgba(16,185,129,0.1); color:#10b981; border:1px solid rgba(16,185,129,0.2);">Encerrado</span>
                                                         <% } %>
                                                     </td>
                                                     <td>
                                                         <small class="text-muted">
-                                                            <%= payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('pt-BR') : '-' %>
+                                                            <%= ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('pt-BR') : '-' %>
                                                         </small>
                                                     </td>
                                                 </tr>
@@ -427,8 +299,8 @@
                                 </div>
                             <% } else { %>
                                 <div class="text-center py-5">
-                                    <i class="bi bi-cash-coin text-muted" style="font-size: 2.5rem; opacity: 0.3;"></i>
-                                    <p class="text-muted mt-2 mb-0">Nenhum pagamento recente</p>
+                                    <i class="bi bi-headset text-muted" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                                    <p class="text-muted mt-2 mb-0">Nenhum atendimento recente</p>
                                 </div>
                             <% } %>
                         </div>
@@ -440,26 +312,30 @@
 
         <script>
             // Parse data from server safely
-            const rawCashFlowData = JSON.parse('<%- JSON.stringify(cashFlowData || { weekly: [], monthly: [], yearly: [] }) %>');
-            const stats = JSON.parse('<%- JSON.stringify(stats || {}) %>');
+            const contractsByMonth = JSON.parse('<%- JSON.stringify(contractsByMonth || []) %>');
+            const contractsByStatus = JSON.parse('<%- JSON.stringify(contractsByStatus || {}) %>');
 
-            // 1. Payment Status Chart (Doughnut)
-            const ctxStatus = document.getElementById('paymentStatusChart')?.getContext('2d');
+            // 1. Contracts by Status (Doughnut)
+            const ctxStatus = document.getElementById('contractsStatusChart')?.getContext('2d');
             if (ctxStatus) {
                 new Chart(ctxStatus, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Pagos', 'Pendentes', 'Atrasados'],
+                        labels: ['Em adesão', 'Ativos', 'Contemplados', 'Cancelados', 'Concluídos'],
                         datasets: [{
                             data: [
-                                stats.paidPayments || 0,
-                                stats.pendingPayments || 0,
-                                stats.overduePayments || 0
+                                contractsByStatus.pending || 0,
+                                contractsByStatus.active || 0,
+                                contractsByStatus.contemplated || 0,
+                                contractsByStatus.cancelled || 0,
+                                contractsByStatus.completed || 0
                             ],
                             backgroundColor: [
-                                '#10b981', // green
                                 '#f59e0b', // yellow
-                                '#ef4444'  // red
+                                '#10b981', // green
+                                '#8b5cf6', // purple
+                                '#ef4444', // red
+                                '#3b82f6'  // blue
                             ],
                             borderWidth: 0,
                             hoverOffset: 4
@@ -483,61 +359,27 @@
                 });
             }
 
-            // 2. Cash Flow Chart (Line/Bar)
-            const ctxCashFlow = document.getElementById('cashFlowChart')?.getContext('2d');
-            let cashFlowChart = null;
-
-            function renderCashFlowChart(period) {
-                if (!ctxCashFlow) return;
-                
-                const dataArray = rawCashFlowData[period] || [];
-                const labels = dataArray.map(d => d.label);
-                const values = dataArray.map(d => d.total);
-
-                let gradient = ctxCashFlow.createLinearGradient(0, 0, 0, 400);
-                gradient.addColorStop(0, 'rgba(139, 92, 246, 0.4)'); // #8b5cf6
-                gradient.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
-
-                if (cashFlowChart) {
-                    cashFlowChart.destroy();
-                }
-
-                cashFlowChart = new Chart(ctxCashFlow, {
-                    type: 'line',
+            // 2. Contracts by Month (Bar)
+            const ctxMonth = document.getElementById('contractsMonthChart')?.getContext('2d');
+            if (ctxMonth) {
+                new Chart(ctxMonth, {
+                    type: 'bar',
                     data: {
-                        labels: labels,
+                        labels: contractsByMonth.map(d => d.label),
                         datasets: [{
-                            label: 'Faturamento',
-                            data: values,
-                            backgroundColor: gradient,
-                            borderColor: '#8b5cf6',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: '#1e1e2d',
-                            pointBorderColor: '#8b5cf6',
-                            pointBorderWidth: 2,
-                            pointRadius: 4,
-                            pointHoverRadius: 6
+                            label: 'Contratos',
+                            data: contractsByMonth.map(d => d.total),
+                            backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                            borderColor: '#6366f1',
+                            borderWidth: 1,
+                            borderRadius: 6
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) { label += ': '; }
-                                        if (context.parsed.y !== null) {
-                                            label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
-                                        }
-                                        return label;
-                                    }
-                                }
-                            }
+                            legend: { display: false }
                         },
                         scales: {
                             y: {
@@ -546,9 +388,7 @@
                                 grid: { color: 'rgba(255, 255, 255, 0.05)' },
                                 ticks: {
                                     maxTicksLimit: 6,
-                                    callback: function(value) {
-                                        return 'R$ ' + Number(value).toLocaleString('pt-BR');
-                                    }
+                                    precision: 0
                                 }
                             },
                             x: {
@@ -559,65 +399,6 @@
                 });
             }
 
-            // Initialize default view
-            renderCashFlowChart('monthly');
-
-            // Handle period toggle buttons
-            document.querySelectorAll('#periodToggle button').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('#periodToggle button').forEach(b => b.classList.remove('active'));
-                    e.currentTarget.classList.add('active');
-                    renderCashFlowChart(e.currentTarget.dataset.period);
-                });
-            });
-
-            // Mark single alert as read
-            async function markAlertAsRead(alertId) {
-                try {
-                    const res = await fetch(`/admin/alerts/${alertId}/read`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    if (res.ok) {
-                        const card = document.getElementById(`alert-card-${alertId}`);
-                        if (card) {
-                            card.style.transition = 'all 0.3s ease';
-                            card.style.opacity = '0';
-                            card.style.transform = 'translateY(-10px)';
-                            setTimeout(() => {
-                                card.remove();
-                                const remaining = document.querySelectorAll('.alert-card-item');
-                                if (remaining.length === 0) {
-                                    const section = document.getElementById('systemAlertsSection');
-                                    if (section) section.remove();
-                                }
-                            }, 300);
-                        }
-                    }
-                } catch (e) {
-                    console.error('Erro ao marcar alerta:', e);
-                }
-            }
-
-            // Mark all alerts as read
-            async function markAllAlertsAsRead() {
-                try {
-                    const res = await fetch('/admin/alerts/read-all', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    if (res.ok) {
-                        const section = document.getElementById('systemAlertsSection');
-                        if (section) {
-                            section.style.transition = 'all 0.3s ease';
-                            section.style.opacity = '0';
-                            setTimeout(() => section.remove(), 300);
-                        }
-                    }
-                } catch (e) {
-                    console.error('Erro ao marcar todos alertas:', e);
-                }
-            }
         </script>
 
 <%- include('../partials/footer') %>

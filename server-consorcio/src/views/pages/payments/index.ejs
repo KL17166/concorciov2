@@ -66,19 +66,19 @@
                     <div class="premium-stat-card p-4">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <div class="info-label">Pendente</div>
+                                <div class="info-label">A Pagar</div>
                                 <div style="font-size: 1.7rem; font-weight: 800; line-height: 1; color: #f59e0b;">
                                     <span style="font-size: 0.9rem;">R$</span>
-                                    <%= summary.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                                    <%= summary.dueTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                                 </div>
-                                <small class="text-muted mt-1 d-block"><%= summary.pendingCount %> parcelas aguardando</small>
+                                <small class="text-muted mt-1 d-block"><%= summary.dueCount %> parcelas para cobrar</small>
                             </div>
                             <div class="stat-icon-wrapper" style="background: rgba(245,158,11,0.1); color: #f59e0b;">
                                 <i class="bi bi-clock-history"></i>
                             </div>
                         </div>
                         <div class="mt-2 pt-2" style="border-top: 1px solid var(--border-color);">
-                            <small class="text-muted"><i class="bi bi-alarm me-1"></i>Vencem em 7 dias: <strong style="color:#f59e0b;"><%= summary.nearDueCount %></strong></small>
+                            <small class="text-muted"><i class="bi bi-calendar-week me-1"></i>Agendadas: <strong><%= summary.scheduledCount %></strong> (R$ <%= summary.scheduledTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>)</small>
                         </div>
                     </div>
                 </div>
@@ -134,17 +134,22 @@
                         <a href="/admin/payments?status=ALL<%= month ? '&month=' + month : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
                             class="btn btn-sm <%= status === 'ALL' ? 'btn-primary' : 'btn-outline-primary' %>">
                             <i class="bi bi-grid-3x3-gap me-1"></i>Todos
-                            <span class="badge bg-white text-primary ms-1"><%= summary.paidCount + summary.pendingCount + summary.overdueCount %></span>
+                            <span class="badge bg-white text-primary ms-1"><%= summary.paidCount + summary.adesaoCount + summary.pendCount + summary.overdueCount %></span>
                         </a>
                         <a href="/admin/payments?status=PAID<%= month ? '&month=' + month : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
                             class="btn btn-sm <%= status === 'PAID' ? 'btn-success' : 'btn-outline-success' %>">
                             <i class="bi bi-check-circle-fill me-1"></i>Pagos
                             <span class="badge bg-white text-success ms-1"><%= summary.paidCount %></span>
                         </a>
+                        <a href="/admin/payments?status=ADESOES<%= month ? '&month=' + month : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+                            class="btn btn-sm <%= status === 'ADESOES' ? 'btn-info' : 'btn-outline-info' %>">
+                            <i class="bi bi-person-plus-fill me-1"></i>Adesões
+                            <span class="badge bg-white text-info ms-1"><%= summary.adesaoCount %></span>
+                        </a>
                         <a href="/admin/payments?status=PENDING<%= month ? '&month=' + month : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
                             class="btn btn-sm <%= status === 'PENDING' ? 'btn-warning' : 'btn-outline-warning' %>">
                             <i class="bi bi-clock me-1"></i>Pendentes
-                            <span class="badge bg-white text-warning ms-1"><%= summary.pendingCount %></span>
+                            <span class="badge bg-white text-warning ms-1"><%= summary.pendCount %></span>
                         </a>
                         <a href="/admin/payments?status=OVERDUE<%= month ? '&month=' + month : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
                             class="btn btn-sm <%= status === 'OVERDUE' ? 'btn-danger' : 'btn-outline-danger' %>">
@@ -207,7 +212,8 @@
                     <div class="px-4 py-3 d-flex justify-content-between align-items-center" style="border-bottom: 1px solid var(--border-color);">
                         <h5 class="mb-0 fw-bold">
                             <i class="bi bi-cash-coin text-primary me-2"></i>
-                            Parcelas (<%= summary.count %>)
+                            <% const tabNames = { ALL: 'todas', PAID: 'pagas', PENDING: 'pendentes', OVERDUE: 'atrasadas', ADESOES: 'adesões' }; %>
+                            Parcelas <%= tabNames[status] || 'todas' %> (<%= summary.count %>)
                         </h5>
                     </div>
 
@@ -263,7 +269,7 @@
                                             </td>
                                             <td>
                                                 <span class="text-muted" style="font-size:0.9rem;">
-                                                    <i class="bi bi-calendar3 me-1"></i><%= new Date(inst.dueDate).toLocaleDateString('pt-BR') %>
+                                                    <i class="bi bi-calendar3 me-1"></i><%= new Date(inst.dueDate).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %>
                                                 </span>
                                                 <% if (isNearDue) { %>
                                                     <span class="badge-premium ms-1" style="background:rgba(245,158,11,0.15); color:#92400e; border:1px solid rgba(245,158,11,0.3); font-size:0.65rem;">
@@ -281,10 +287,17 @@
                                                 <% } %>
                                             </td>
                                             <td>
+                                                <% const isDue = inst.status !== 'PAID' && currentMap && currentMap[inst.subscriptionId] === inst.number; %>
+                                                <% const _atts = inst.paymentAttempts || []; %>
+                                                <% const _expiredAtts = _atts.filter(a => a.status === 'EXPIRED').length; %>
+                                                <% const _liveAtt = _atts.find(a => a.status === 'ACTIVE'); %>
+                                                <% const _liveExpired = _liveAtt && _liveAtt.expiresAt && new Date(_liveAtt.expiresAt) < new Date(); %>
                                                 <% if (inst.status === 'PAID') { %>
                                                     <span class="badge-premium" style="background:rgba(16,185,129,0.1); color:#10b981; border:1px solid rgba(16,185,129,0.2);"><i class="bi bi-check-circle-fill"></i> Pago</span>
+                                                <% } else if (inst.status === 'PENDING' && isDue) { %>
+                                                    <span class="badge-premium" style="background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.2);"><i class="bi bi-zap-fill"></i> A pagar</span>
                                                 <% } else if (inst.status === 'PENDING') { %>
-                                                    <span class="badge-premium" style="background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.2);"><i class="bi bi-clock-fill"></i> Pendente</span>
+                                                    <span class="badge-premium" style="background:rgba(100,116,139,0.1); color:#64748b; border:1px solid rgba(100,116,139,0.2);"><i class="bi bi-calendar-week"></i> Agendada</span>
                                                 <% } else if (inst.status === 'OVERDUE') { %>
                                                     <span class="badge-premium" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2);"><i class="bi bi-exclamation-triangle-fill"></i> Atrasado</span>
                                                 <% } else if (inst.status === 'REFUNDED') { %>
@@ -296,17 +309,25 @@
                                                 <% } else { %>
                                                     <span class="badge-premium" style="background:rgba(108,117,125,0.1); color:#6c757d; border:1px solid rgba(108,117,125,0.2);"><%= inst.status %></span>
                                                 <% } %>
+                                                <% if (_liveExpired && inst.status === 'PENDING') { %>
+                                                    <div class="mt-1"><span class="badge-premium" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); font-size:0.65rem;"><i class="bi bi-x-circle"></i> PIX expirado</span></div>
+                                                <% } else if (_expiredAtts > 0 && inst.status === 'PENDING') { %>
+                                                    <div class="mt-1"><span class="badge-premium" style="background:rgba(108,117,125,0.08); color:#6c757d; border:1px solid rgba(108,117,125,0.2); font-size:0.65rem;"><i class="bi bi-arrow-repeat"></i> <%= _expiredAtts + 1 %>ª via (anterior expirada)</span></div>
+                                                <% } %>
                                             </td>
                                             <td class="text-center">
-                                                <% if (inst.paymentMethod === 'SANDBOX_WAITING_APPROVAL' && inst.status === 'PENDING') { %>
+                                                <% if ((inst.paymentMethod || '').endsWith('_WAITING_APPROVAL') && inst.status === 'PENDING') { %>
                                                     <div class="d-flex justify-content-center gap-1">
                                                         <button class="btn btn-sm btn-outline-success" style="border-radius:8px;" data-id="<%= inst.id %>" onclick="quickApprove(this)" title="Aprovar"><i class="bi bi-check-lg"></i></button>
                                                         <button class="btn btn-sm btn-outline-danger"  style="border-radius:8px;" data-id="<%= inst.id %>" onclick="quickReject(this)"  title="Rejeitar"><i class="bi bi-x-lg"></i></button>
+                                                        <button class="btn btn-sm btn-outline-secondary" style="border-radius:8px;" data-id="<%= inst.id %>" onclick="quickExpire(this)" title="Marcar como expirado"><i class="bi bi-clock"></i></button>
                                                     </div>
                                                 <% } else { %>
                                                     <button class="btn btn-sm btn-outline-primary" style="border-radius:8px;"
                                                         data-id="<%= inst.id %>"
                                                         data-status="<%= inst.status %>"
+                                                        data-number="<%= inst.number %>"
+                                                        data-substatus="<%= inst.subscription.status %>"
                                                         data-date="<%= inst.paymentDate ? new Date(inst.paymentDate).toISOString().split('T')[0] : '' %>"
                                                         data-method="<%= inst.paymentMethod || '' %>"
                                                         onclick="openUpdateModal(this)" title="Editar">
@@ -369,6 +390,10 @@
                             const daysUntilDue = Math.floor((new Date(inst.dueDate) - new Date()) / (1000 * 60 * 60 * 24));
                             const isNearDue    = daysUntilDue <= 3 && daysUntilDue >= 0 && inst.status === 'PENDING';
                             const borderColor  = inst.status === 'PAID' ? '#10b981' : inst.status === 'OVERDUE' ? '#ef4444' : inst.status === 'REFUNDED' ? '#3b82f6' : '#f59e0b';
+                            const _catts = inst.paymentAttempts || [];
+                            const _cexpired = _catts.filter(a => a.status === 'EXPIRED').length;
+                            const _clive = _catts.find(a => a.status === 'ACTIVE');
+                            const _cliveExpired = _clive && _clive.expiresAt && new Date(_clive.expiresAt) < new Date();
                             %>
                             <div class="col-md-6 col-lg-4">
                                 <div class="premium-stat-card h-100" <%- `style="overflow:hidden; border-left:4px solid ${borderColor};"` %>>
@@ -385,8 +410,10 @@
                                             </div>
                                             <% if (inst.status === 'PAID') { %>
                                                 <span class="badge-premium ms-2" style="background:rgba(16,185,129,0.1); color:#10b981; border:1px solid rgba(16,185,129,0.2); font-size:0.7rem; white-space:nowrap;"><i class="bi bi-check-circle-fill"></i> Pago</span>
+                                            <% } else if (inst.status === 'PENDING' && currentMap && currentMap[inst.subscriptionId] === inst.number) { %>
+                                                <span class="badge-premium ms-2" style="background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.2); font-size:0.7rem; white-space:nowrap;"><i class="bi bi-zap-fill"></i> A pagar</span>
                                             <% } else if (inst.status === 'PENDING') { %>
-                                                <span class="badge-premium ms-2" style="background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.2); font-size:0.7rem; white-space:nowrap;"><i class="bi bi-clock-fill"></i> Pendente</span>
+                                                <span class="badge-premium ms-2" style="background:rgba(100,116,139,0.1); color:#64748b; border:1px solid rgba(100,116,139,0.2); font-size:0.7rem; white-space:nowrap;"><i class="bi bi-calendar-week"></i> Agendada</span>
                                             <% } else if (inst.status === 'OVERDUE') { %>
                                                 <span class="badge-premium ms-2" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); font-size:0.7rem; white-space:nowrap;"><i class="bi bi-exclamation-triangle-fill"></i> Atrasado</span>
                                             <% } else if (inst.status === 'REFUNDED') { %>
@@ -417,9 +444,14 @@
                                                     <i class="bi bi-credit-card me-1"></i><%= inst.paymentMethod %>
                                                 </span>
                                                 <% if (inst.paymentDate) { %>
-                                                    <span class="text-muted small ms-2"><i class="bi bi-check2 me-1"></i>Pago em <%= new Date(inst.paymentDate).toLocaleDateString('pt-BR') %></span>
+                                                    <span class="text-muted small ms-2"><i class="bi bi-check2 me-1"></i>Pago em <%= new Date(inst.paymentDate).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
                                                 <% } %>
                                             </div>
+                                        <% } %>
+                                        <% if (_cliveExpired && inst.status === 'PENDING') { %>
+                                            <div class="mb-2"><span class="badge-premium" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); font-size:0.7rem;"><i class="bi bi-x-circle"></i> PIX expirado — gere novamente</span></div>
+                                        <% } else if (_cexpired > 0 && inst.status === 'PENDING') { %>
+                                            <div class="mb-2"><span class="badge-premium" style="background:rgba(108,117,125,0.08); color:#6c757d; border:1px solid rgba(108,117,125,0.2); font-size:0.7rem;"><i class="bi bi-arrow-repeat"></i> <%= _cexpired + 1 %>ª via (anterior expirada)</span></div>
                                         <% } %>
 
                                         <% if (isNearDue) { %>
@@ -429,13 +461,16 @@
                                         <% } %>
 
                                         <div class="d-flex gap-2">
-                                            <% if (inst.paymentMethod === 'SANDBOX_WAITING_APPROVAL' && inst.status === 'PENDING') { %>
+                                            <% if ((inst.paymentMethod || '').endsWith('_WAITING_APPROVAL') && inst.status === 'PENDING') { %>
                                                 <button class="btn btn-sm btn-outline-success flex-1" style="border-radius:8px;" data-id="<%= inst.id %>" onclick="quickApprove(this)"><i class="bi bi-check-lg me-1"></i>Aprovar</button>
                                                 <button class="btn btn-sm btn-outline-danger  flex-1" style="border-radius:8px;" data-id="<%= inst.id %>" onclick="quickReject(this)"><i class="bi bi-x-lg me-1"></i>Rejeitar</button>
+                                                <button class="btn btn-sm btn-outline-secondary flex-1" style="border-radius:8px;" data-id="<%= inst.id %>" onclick="quickExpire(this)" title="Marcar como expirado"><i class="bi bi-clock me-1"></i>Expirar</button>
                                             <% } else { %>
                                                 <button class="btn btn-sm btn-outline-primary flex-1" style="border-radius:8px;"
                                                     data-id="<%= inst.id %>"
                                                     data-status="<%= inst.status %>"
+                                                    data-number="<%= inst.number %>"
+                                                    data-substatus="<%= inst.subscription.status %>"
                                                     data-date="<%= inst.paymentDate ? new Date(inst.paymentDate).toISOString().split('T')[0] : '' %>"
                                                     data-method="<%= inst.paymentMethod || '' %>"
                                                     onclick="openUpdateModal(this)">
@@ -525,10 +560,17 @@
             if (savedView) setView(savedView);
 
             function openUpdateModal(btn) {
-                document.getElementById('updatePaymentForm').action = '/admin/payments/' + btn.dataset.id;
+                document.getElementById('updatePaymentForm').action = '/admin/payments/' + btn.dataset.id + '/update';
                 document.getElementById('modalStatus').value        = btn.dataset.status;
                 document.getElementById('modalPaymentDate').value   = btn.dataset.date;
                 document.getElementById('modalPaymentMethod').value = btn.dataset.method;
+                // Adesão (parcela 1 de contrato PENDING): sem opção "Atrasado"
+                var isAdesao = btn.dataset.number === '1' && btn.dataset.substatus === 'PENDING';
+                var overdueOpt = document.querySelector('#modalStatus option[value="OVERDUE"]');
+                if (overdueOpt) overdueOpt.style.display = isAdesao ? 'none' : '';
+                if (isAdesao && document.getElementById('modalStatus').value === 'OVERDUE') {
+                    document.getElementById('modalStatus').value = 'PENDING';
+                }
                 togglePaymentFields();
                 new bootstrap.Modal(document.getElementById('updatePaymentModal')).show();
             }
@@ -552,6 +594,15 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ _csrf: '<%= csrfToken %>' })
                 }).then(r => { if (r.ok) location.reload(); else alert('Erro ao rejeitar'); });
+            }
+
+            function quickExpire(btn) {
+                if (!confirm('Marcar este PIX como expirado? O cliente poderá gerar um novo.')) return;
+                fetch('/admin/payments/' + btn.dataset.id + '/expire', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ _csrf: '<%= csrfToken %>' })
+                }).then(r => { if (r.ok) location.reload(); else alert('Erro ao expirar'); });
             }
 
             function exportToExcel() {

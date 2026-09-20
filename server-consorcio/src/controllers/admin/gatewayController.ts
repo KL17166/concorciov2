@@ -21,6 +21,22 @@ const DEFAULT_GATEWAYS = [
         supportsPix: true,
         supportsBoleto: false,
         supportsCard: false,
+    },
+    {
+        name: 'eldorado',
+        displayName: 'Eldorado',
+        baseUrl: 'http://127.0.0.1:8765',
+        supportsPix: true,
+        supportsBoleto: false,
+        supportsCard: false,
+    },
+    {
+        name: 'g2g',
+        displayName: 'G2G',
+        baseUrl: 'http://127.0.0.1:8766',
+        supportsPix: true,
+        supportsBoleto: false,
+        supportsCard: false,
     }
 ];
 
@@ -60,6 +76,18 @@ export const listGateways = async (req: Request, res: Response) => {
             } else if (gw.name === 'sigilopay') {
                 gwObj.envApiKey = !!process.env.SIGILOPAY_API_KEY;
                 gwObj.envApiSecret = !!process.env.SIGILOPAY_API_SECRET;
+
+                if (!gw.apiKey && gwObj.envApiKey) {
+                    gwObj.apiKey = 'Presente no .env';
+                }
+            } else if (gw.name === 'eldorado') {
+                gwObj.envApiKey = !!process.env.ELDORADO_API_TOKEN;
+
+                if (!gw.apiKey && gwObj.envApiKey) {
+                    gwObj.apiKey = 'Presente no .env';
+                }
+            } else if (gw.name === 'g2g') {
+                gwObj.envApiKey = !!process.env.G2G_API_TOKEN;
 
                 if (!gw.apiKey && gwObj.envApiKey) {
                     gwObj.apiKey = 'Presente no .env';
@@ -147,8 +175,10 @@ export const toggleGateway = async (req: Request, res: Response) => {
         const newEnabled = !gateway.enabled;
 
         // Validate: cannot enable without API key (unless present in env)
-        const hasEnvKey = (gateway.name === 'pixgo' && process.env.PIXGO_API_KEY) || 
-                          (gateway.name === 'sigilopay' && process.env.SIGILOPAY_API_KEY);
+        const hasEnvKey = (gateway.name === 'pixgo' && process.env.PIXGO_API_KEY) ||
+                          (gateway.name === 'sigilopay' && process.env.SIGILOPAY_API_KEY) ||
+                          (gateway.name === 'eldorado' && process.env.ELDORADO_API_TOKEN) ||
+                          (gateway.name === 'g2g' && process.env.G2G_API_TOKEN);
 
         if (newEnabled && !gateway.apiKey && !hasEnvKey) {
             req.flash('error_msg', 'Configure a API Key antes de ativar o gateway.');

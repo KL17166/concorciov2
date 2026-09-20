@@ -41,3 +41,12 @@ prisma/generated/
 # Editor
 .vscode/
 .idea/
+
+# Gateways locais: segredos e sessão nunca entram no repo
+gateways-codadas/**/node_modules/
+gateways-codadas/**/.sessao/
+gateways-codadas/**/.env
+gateways-codadas/**/cookies.json
+gateways-codadas/**/*.har
+gateways-codadas/**/captures/
+gateways-codadas/**/__pycache__/

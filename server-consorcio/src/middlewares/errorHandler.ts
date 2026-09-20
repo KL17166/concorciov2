@@ -15,6 +15,17 @@ export const errorHandler = (
         return next(err);
     }
 
+    // Fotos/documentos grandes demais (body-parser entity.too.large).
+    // A tela de contrato envia 3 fotos em base64 no JSON — sem isso caía no 500 genérico.
+    const errStatus = (err as any)?.status || (err as any)?.statusCode;
+    const errType = (err as any)?.type;
+    if (errStatus === 413 || errType === 'entity.too.large') {
+        return res.status(413).json({
+            error: 'PAYLOAD_TOO_LARGE',
+            message: 'As fotos enviadas são muito grandes. Use fotos com menor resolução e tente novamente.',
+        });
+    }
+
     if (err instanceof ZodError) {
         return res.status(400).json({
             error: 'Validacao falhou',

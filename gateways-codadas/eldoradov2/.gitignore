@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+eldorado-state.json
+eldorado-meta.json
+.sessao/
+pix_*.txt
+pix_*.json
+*-trace.zip

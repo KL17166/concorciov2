@@ -1,0 +1,92 @@
+<%- include('../../partials/header') %>
+
+    <%- include('../../partials/sidebar', { path: '/tickets' }) %>
+
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div>
+                    <h1 class="page-title">Atendimentos</h1>
+                    <p class="text-muted mb-0">Pedidos dos clientes (cancelamentos, pagamentos, outros)</p>
+                </div>
+                <div class="top-bar-actions">
+                    <% if (openCount > 0) { %>
+                        <span class="badge bg-danger" style="font-size: 0.85rem;"><%= openCount %> em aberto</span>
+                    <% } %>
+                    <button class="theme-toggle" onclick="toggleTheme()">
+                        <i class="bi bi-moon-stars" id="themeIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Flash Messages -->
+            <% if (typeof success_msg !== 'undefined' && success_msg && success_msg.length > 0) { %>
+                <div class="alert alert-success alert-dismissible fade show shadow-sm border-0" role="alert" style="border-radius: 12px;">
+                    <i class="bi bi-check-circle-fill me-2"></i><%= success_msg %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <% } %>
+            <% if (typeof error_msg !== 'undefined' && error_msg && error_msg.length > 0) { %>
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0" role="alert" style="border-radius: 12px;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><%= error_msg %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <% } %>
+
+            <!-- Filter Tabs -->
+            <div class="btn-group mb-3" role="group">
+                <a href="/admin/tickets?status=OPEN" class="btn btn-sm <%= filter === 'OPEN' ? 'btn-primary' : 'btn-outline-primary' %>">Abertos</a>
+                <a href="/admin/tickets?status=IN_PROGRESS" class="btn btn-sm <%= filter === 'IN_PROGRESS' ? 'btn-primary' : 'btn-outline-primary' %>">Em atendimento</a>
+                <a href="/admin/tickets?status=CLOSED" class="btn btn-sm <%= filter === 'CLOSED' ? 'btn-primary' : 'btn-outline-primary' %>">Encerrados</a>
+                <a href="/admin/tickets?status=ALL" class="btn btn-sm <%= filter === 'ALL' ? 'btn-primary' : 'btn-outline-primary' %>">Todos</a>
+            </div>
+
+            <% if (tickets.length === 0) { %>
+                <div class="alert alert-info border-0" style="border-radius: 12px;">
+                    <i class="bi bi-inbox me-2"></i>Nenhum atendimento nesta fila.
+                </div>
+            <% } %>
+
+            <% tickets.forEach(t => { %>
+                <div class="card mb-3 border-0 shadow-sm" style="border-radius: 14px;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <div>
+                                <span class="badge <%= t.status === 'OPEN' ? 'bg-danger' : (t.status === 'IN_PROGRESS' ? 'bg-warning text-dark' : 'bg-success') %>"><%= t.status === 'OPEN' ? 'ABERTO' : (t.status === 'IN_PROGRESS' ? 'EM ATENDIMENTO' : 'ENCERRADO') %></span>
+                                <span class="badge bg-secondary ms-1"><%= t.type || 'CANCELLATION' %></span>
+                                <h5 class="mt-2 mb-1"><%= t.subject %></h5>
+                                <div class="text-muted" style="font-size: 0.82rem;">
+                                    <%= t.user ? t.user.name : '—' %> (<%= t.user ? t.user.cpf : '—' %>)
+                                    <% if (t.subscription) { %> • Grupo <%= t.subscription.groupNumber %>/Cota <%= t.subscription.quotaNumber %> (<%= t.subscription.status %>, <%= t.subscription.paidInstallments %> pagas)<% } %>
+                                    • <%= new Date(t.createdAt).toLocaleString('pt-BR') %>
+                                </div>
+                            </div>
+                            <% if (t.status !== 'CLOSED') { %>
+                                <form action="/admin/tickets/<%= t.id %>/close" method="POST" style="display:inline;">
+                                    <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px;">Encerrar</button>
+                                </form>
+                            <% } %>
+                        </div>
+                        <p class="mt-2 mb-2"><%= t.message %></p>
+                        <% if (t.adminReply) { %>
+                            <div class="alert alert-success border-0 mt-2 mb-0" style="border-radius: 10px; font-size: 0.88rem;">
+                                <strong>Resposta (<%= t.repliedBy || 'admin' %>):</strong> <%= t.adminReply %>
+                            </div>
+                        <% } %>
+                        <% if (t.status !== 'CLOSED') { %>
+                            <form action="/admin/tickets/<%= t.id %>/reply" method="POST" class="mt-2">
+                                <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" name="adminReply" placeholder="Responder ao cliente..." required maxlength="2000" style="border-radius: 10px 0 0 10px;">
+                                    <button type="submit" class="btn btn-primary" style="border-radius: 0 10px 10px 0;">Responder</button>
+                                    <button type="submit" name="close" value="true" class="btn btn-success ms-2" style="border-radius: 10px;">Responder e encerrar</button>
+                                </div>
+                            </form>
+                        <% } %>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+
+<%- include('../../partials/footer') %>

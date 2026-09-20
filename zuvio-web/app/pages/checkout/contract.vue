@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useConsortiumStore } from '~/stores/consortium'
 import { useCheckoutStore } from '~/stores/checkout'
+import { useToast } from '~/composables/useToast'
 import { formatCurrency } from '~~/shared/utils/currency'
 import { DEFAULT_PRODUCTS } from '~~/shared/utils/catalogData'
 import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
@@ -34,8 +35,10 @@ const route = useRoute()
 const authStore = useAuthStore()
 const consortiumStore = useConsortiumStore()
 const checkoutStore = useCheckoutStore()
+const toast = useToast()
 
 const isAccepted = ref(false)
+const isHondaRegExpanded = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref<string | null>(null)
 const hasScrolledToBottom = ref(false)
@@ -89,9 +92,28 @@ function handleScroll() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   checkoutStore.initFromAuth()
+  // Cache local ligado? Preenche as fotos salvas (dev)
+  if (checkoutStore.docsCacheEnabled) {
+    checkoutStore.loadDocsCache()
+  }
   window.addEventListener('scroll', handleScroll, { passive: true })
+
+  // Garante o catálogo real: sem isso, um refresh aqui caía no fallback
+  // products[0] (produto ERRADO) quando o ?productId não estava na store.
+  await consortiumStore.ensureProductsLoaded()
+  const qId = route.query.productId ? String(route.query.productId) : null
+  if (
+    qId &&
+    consortiumStore.selectedProduct?.id !== qId &&
+    !consortiumStore.products.some(p => p.id === qId) &&
+    !DEFAULT_PRODUCTS.some(p => p.id === qId)
+  ) {
+    toast.error('Produto não encontrado no catálogo. Escolha novamente.')
+    router.replace('/')
+    return
+  }
 
   // Check initial height in case screen is very large
   setTimeout(() => {
@@ -157,7 +179,7 @@ async function handleSignContract() {
 
 function handleRelogin() {
   authStore.clearSession()
-  router.push('/login?redirect=' + encodeURIComponent(router.currentRoute.value.fullPath))
+  router.push('/welcome?redirect=' + encodeURIComponent(router.currentRoute.value.fullPath))
 }
 </script>
 
@@ -435,11 +457,69 @@ function handleRelogin() {
           </div>
         </div>
 
+        <!-- 7a. Regulamento de Grupo Katari -->
+        <div class="honda-reg-wrapper">
+          <div class="honda-reg-header" @click="isHondaRegExpanded = !isHondaRegExpanded">
+            <div class="honda-reg-title-row">
+              <FileText :size="16" color="#FF6D00" />
+              <span class="honda-reg-title">REGULAMENTO DO GRUPO DE CONSÓRCIO — KATARI</span>
+            </div>
+            <span class="honda-reg-toggle">{{ isHondaRegExpanded ? '▲' : '▼' }}</span>
+          </div>
+          <div v-if="isHondaRegExpanded" class="honda-reg-body">
+            <p class="honda-reg-doc-title">
+              Regulamento de Grupo de Consórcio Destinado à Aquisição de Produto — Katari Consórcios S.A.
+            </p>
+            <p class="honda-reg-doc-subtitle">CONDIÇÕES GERAIS DO PLANO DE CONSÓRCIO</p>
+
+            <div class="honda-reg-section">
+              <p class="honda-reg-section-title">I – DAS PARTES</p>
+              <p class="honda-reg-clause">1.1. Katari Consórcios S.A., pessoa jurídica de direito privado, com sede na cidade de São Paulo/SP, inscrita no CNPJ/MF sob o nº 00.000.000/0001-00, devidamente autorizada pelo Banco Central do Brasil para administrar grupos de consórcio, doravante denominada Administradora; e</p>
+              <p class="honda-reg-clause">1.2. Consorciado, qualificado na proposta de adesão, parte integrante deste regulamento.</p>
+            </div>
+
+            <div class="honda-reg-section">
+              <p class="honda-reg-section-title">II – DO OBJETO</p>
+              <p class="honda-reg-clause">2.1. Adesão a Grupo de consórcio, nos termos da Resolução BCB 285, de 19.01.2023 e das demais normas do Banco Central do Brasil e da Lei nº 11.795, de 08.10.2008, bem como dos demais dispositivos legais aplicáveis à matéria, dispostos neste regulamento do Grupo de consórcio e de acordo com as cláusulas e condições seguintes.</p>
+              <p class="honda-reg-clause">2.2. A Katari Consórcios S.A., na qualidade de Administradora, é prestadora de serviços e gestora dos interesses do Grupo, visando propiciar a seus integrantes recursos para a aquisição de veículos automotores (motos e carros) por meio de autofinanciamento, sem cobrança de juros.</p>
+              <p class="honda-reg-clause">2.3. Grupo de consórcio é uma sociedade não personificada, constituída por Consorciados com o fim de propiciar a seus integrantes, de forma isonômica, o direito à aquisição de bens por meio de autofinanciamento.</p>
+              <p class="honda-reg-clause">2.4. O Grupo é representado pela Administradora, ativa ou passivamente, em juízo ou fora dele, para a defesa dos direitos coletivamente considerados e para a consecução do contrato de consórcio, devendo sempre prevalecer os interesses do Grupo sobre todos os interesses individuais dos Consorciados.</p>
+              <p class="honda-reg-clause">2.5. Cada Grupo é autônomo em relação aos demais, possuindo patrimônio próprio, que não se confunde com o da Administradora.</p>
+            </div>
+
+            <div class="honda-reg-section">
+              <p class="honda-reg-section-title">III – DA CONSTITUIÇÃO DO GRUPO</p>
+              <p class="honda-reg-clause">3.1. Considera-se constituído o Grupo de consórcio com a realização da primeira Assembleia, em data a ser designada pela Katari Consórcios S.A. quando houver adesões em número e condições suficientes para assegurar a viabilidade econômico-financeira do Grupo.</p>
+              <p class="honda-reg-clause">3.2. No caso de não constituição do Grupo no prazo máximo de 90 (noventa) dias, a Administradora devolverá integralmente os valores pagos pelos aderentes.</p>
+              <p class="honda-reg-clause">3.3. O Grupo poderá ser formado com Cotas referenciadas em percentual ou no valor do bem objeto de consórcio e com diferentes taxas de administração, conforme plano de consórcio informado e comercializado pela Administradora.</p>
+              <p class="honda-reg-clause">3.4. A Administradora poderá reunir em um mesmo Grupo cotas destinadas à aquisição de diferentes categorias de veículos automotores, respeitadas as normas regulatórias do Banco Central do Brasil.</p>
+            </div>
+
+            <div class="honda-reg-section">
+              <p class="honda-reg-section-title">IV – DAS OBRIGAÇÕES FINANCEIRAS</p>
+              <p class="honda-reg-clause">4.1. O valor do Bem Base do plano será o constante da Tabela de Preços vigente na data da respectiva Assembleia Geral Ordinária, válida no Estado onde a cota foi adquirida.</p>
+              <p class="honda-reg-clause">4.2. O Consorciado deverá pagar a parcela mensal até o respectivo vencimento, fixado pela Administradora em data anterior à data da realização da Assembleia Geral Ordinária. O valor será o resultado do somatório do percentual mensal do Fundo Comum, Taxa de Administração e Fundo de Reserva, sobre o valor do Bem Base do plano, acrescido do valor do prêmio do Seguro de Vida em Grupo, quando contratado.</p>
+              <p class="honda-reg-clause">4.3. O valor mensal cobrado referente ao Fundo Comum e à Taxa de Administração será apurado conforme a planilha de consórcio, de acordo com o prazo da cota e o modelo do bem.</p>
+              <p class="honda-reg-clause">4.4. O Consorciado ficará obrigado, ainda, às despesas referentes a multas, juros moratórios, custas judiciais e honorários advocatícios em caso de inadimplemento.</p>
+              <p class="honda-reg-clause">4.5. A parcela mensal somente será considerada quitada mediante pagamento de seu valor integral.</p>
+            </div>
+
+            <div class="honda-reg-section">
+              <p class="honda-reg-section-title">V – DA CONTEMPLAÇÃO E LANCES</p>
+              <p class="honda-reg-clause">5.1. A contemplação ocorre mensalmente por sorteio realizado nas Assembleias Gerais Ordinárias, mediante extração da Loteria Federal, ou por oferta de lance.</p>
+              <p class="honda-reg-clause">5.2. LANCE LIVRE: o Consorciado que oferecer o maior percentual sobre o valor do crédito será o contemplado. Em caso de empate, considera-se o número de cota mais próximo ao sorteado.</p>
+              <p class="honda-reg-clause">5.3. LANCE FIXO: quando houver registro de lance fixo, o número da cota com Lance Fixo registrado mais próximo do número da cota contemplada por sorteio será considerado o novo vencedor.</p>
+              <p class="honda-reg-clause">5.4. Cancelada a contemplação em razão do não pagamento do lance, em havendo recursos suficientes, a cota cancelada poderá ser substituída por outra cota com registro de oferta de lance na mesma Assembleia, observadas as regras dos itens 5.2 e 5.3.</p>
+            </div>
+          </div>
+        </div>
+
         <div class="contract-divider"></div>
 
         <!-- 7. Todas as 13 Cláusulas Contratuais Oficiais Katari -->
         <div class="clauses-container">
           <h3 class="clauses-main-title">CLÁUSULAS CONTRATUAIS</h3>
+
 
           <!-- Cláusula 1 -->
           <article class="clause-item">
@@ -703,6 +783,12 @@ function handleRelogin() {
   display: none;
 }
 
+/* No contrato o header ganha o radius inferior e a borda de volta */
+.appbar-header {
+  border-radius: 0 0 47px 47px;
+  border-bottom: 1px solid var(--color-border, #ECEFF1);
+}
+
 /* ── Notice Bar ─────────────────────────────────────────────────────────── */
 .contract-notice-bar {
   background-color: #FFFFFF;
@@ -711,6 +797,7 @@ function handleRelogin() {
   display: flex;
   align-items: center;
   gap: 14px;
+  border-radius: 0;
 }
 
 .notice-icon-box {
@@ -1072,6 +1159,96 @@ function handleRelogin() {
 }
 
 /* ── BACEN Legal Alert ──────────────────────────────────────────────────── */
+/* ── Honda Regulation Reference Block ─────────────────────────────────────── */
+.honda-reg-wrapper {
+  border: 1px solid #E0E0E0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.honda-reg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #FFF8F4;
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+}
+
+.honda-reg-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.honda-reg-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #37474F;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.honda-reg-toggle {
+  font-size: 10px;
+  color: #FF6D00;
+  flex-shrink: 0;
+}
+
+.honda-reg-body {
+  padding: 14px 14px 16px;
+  background: #FAFAFA;
+  border-top: 1px solid #F0F0F0;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.honda-reg-doc-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #263238;
+  text-align: center;
+  margin-bottom: 2px;
+  line-height: 1.4;
+}
+
+.honda-reg-doc-subtitle {
+  font-size: 9px;
+  font-weight: 600;
+  color: #546E7A;
+  text-align: center;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.honda-reg-section {
+  margin-bottom: 12px;
+}
+
+.honda-reg-section-title {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #FF6D00;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #FFE0CC;
+  padding-bottom: 3px;
+}
+
+.honda-reg-clause {
+  font-size: 9px;
+  color: #455A64;
+  line-height: 1.55;
+  margin-bottom: 5px;
+  padding-left: 8px;
+  border-left: 2px solid #F5F5F5;
+}
+
 .bacen-legal-alert {
   background-color: #E3F2FD;
   border: 1px solid #BBDEFB;
@@ -1257,6 +1434,7 @@ function handleRelogin() {
   border-top: 1px solid var(--color-border, #E0E0E0);
   padding: 16px 20px;
   z-index: 40;
+  border-radius: 47px 47px 0 0;
 }
 
 .footer-inner {

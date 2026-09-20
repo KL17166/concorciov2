@@ -132,6 +132,8 @@
                 }
                 .gw-icon-sm.pixgo { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
                 .gw-icon-sm.sigilopay { background: linear-gradient(135deg, #059669, #10b981); }
+                .gw-icon-sm.eldorado { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+                .gw-icon-sm.g2g { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
                 .gw-pill {
                     display: inline-flex; align-items: center; gap: 0.3rem;
                     padding: 0.25rem 0.65rem; border-radius: 20px;
@@ -162,6 +164,8 @@
                 }
                 .gw-pick .pick-icon.pixgo { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
                 .gw-pick .pick-icon.sigilopay { background: linear-gradient(135deg, #059669, #10b981); }
+                .gw-pick .pick-icon.eldorado { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+                .gw-pick .pick-icon.g2g { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
                 .gw-form-wrap {
                     border-radius: 16px; border: 1px solid var(--border-color);
                     overflow: hidden; box-shadow: 0 2px 15px rgba(0,0,0,0.04);
@@ -335,6 +339,8 @@
                                         <div class="gw-icon-sm <%= gw.name %>">
                                             <% if (gw.name === 'pixgo') { %><i class="bi bi-qr-code-scan"></i>
                                             <% } else if (gw.name === 'sigilopay') { %><i class="bi bi-shield-lock-fill"></i>
+                                            <% } else if (gw.name === 'eldorado') { %><i class="bi bi-joystick"></i>
+                                            <% } else if (gw.name === 'g2g') { %><i class="bi bi-cart-fill"></i>
                                             <% } else { %><i class="bi bi-hdd-network"></i><% } %>
                                         </div>
                                         <div>
@@ -390,6 +396,8 @@
                         <div class="gw-pick h-100 <%= idx === 0 ? 'sel' : '' %>" onclick="pickGW(this, '<%= gw.id %>')">
                             <div class="pick-icon <%= gw.name %>">
                                 <% if (gw.name === 'pixgo') { %><i class="bi bi-qr-code-scan"></i>
+                                <% } else if (gw.name === 'eldorado') { %><i class="bi bi-joystick"></i>
+                                <% } else if (gw.name === 'g2g') { %><i class="bi bi-cart-fill"></i>
                                 <% } else { %><i class="bi bi-shield-lock-fill"></i><% } %>
                             </div>
                             <div class="fw-bold" style="font-size: 0.92rem;"><%= gw.displayName %></div>
@@ -409,6 +417,8 @@
                         <div class="d-flex align-items-center gap-2">
                             <div class="gw-icon-sm <%= gw.name %>">
                                 <% if (gw.name === 'pixgo') { %><i class="bi bi-qr-code-scan"></i>
+                                <% } else if (gw.name === 'eldorado') { %><i class="bi bi-joystick"></i>
+                                <% } else if (gw.name === 'g2g') { %><i class="bi bi-cart-fill"></i>
                                 <% } else { %><i class="bi bi-shield-lock-fill"></i><% } %>
                             </div>
                             <div>
@@ -432,19 +442,19 @@
                                 <div class="col-md-6">
                                     <label class="form-label fw-medium" style="font-size: 0.85rem;">
                                         <i class="bi bi-key-fill me-1 text-warning"></i>
-                                        <%= gw.name === 'pixgo' ? 'API Key' : 'API Key (Public)' %>
+                                        <%= gw.name === 'pixgo' ? 'API Key' : ((gw.name === 'eldorado' || gw.name === 'g2g') ? 'Token da gateway (X-Gateway-Token)' : 'API Key (Public)') %>
                                     </label>
                                     <input type="password" class="form-control" name="apiKey" style="border-radius: 10px;"
                                         value="<%= gw.apiKey && !gw.apiKey.includes('.env') ? gw.apiKey : '' %>"
                                         placeholder="<%= gw.apiKey ? '••••••• (configurado)' : 'Cole a API Key aqui' %>">
-                                    <% if ((gw.name === 'pixgo' || gw.name === 'sigilopay') && gw.envApiKey) { %>
+                                    <% if ((gw.name === 'pixgo' || gw.name === 'sigilopay' || gw.name === 'eldorado' || gw.name === 'g2g') && gw.envApiKey) { %>
                                         <small class="text-success mt-1 d-block"><i class="bi bi-check-circle-fill me-1"></i>Presente no .env</small>
                                     <% } %>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-medium" style="font-size: 0.85rem;">
                                         <i class="bi bi-shield-lock me-1 text-danger"></i>
-                                        <%= gw.name === 'pixgo' ? 'Webhook Secret' : 'API Secret' %>
+                                        <%= gw.name === 'pixgo' ? 'Webhook Secret' : ((gw.name === 'eldorado' || gw.name === 'g2g') ? 'Não utilizado' : 'API Secret') %>
                                     </label>
                                     <input type="password" class="form-control"
                                         name="<%= gw.name === 'pixgo' ? 'webhookSecret' : 'apiSecret' %>"
@@ -463,6 +473,10 @@
                                         <small class="text-muted mt-1 d-block"><i class="bi bi-lightbulb me-1 text-warning"></i>Padrão: https://pixgo.org/api/v1</small>
                                     <% } else if (gw.name === 'sigilopay') { %>
                                         <small class="text-muted mt-1 d-block"><i class="bi bi-lightbulb me-1 text-warning"></i>Padrão: https://app.sigilopay.com.br/api/v1</small>
+                                    <% } else if (gw.name === 'eldorado') { %>
+                                        <small class="text-muted mt-1 d-block"><i class="bi bi-lightbulb me-1 text-warning"></i>Padrão: http://127.0.0.1:8765 (serviço local eldoradov2)</small>
+                                    <% } else if (gw.name === 'g2g') { %>
+                                        <small class="text-muted mt-1 d-block"><i class="bi bi-lightbulb me-1 text-warning"></i>Padrão: http://127.0.0.1:8766 (serviço local g2g)</small>
                                     <% } %>
                                 </div>
                                 <div class="col-md-3">

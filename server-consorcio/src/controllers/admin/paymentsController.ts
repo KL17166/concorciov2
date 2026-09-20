@@ -6,7 +6,7 @@ import { paginate, paginationMeta, buildPageUrl } from '../../utils/pagination';
 // GET /admin/payments
 export const getPayments = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const status  = (req.query.status  as string) || 'ALL';
+        const status  = (req.query.status  as string) || 'ADESOES';
         const month   = (req.query.month   as string) || '';
         const search  = (req.query.search  as string) || '';
         const method  = (req.query.method  as string) || '';
@@ -14,8 +14,37 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
 
         const where: any = {};
 
-        if (status && status !== 'ALL') {
+        // Abas virtuais: ADESOES (parcela 1 em aberto) e PENDING (demais atuais).
+        const isVirtualStatus = status === 'ADESOES' || status === 'PENDING';
+
+        if (status && status !== 'ALL' && !isVirtualStatus) {
             where.status = status;
+        }
+
+        // "Todos" não puxa as agendadas (futuras que ainda não valem) — só o acionável.
+        if (status === 'ALL') {
+            const pendIds = await prisma.installment.findMany({
+                where: { ...where, status: 'PENDING' },
+                select: { id: true, subscriptionId: true, number: true }
+            });
+            const subIdsAll = [...new Set(pendIds.map(p => p.subscriptionId))];
+            let firstAll = new Map<string, number>();
+            if (subIdsAll.length > 0) {
+                const rows = await prisma.$queryRawUnsafe<any[]>(`
+                    SELECT "subscriptionId" AS "sub", MIN(number) AS "first"
+                    FROM installments
+                    WHERE "subscriptionId" = ANY($1)
+                      AND status IN ('PENDING', 'OVERDUE')
+                    GROUP BY "subscriptionId"
+                `, subIdsAll);
+                firstAll = new Map(rows.map((r: any) => [r.sub, Number(r.first)]));
+            }
+            const scheduledIds = pendIds
+                .filter(p => firstAll.get(p.subscriptionId) !== p.number)
+                .map(p => p.id);
+            if (scheduledIds.length > 0) {
+                where.id = { notIn: scheduledIds };
+            }
         }
 
         if (method) {
@@ -51,6 +80,11 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
                             user: true,
                             plan: { include: { product: true } }
                         }
+                    },
+                    paymentAttempts: {
+                        select: { id: true, status: true, provider: true, createdAt: true, expiresAt: true },
+                        orderBy: { createdAt: 'desc' },
+                        take: 5
                     }
                 },
                 orderBy: { dueDate: 'asc' },
@@ -60,29 +94,140 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
             prisma.installment.count({ where })
         ]);
 
+        // ── Primeira parcela em aberto por assinatura (A PAGAR vs AGENDADA) ──
+        // A pagar = menor number não pago da assinatura (PENDING/OVERDUE).
+        // Agendada = PENDING que ainda não é a atual.
+        const [dueAgg] = await prisma.$queryRawUnsafe<any[]>(`
+            SELECT COUNT(*) AS "count", COALESCE(SUM(amount), 0) AS "total"
+            FROM installments i
+            WHERE i.status IN ('PENDING', 'OVERDUE')
+              AND i.number = (
+                SELECT MIN(number) FROM installments
+                WHERE "subscriptionId" = i."subscriptionId"
+                  AND status IN ('PENDING', 'OVERDUE')
+              )
+        `);
+        const [schedAgg] = await prisma.$queryRawUnsafe<any[]>(`
+            SELECT COUNT(*) AS "count", COALESCE(SUM(amount), 0) AS "total"
+            FROM installments i
+            WHERE i.status = 'PENDING'
+              AND i.number <> (
+                SELECT MIN(number) FROM installments
+                WHERE "subscriptionId" = i."subscriptionId"
+                  AND status IN ('PENDING', 'OVERDUE')
+              )
+        `);
+
+        // Abas virtuais ADESOES / PENDING (respeitam busca/mês/método)
+        let finalInstallments = installments;
+        let finalTotal = total;
+        if (isVirtualStatus) {
+            const baseWhere: any = { ...where };
+            delete baseWhere.status;
+            const candidates = await prisma.installment.findMany({
+                where: status === 'ADESOES'
+                    ? { ...baseWhere, number: 1, status: { in: ['PENDING', 'OVERDUE'] } }
+                    : { ...baseWhere, status: 'PENDING' },
+                select: { id: true, subscriptionId: true, number: true, status: true, dueDate: true }
+            });
+            // Mapa do primeiro em aberto real por assinatura (escopo global, não só filtros)
+            const subIds = [...new Set(candidates.map(c => c.subscriptionId))];
+            let realFirst = new Map<string, number>();
+            if (subIds.length > 0) {
+                const rows = await prisma.$queryRawUnsafe<any[]>(`
+                    SELECT "subscriptionId" AS "sub", MIN(number) AS "first"
+                    FROM installments
+                    WHERE "subscriptionId" = ANY($1)
+                      AND status IN ('PENDING', 'OVERDUE')
+                    GROUP BY "subscriptionId"
+                `, subIds);
+                realFirst = new Map(rows.map((r: any) => [r.sub, Number(r.first)]));
+            }
+            const wanted = candidates.filter(c => {
+                if (status === 'ADESOES') return true;
+                const real = realFirst.get(c.subscriptionId);
+                return c.number > 1 && real !== undefined && c.number === real;
+            });
+            wanted.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+            finalTotal = wanted.length;
+            const pageIds = wanted.slice(skip, skip + limit).map(c => c.id);
+            finalInstallments = pageIds.length > 0 ? await prisma.installment.findMany({
+                where: { id: { in: pageIds } },
+                include: {
+                    subscription: {
+                        include: {
+                            user: true,
+                            plan: { include: { product: true } }
+                        }
+                    },
+                    paymentAttempts: {
+                        select: { id: true, status: true, provider: true, createdAt: true, expiresAt: true },
+                        orderBy: { createdAt: 'desc' },
+                        take: 5
+                    }
+                },
+                orderBy: { dueDate: 'asc' }
+            }) : [];
+        }
+
+        // Contadores das abas: Adesões (parcela 1 em aberto) e Pendentes (atuais, exceto adesão)
+        const [adesaoAgg] = await prisma.$queryRawUnsafe<any[]>(`
+            SELECT COUNT(*) AS "count", COALESCE(SUM(amount), 0) AS "total"
+            FROM installments
+            WHERE number = 1 AND status IN ('PENDING', 'OVERDUE')
+        `);
+        const [pendAgg] = await prisma.$queryRawUnsafe<any[]>(`
+            SELECT COUNT(*) AS "count", COALESCE(SUM(amount), 0) AS "total"
+            FROM installments i
+            WHERE i.status = 'PENDING' AND i.number > 1
+              AND i.number = (
+                SELECT MIN(number) FROM installments
+                WHERE "subscriptionId" = i."subscriptionId"
+                  AND status IN ('PENDING', 'OVERDUE')
+              )
+        `);
+        // Mapa assinatura -> primeira em aberto (p/ selo A PAGAR nas linhas da página)
+        const pageSubIds = [...new Set(finalInstallments.map(i => i.subscriptionId))];
+        let currentMap: Record<string, number> = {};
+        if (pageSubIds.length > 0) {
+            const rows = await prisma.$queryRawUnsafe<any[]>(`
+                SELECT "subscriptionId" AS "sub", MIN(number) AS "first"
+                FROM installments
+                WHERE "subscriptionId" = ANY($1)
+                  AND status IN ('PENDING', 'OVERDUE')
+                GROUP BY "subscriptionId"
+            `, pageSubIds);
+            currentMap = Object.fromEntries(rows.map((r: any) => [r.sub, Number(r.first)]));
+        }
+
         // ── All-installments summary (ignores filters for totals) ────────
+        // Só entra no total depois da adesão paga (contrato não-PENDING).
         const [summaryResult] = await prisma.$queryRawUnsafe<any[]>(`
             SELECT
-                COALESCE(SUM(CASE WHEN status = 'PENDING' THEN amount ELSE 0 END), 0) AS "totalPending",
-                COALESCE(SUM(CASE WHEN status = 'OVERDUE'  THEN amount ELSE 0 END), 0) AS "totalOverdue",
-                COALESCE(SUM(CASE WHEN status = 'PAID'     THEN amount ELSE 0 END), 0) AS "totalPaid",
-                COALESCE(SUM(CASE WHEN status = 'REFUNDED' THEN amount ELSE 0 END), 0) AS "totalRefunded",
+                COALESCE(SUM(CASE WHEN i.status = 'PENDING' THEN i.amount ELSE 0 END), 0) AS "totalPending",
+                COALESCE(SUM(CASE WHEN i.status = 'OVERDUE'  THEN i.amount ELSE 0 END), 0) AS "totalOverdue",
+                COALESCE(SUM(CASE WHEN i.status = 'PAID'     THEN i.amount ELSE 0 END), 0) AS "totalPaid",
+                COALESCE(SUM(CASE WHEN i.status = 'REFUNDED' THEN i.amount ELSE 0 END), 0) AS "totalRefunded",
                 COUNT(*)                                                                AS "totalCount",
-                COUNT(CASE WHEN status = 'PAID'     THEN 1 END)                        AS "paidCount",
-                COUNT(CASE WHEN status = 'PENDING'  THEN 1 END)                        AS "pendingCount",
-                COUNT(CASE WHEN status = 'OVERDUE'  THEN 1 END)                        AS "overdueCount",
-                COUNT(CASE WHEN status = 'REFUNDED' THEN 1 END)                        AS "refundedCount"
-            FROM installments
+                COUNT(CASE WHEN i.status = 'PAID'     THEN 1 END)                        AS "paidCount",
+                COUNT(CASE WHEN i.status = 'PENDING'  THEN 1 END)                        AS "pendingCount",
+                COUNT(CASE WHEN i.status = 'OVERDUE'  THEN 1 END)                        AS "overdueCount",
+                COUNT(CASE WHEN i.status = 'REFUNDED' THEN 1 END)                        AS "refundedCount"
+            FROM installments i
+            JOIN subscriptions s ON s.id = i."subscriptionId"
+            WHERE s.status <> 'PENDING'
         `);
 
         // ── This month received ──────────────────────────────────────────
         const now = new Date();
         const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const [monthResult] = await prisma.$queryRawUnsafe<any[]>(`
-            SELECT COALESCE(SUM(amount), 0) AS "receivedThisMonth"
-            FROM installments
-            WHERE status = 'PAID'
-              AND "paymentDate" >= '${firstOfMonth.toISOString()}'
+            SELECT COALESCE(SUM(i.amount), 0) AS "receivedThisMonth"
+            FROM installments i
+            JOIN subscriptions s ON s.id = i."subscriptionId"
+            WHERE i.status = 'PAID'
+              AND s.status <> 'PENDING'
+              AND i."paymentDate" >= '${firstOfMonth.toISOString()}'
         `);
 
         // ── Near-due (next 7 days, still PENDING) ────────────────────────
@@ -105,11 +250,12 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
             .map(m => m.paymentMethod)
             .filter(Boolean) as string[];
 
-        const pagination = paginationMeta(total, page, limit);
+        const pagination = paginationMeta(finalTotal, page, limit);
 
         res.render('pages/payments/index', {
             path: '/payments',
-            installments,
+            installments: finalInstallments,
+            currentMap,
             summary: {
                 totalPending:   Number(summaryResult?.totalPending   || 0),
                 totalOverdue:   Number(summaryResult?.totalOverdue   || 0),
@@ -119,7 +265,15 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
                 pendingCount:   Number(summaryResult?.pendingCount   || 0),
                 overdueCount:   Number(summaryResult?.overdueCount   || 0),
                 refundedCount:  Number(summaryResult?.refundedCount  || 0),
-                count:          total,
+                dueCount:       Number(dueAgg?.count || 0),
+                dueTotal:       Number(dueAgg?.total || 0),
+                scheduledCount: Number(schedAgg?.count || 0),
+                scheduledTotal: Number(schedAgg?.total || 0),
+                adesaoCount:    Number(adesaoAgg?.count || 0),
+                adesaoTotal:    Number(adesaoAgg?.total || 0),
+                pendCount:      Number(pendAgg?.count || 0),
+                pendTotal:      Number(pendAgg?.total || 0),
+                count:          finalTotal,
                 receivedThisMonth: Number(monthResult?.receivedThisMonth || 0),
                 nearDueCount
             },
@@ -204,6 +358,16 @@ export const updatePayment = async (req: Request, res: Response, next: NextFunct
             });
             if (!inst) throw new Error('Parcela não encontrada');
 
+            // Adesão (parcela 1 de contrato PENDING) nunca pode ir para Atrasado —
+            // vale: pendente, pago ou PIX expirado (botão Expirar).
+            const isAdesao = inst.number === 1 && inst.subscription.status === 'PENDING';
+            if (isAdesao && status === 'OVERDUE') {
+                throw Object.assign(
+                    new Error('Adesão não pode ser marcada como atrasada. Use pago ou expirado.'),
+                    { isBusinessRule: true }
+                );
+            }
+
             const currentOldStatus = inst.status;
 
             await tx.installment.update({
@@ -214,6 +378,14 @@ export const updatePayment = async (req: Request, res: Response, next: NextFunct
                     paymentDate:   status === 'PAID' ? (paymentDate ? new Date(paymentDate) : new Date()) : null
                 }
             });
+
+            // Baixa manual paga a tentativa ativa; voltar p/ não-pago expira o vínculo
+            try {
+                await (tx as any).paymentAttempt.updateMany({
+                    where: { installmentId: id, status: 'ACTIVE' },
+                    data: { status: status === 'PAID' ? 'PAID' : 'EXPIRED' }
+                });
+            } catch (_) {}
 
             await tx.auditLog.create({
                 data: {
@@ -266,7 +438,12 @@ export const updatePayment = async (req: Request, res: Response, next: NextFunct
 
         req.flash('success_msg', 'Pagamento atualizado com sucesso!');
         res.redirect('/admin/payments');
-    } catch (error) {
+    } catch (error: any) {
+        // Regra de negócio (ex: adesão → atrasado): volta com aviso em vez de 500
+        if (error?.isBusinessRule) {
+            req.flash('error_msg', error.message);
+            return res.redirect('/admin/payments');
+        }
         next(error);
     }
 };

@@ -58,6 +58,24 @@ const envSchema = z.object({
 
     // Cloudflare Tunnel URL
     CLOUDFLARE_TUNNEL_URL: z.string().url().optional(),
+
+    // ── Gateways locais (Eldorado + G2G) ──────────────────────────────
+    // Serviços locais que geram PIX copia-e-cola. Token vai no header
+    // X-Gateway-Token em toda chamada. Limites: min/max por cobrança (R$),
+    // máximo de gerações por minuto e teto diário somado (R$).
+    ELDORADO_API_URL: z.string().url().optional(),
+    ELDORADO_API_TOKEN: z.string().optional(),
+    ELDORADO_MIN_AMOUNT: z.string().optional(),
+    ELDORADO_MAX_AMOUNT: z.string().optional(),
+    ELDORADO_MAX_PER_MIN: z.string().optional(),
+    ELDORADO_DAILY_CAP: z.string().optional(),
+    G2G_API_URL: z.string().url().optional(),
+    G2G_API_TOKEN: z.string().optional(),
+    G2G_CHARACTER_NAME: z.string().optional(),
+    G2G_MIN_AMOUNT: z.string().optional(),
+    G2G_MAX_AMOUNT: z.string().optional(),
+    G2G_MAX_PER_MIN: z.string().optional(),
+    G2G_DAILY_CAP: z.string().optional(),
 });
 
 const _env = envSchema.safeParse(process.env);

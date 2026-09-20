@@ -1,0 +1,2189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>G2G — Fluxo de Checkout Validado (wow-gold)</title>
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    /* -------------------------------------------------------------
+       DESIGN SYSTEM TOKENS & RESET
+       ------------------------------------------------------------- */
+    :root {
+      --bg-base: #090d16;
+      --bg-surface: #0f1626;
+      --bg-surface-elevated: #162035;
+      --bg-surface-subtle: #1a263d;
+      --bg-code: #060910;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.14);
+      --border-accent: rgba(56, 189, 248, 0.35);
+
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --accent-glow: rgba(56, 189, 248, 0.18);
+      
+      --color-get: #10b981;
+      --color-get-bg: rgba(16, 185, 129, 0.12);
+      --color-post: #a855f7;
+      --color-post-bg: rgba(168, 85, 247, 0.12);
+      --color-ws: #f59e0b;
+      --color-ws-bg: rgba(245, 158, 11, 0.12);
+      --color-tok: #fb923c;
+      --color-ok: #10b981;
+      --color-warn: #f59e0b;
+      --color-err: #f43f5e;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 18px;
+
+      --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-subtle);
+      --shadow-glow: 0 0 25px -5px var(--accent-glow);
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      color-scheme: dark;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.08), transparent 70%),
+        radial-gradient(ellipse 60% 40% at 100% 40%, rgba(168, 85, 247, 0.05), transparent 60%);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding-bottom: 100px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+    /* -------------------------------------------------------------
+       CONTAINER & HEADER
+       ------------------------------------------------------------- */
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    header.app-header {
+      padding: 40px 0 28px;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .title-group h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+    }
+
+    .title-badge {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .title-badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .header-desc {
+      color: var(--text-secondary);
+      font-size: 14px;
+      max-width: 820px;
+      margin-top: 6px;
+    }
+
+    .header-desc b {
+      color: var(--text-primary);
+    }
+
+    /* Meta Tags Pills */
+    .pills-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 18px 0 24px;
+    }
+
+    .pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: border-color 0.2s;
+    }
+
+    .pill:hover {
+      border-color: var(--border-medium);
+    }
+
+    .pill b {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* -------------------------------------------------------------
+       ACTION CARDS / CONSOLE CONTROLS
+       ------------------------------------------------------------- */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .control-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .control-card::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--border-accent), transparent);
+    }
+
+    .control-card.card-buy::after {
+      background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent);
+    }
+
+    .control-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-title .badge {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .badge-safe {
+      background: var(--color-get-bg);
+      color: var(--color-get);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-real {
+      background: var(--color-ws-bg);
+      color: var(--color-ws);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .input-group {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-prefix {
+      position: absolute;
+      left: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .input-field {
+      background: var(--bg-code);
+      color: var(--text-primary);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      font-size: 13px;
+      font-family: var(--font-mono);
+      transition: all 0.2s ease;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+    }
+
+    .input-with-prefix {
+      padding-left: 36px;
+    }
+
+    #livebudget { width: 130px; }
+    #livechar { flex: 1; min-width: 170px; }
+    #liveqty { width: 130px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      font-family: var(--font-sans);
+      white-space: nowrap;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-emerald {
+      background: linear-gradient(180deg, #10b981, #059669);
+      color: #04140a;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-emerald:hover:not(:disabled) {
+      background: linear-gradient(180deg, #34d399, #10b981);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-warning {
+      background: rgba(245, 158, 11, 0.12);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+
+    .btn-warning:hover:not(:disabled) {
+      background: rgba(245, 158, 11, 0.22);
+      border-color: #fbbf24;
+      box-shadow: 0 2px 12px rgba(245, 158, 11, 0.2);
+    }
+
+    .paybtn {
+      background: var(--bg-surface-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 8px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .paybtn:hover:not(:disabled) {
+      color: var(--text-primary);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .paybtn.sel {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.5);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+    }
+
+    .paybtn:disabled {
+      background: #111722;
+      color: #475569;
+      border-color: rgba(255, 255, 255, 0.05);
+      cursor: not-allowed;
+    }
+
+    .helper-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+
+    .gatecheck {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border-subtle);
+    }
+
+    .gatecheck label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .gatecheck input[type="checkbox"] {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--border-medium);
+      border-radius: 4px;
+      background: var(--bg-code);
+      cursor: pointer;
+      position: relative;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .gatecheck input[type="checkbox"]:checked {
+      background: var(--color-warn);
+      border-color: var(--color-warn);
+    }
+
+    .gatecheck input[type="checkbox"]:checked::after {
+      content: "✓";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #04101f;
+      font-weight: 900;
+      font-size: 11px;
+    }
+
+    .gatecheck b {
+      color: #fbbf24;
+    }
+
+    /* -------------------------------------------------------------
+       LIVE STREAMING CONSOLE PANEL
+       ------------------------------------------------------------- */
+    #livemain {
+      margin-bottom: 30px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .terminal-card {
+      background: #080c14;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(56, 189, 248, 0.1);
+      overflow: hidden;
+    }
+
+    .terminal-header {
+      background: #0f1626;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .terminal-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .terminal-status-pill {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+
+    .terminal-body {
+      padding: 16px 20px;
+      max-height: 480px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .lrow {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .lrow.row-success {
+      border-left: 3px solid var(--color-ok);
+    }
+
+    .lrow.row-start {
+      border-left: 3px solid var(--accent);
+    }
+
+    .lrow.row-done {
+      border-left: 3px solid var(--color-ws);
+      background: rgba(245, 158, 11, 0.06);
+    }
+
+    .ldot {
+      flex-shrink: 0;
+      width: 22px;
+      text-align: center;
+      font-size: 15px;
+    }
+
+    .lcontent {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .lcontent b {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .lms {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .ldata {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      word-break: break-all;
+      background: #060910;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .spin {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: sp 0.8s linear infinite;
+      vertical-align: -2px;
+    }
+
+    @keyframes sp { to { transform: rotate(360deg); } }
+
+    /* -------------------------------------------------------------
+       STICKY NAVIGATION BAR WITH FILTERS & SEARCH
+       ------------------------------------------------------------- */
+    .nav-wrapper {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 30px;
+    }
+
+    .nav-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+      flex-wrap: wrap;
+    }
+
+    .nav-filters {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .filter-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .filter-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-surface);
+    }
+
+    .filter-btn.active {
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+
+    .nav-search {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-search input {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 6px 14px 6px 32px;
+      font-size: 12px;
+      color: var(--text-primary);
+      width: 220px;
+      transition: all 0.2s ease;
+    }
+
+    .nav-search input:focus {
+      outline: none;
+      border-color: var(--accent);
+      width: 260px;
+    }
+
+    .nav-search svg {
+      position: absolute;
+      left: 10px;
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    nav.steps {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 8px 0 10px;
+      scrollbar-width: thin;
+    }
+
+    nav.steps a {
+      flex: 0 0 auto;
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      background: var(--bg-surface);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    nav.steps a:hover {
+      color: var(--text-primary);
+      border-color: var(--border-accent);
+      background: var(--bg-surface-elevated);
+    }
+
+    nav.steps a.active {
+      color: #fff;
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.12);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+    }
+
+    nav.steps a .n {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--accent);
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 11px;
+      min-width: 18px;
+    }
+
+    nav.steps a.active .n {
+      background: var(--accent);
+      color: #04101f;
+    }
+
+    /* -------------------------------------------------------------
+       CARDS & STEP SECTIONS
+       ------------------------------------------------------------- */
+    section.card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    section.card:hover {
+      border-color: var(--border-medium);
+    }
+
+    .chead {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-surface-elevated);
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .num {
+      background: var(--accent);
+      color: #04101f;
+      font-weight: 800;
+      border-radius: var(--radius-sm);
+      padding: 3px 10px;
+      font-size: 13px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .chead-content {
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .chead h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+
+    .chead .fn {
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .chead .fn b {
+      color: var(--text-primary);
+    }
+
+    .cbody {
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Request / Response / Derivations */
+    .block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .lbl {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lbl.req { color: #c084fc; }
+    .lbl.res { color: #34d399; }
+    .lbl.deriva { color: #fb923c; }
+
+    .method-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .m-get {
+      background: var(--color-get-bg);
+      color: var(--color-get);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .m-post {
+      background: var(--color-post-bg);
+      color: var(--color-post);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    .m-ws {
+      background: var(--color-ws-bg);
+      color: var(--color-ws);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .st {
+      display: inline-block;
+      background: var(--color-get-bg);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--color-ok);
+      border-radius: 6px;
+      padding: 1px 8px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      margin-left: 8px;
+    }
+
+    /* Code Blocks */
+    .code-container {
+      position: relative;
+    }
+
+    pre {
+      background: var(--bg-code);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #e2e8f0;
+      tab-size: 2;
+    }
+
+    .tok {
+      color: var(--color-tok);
+      background: rgba(251, 146, 60, 0.1);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* Copy Button */
+    button.copy {
+      background: var(--bg-surface-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 500;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+
+    button.copy:hover {
+      color: var(--text-primary);
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    button.copy.copied {
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    /* Derivations & Chips */
+    .deriva-box {
+      background: rgba(251, 146, 60, 0.04);
+      border: 1px dashed rgba(251, 146, 60, 0.2);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .deriva-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 3px 8px;
+      color: #e2e8f0;
+    }
+
+    .chip b {
+      color: var(--accent);
+    }
+
+    .arrow {
+      color: var(--color-tok);
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    /* Notes & Alerts */
+    .note {
+      background: rgba(245, 158, 11, 0.06);
+      border-left: 3px solid var(--color-warn);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      line-height: 1.5;
+    }
+
+    .note b {
+      color: var(--text-primary);
+    }
+
+    /* -------------------------------------------------------------
+       VERDICT SECTION
+       ------------------------------------------------------------- */
+    .verdict {
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      background: linear-gradient(180deg, #181409, #100e07);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      margin: 36px 0;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .verdict::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #f59e0b, #10b981, #38bdf8);
+    }
+
+    .verdict-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .verdict h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .verdict-badge {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .verdict-codes {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .verdict code {
+      font-family: var(--font-mono);
+      background: #080a10;
+      border: 1px solid var(--border-subtle);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      color: #e2e8f0;
+      font-size: 12.5px;
+      display: block;
+      overflow-x: auto;
+    }
+
+    .verdict p {
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+
+    .verdict p b {
+      color: var(--text-primary);
+    }
+
+    /* -------------------------------------------------------------
+       FOOTER
+       ------------------------------------------------------------- */
+    footer.app-footer {
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 24px;
+      color: var(--text-muted);
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    footer.app-footer p {
+      margin-bottom: 8px;
+    }
+
+    footer.app-footer code {
+      font-family: var(--font-mono);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--text-secondary);
+    }
+
+    /* -------------------------------------------------------------
+       RESPONSIVENESS
+       ------------------------------------------------------------- */
+    @media (max-width: 768px) {
+      .container { padding: 0 16px; }
+      header.app-header { padding: 24px 0 18px; }
+      .controls-grid { grid-template-columns: 1fr; }
+      .nav-toolbar { flex-direction: column; align-items: stretch; }
+      .nav-search input { width: 100%; }
+      .nav-search input:focus { width: 100%; }
+      .chead { padding: 14px 16px; }
+      .cbody { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- HEADER -->
+    <header class="app-header">
+      <div class="header-top">
+        <div class="title-group">
+          <h1>
+            <span>🎯 G2G — Fluxo de Checkout Validado</span>
+            <span class="title-badge">Pipeline Validado</span>
+          </h1>
+          <p class="header-desc">
+            Cada request é consequência direta da anterior. <b>Toda execução do passo 6 cria um pedido REAL <i>to_pay</i></b> — comportamento esperado por design, sem efeito colateral acidental. Clique nas etapas para navegar. Tokens mascarados (<span class="tok">laranja</span>).
+          </p>
+        </div>
+      </div>
+
+      <!-- METADATA BADGES -->
+      <div class="pills-grid">
+        <span class="pill">Meta: <b>R$ 3.500</b></span>
+        <span class="pill">Produto: <b>Silvermoon [EU] Alliance · K Gold</b></span>
+        <span class="pill">Vendedor: <b>EternalStock (493848)</b></span>
+        <span class="pill">Compra-Teste: <b>200un = R$ 49,69 · to_pay</b></span>
+        <span class="pill">User ID: <b>1004386074</b></span>
+        <span class="pill">Comportamento: <b>Cada run = 1 pedido novo (expira ~2h)</b></span>
+        <span class="pill">Captura: <b>20260908_150049 + HAR 16-11-57</b></span>
+      </div>
+
+      <!-- INTERACTIVE ACTION CONTROLS -->
+      <div class="controls-grid">
+        <!-- Control Card 1: Live Quote (Read-only) -->
+        <div class="control-card">
+          <div class="control-title">
+            <span>Simulador de Cotação</span>
+            <span class="badge badge-safe">Somente Leitura</span>
+          </div>
+          <div class="input-row">
+            <div class="input-group">
+              <span class="input-prefix">R$</span>
+              <input id="livebudget" class="input-field input-with-prefix" type="number" value="3500" min="1" step="0.01" aria-label="Orçamento em BRL">
+            </div>
+            <button id="livebtn" class="btn btn-emerald">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              <span>Ver em Tempo Real</span>
+            </button>
+          </div>
+          <p id="livehint" class="helper-text">
+            Executa passos 1–4b ao vivo contra a API local (consulta segura, não compra).
+          </p>
+        </div>
+
+        <!-- Control Card 2: Live Real Order -->
+        <div class="control-card card-buy">
+          <div class="control-title">
+            <span>Terminal de Compra Real</span>
+            <span class="badge badge-real">Gera Pedido to_pay</span>
+          </div>
+          <div class="input-row" style="margin-bottom: 10px;">
+            <input id="livechar" class="input-field" placeholder="Personagem p/ entrega" aria-label="Nome do personagem">
+            <input id="liveqty" class="input-field" type="number" placeholder="Qtd (vazio=auto)" min="200" step="1" aria-label="Quantidade" style="width: 140px;">
+            <input id="livecpf" class="input-field" type="text" value="21275117783" placeholder="CPF p/ Pix" aria-label="CPF para Pix" style="width: 140px;" title="CPF para emissão do Pix Copia-e-Cola (Passo 11)">
+          </div>
+          <div class="input-row">
+            <button id="paypixbtn" class="paybtn" title="Método validado na captura">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              PIX (tazapay)
+            </button>
+            <button id="paycardbtn" class="paybtn" disabled title="Libera depois de fechar o Pix (passo 11)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              Cartão (em breve)
+            </button>
+            <button id="buylivebtn" class="btn btn-warning">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              Comprar ao Vivo
+            </button>
+          </div>
+          <div class="gatecheck">
+            <label>
+              <input type="checkbox" id="liveconfirm">
+              <span>Entendo que <b>cada clique cria um pedido REAL to_pay novo</b> (expira em ~2h sozinho, sem cobrança imediata).</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- REAL-TIME EXECUTION STREAM (SSE) -->
+    <main id="livemain" hidden>
+      <section class="terminal-card" id="livepanel">
+        <div class="terminal-header">
+          <div class="terminal-title">
+            <span class="spin"></span>
+            <span>Console de Execução em Tempo Real</span>
+          </div>
+          <span class="terminal-status-pill" id="livestatus">Conectando…</span>
+        </div>
+        <div class="terminal-body" id="liverows"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- STICKY STEPS NAVIGATION & SEARCH -->
+  <div class="nav-wrapper">
+    <div class="container">
+      <div class="nav-toolbar">
+        <div class="nav-filters">
+          <button class="filter-btn active" data-filter="all">Todas as Etapas</button>
+          <button class="filter-btn" data-filter="auth">1–3: Busca & Detail</button>
+          <button class="filter-btn" data-filter="order">4b–8: Pedido & WS</button>
+          <button class="filter-btn" data-filter="pay">8b–11: Gateway & PIX</button>
+        </div>
+        <div class="nav-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="stepsearch" placeholder="Filtrar por parâmetro ou rota…" aria-label="Filtrar etapas">
+        </div>
+      </div>
+
+      <nav class="steps" id="stepnav">
+        <a href="#p1" data-cat="auth"><span class="n">1</span>authenticate</a>
+        <a href="#p2" data-cat="auth"><span class="n">2</span>search</a>
+        <a href="#p3" data-cat="auth"><span class="n">3</span>offer detail</a>
+        <a href="#p4" data-cat="order"><span class="n">4b</span>product_settings</a>
+        <a href="#p5" data-cat="order"><span class="n">5</span>histories</a>
+        <a href="#p6" data-cat="order"><span class="n">6</span>buy-now</a>
+        <a href="#p7" data-cat="order"><span class="n">7</span>websocket</a>
+        <a href="#p8" data-cat="order"><span class="n">8</span>summary</a>
+        <a href="#p8b" data-cat="pay"><span class="n">8b</span>escolher PIX</a>
+        <a href="#p9" data-cat="pay"><span class="n">9</span>pix: submit→redirect</a>
+        <a href="#p10" data-cat="pay"><span class="n">10</span>tazapay checkout</a>
+        <a href="#p11" data-cat="pay"><span class="n">11</span>cpf→copia-e-cola</a>
+      </nav>
+    </div>
+  </div>
+
+  <div class="container">
+    <main>
+
+      <!-- 1 -->
+      <section class="card" id="p1" data-cat="auth">
+        <div class="chead">
+          <span class="num">1</span>
+          <div class="chead-content">
+            <h2>Bootstrap de sessão</h2>
+            <div class="fn">Troca os 38 cookies do navegador por um JWT curto (~15 min). Sem ele, tudo depois falha — inclusive com <i>status 0</i> no offer detail.</div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-post">POST</span> https://www.g2g.com/api/authenticate-user</span>
+            <button class="copy" data-copy="raw-p1-req">copiar</button>
+          </div>
+          <pre id="raw-p1-req">{
+  "body": {},
+  "cookies_enviados": 38
+}</pre>
+
+          <div class="block-header">
+            <span class="lbl res">Response — 200 OK</span>
+            <button class="copy" data-copy="raw-p1-res">copiar</button>
+          </div>
+          <pre id="raw-p1-res">{
+  "code": 2000,
+  "payload": {
+    "user": {
+      "accessToken": "<span class="tok">eyJhbGciOiJIUzI1NiIs…(259 chars, JWT iat→exp ≈ 15min)</span>",
+      "userInfo": {
+        "userId": "1004386074",
+        "username": "SR77"
+        <span style="color:var(--text-muted)">// nome/email omitidos (PII)</span>
+      }
+    }
+  }
+}</pre>
+
+          <div class="deriva-box">
+            <span class="lbl deriva">Derivações do Fluxo →</span>
+            <div class="deriva-flow">
+              <span class="chip">accessToken</span>
+              <span class="arrow">→</span>
+              <span class="chip">header <b>authorization</b> em toda sls.g2g.com</span>
+              <span class="chip">userId 1004386074</span>
+              <span class="arrow">→</span>
+              <span class="chip">path /gcart/{userId}/… e ?buyer_id=</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section class="card" id="p2" data-cat="auth">
+        <div class="chead">
+          <span class="num">2</span>
+          <div class="chead-content">
+            <h2>Busca — ranking por unidade</h2>
+            <div class="fn">Fonte da verdade do <b>estimado</b>: <i>converted_unit_price</i> em BRL (já convertido). Nunca usar o display em USD.</div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-get">GET</span> https://sls.g2g.com/v3/offer/search?seo_term=wow-gold&amp;country=BR&amp;currency=BRL&amp;page_size=100&amp;page=1&amp;sort=recommended_v2&amp;v=v2</span>
+            <button class="copy" data-copy="raw-p2-res">copiar</button>
+          </div>
+          <div class="block-header" style="margin-top: 4px;">
+            <span class="lbl res">Response — 200 · 100 ofertas <span class="st">ex: topo EternalStock</span></span>
+          </div>
+          <pre id="raw-p2-res">{
+  "offer_id": "G1744088751310KJ",
+  "username": "EternalStock",
+  "seller_id": "493848",
+  "converted_unit_price": 0.248443,
+  "offer_currency": "USD",
+  "available_qty": 29735667,
+  "min_qty": 200,
+  "relation_id": "lgc_1_2299_ac3f85c1-7562-437e-b125-e89576b9a38e"
+}</pre>
+
+          <div class="deriva-box">
+            <span class="lbl deriva">Derivações do Fluxo →</span>
+            <div class="deriva-flow">
+              <span class="chip">offer_id / seller_id / relation_id</span>
+              <span class="arrow">→</span>
+              <span class="chip">passos 3, 5, 6</span>
+              <span class="chip">converted_unit_price 0.248443</span>
+              <span class="arrow">→</span>
+              <span class="chip">units = ⌊3500 / preço⌋</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section class="card" id="p3" data-cat="auth">
+        <div class="chead">
+          <span class="num">3</span>
+          <div class="chead-content">
+            <h2>Offer detail — números frescos</h2>
+            <div class="fn">Preço e estoque flutuam com frequência (câmbio). Sempre refetch antes do buy-now. Traz também os métodos de entrega disponíveis.</div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-get">GET</span> https://sls.g2g.com/v3/offer/G1744088792265KM?currency=BRL&amp;country=BR&amp;include_out_of_stock=1&amp;is_precheckout_page=1&amp;setState=false&amp;tree_version=v2</span>
+            <button class="copy" data-copy="raw-p3-res">copiar</button>
+          </div>
+          <div class="block-header" style="margin-top: 4px;">
+            <span class="lbl res">Response — 200 OK</span>
+          </div>
+          <pre id="raw-p3-res">{
+  "offer_id": "G1744088792265KM",
+  "relation_id": "lgc_1_2299_ac3f85c1-7562-437e-b125-e89576b9a38e",
+  "service_id": "lgc_service_1",
+  "brand_id": "lgc_game_2299",
+  "region_id": "ac3f85c1-7562-437e-b125-e89576b9a38e",
+  "available_qty": 9253171,
+  "min_qty": 200,
+  "unit_price": 0.0479,
+  "offer_currency": "USD",
+  "converted_unit_price": 0.24844293,
+  "unit_name": "K Gold",
+  "delivery_method_details": [
+    { "code": "guild_bank" },
+    { "code": "mail" <span style="color:var(--color-ok)">/* ← escolhido */</span> },
+    { "code": "auction_house" },
+    { "code": "face_to_face_trade" }
+  ]
+}</pre>
+
+          <div class="deriva-box">
+            <span class="lbl deriva">Derivações do Fluxo →</span>
+            <div class="deriva-flow">
+              <span class="chip">relation_id</span>
+              <span class="arrow">→</span>
+              <span class="chip">passo 5</span>
+              <span class="chip">service_id + brand_id</span>
+              <span class="arrow">→</span>
+              <span class="chip">passo 4b</span>
+              <span class="chip">delivery_method_id (mail)</span>
+              <span class="arrow">→</span>
+              <span class="chip">passo 6</span>
+            </div>
+          </div>
+          <div class="note">
+            <b>Conta da meta:</b> 3500 / 0.24844293 ≈ 14.087 un. A compra-teste usou <b>2000 un</b> (2000 × 0.24844293 = 496,89 BRL).
+          </div>
+        </div>
+      </section>
+
+      <!-- 4b -->
+      <section class="card" id="p4" data-cat="order">
+        <div class="chead">
+          <span class="num">4b</span>
+          <div class="chead-content">
+            <h2>Product settings — de onde sai o collection_id</h2>
+            <div class="fn">Endpoint dedicado por service/brand. Cada delivery_method define os seus próprios form_attributes.</div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-get">GET</span> https://sls.g2g.com/offer/product_settings/service/lgc_service_1/brand/lgc_game_2299/product_settings</span>
+            <button class="copy" data-copy="raw-p4-res">copiar</button>
+          </div>
+          <div class="block-header" style="margin-top: 4px;">
+            <span class="lbl res">Response — 200 OK</span>
+          </div>
+          <pre id="raw-p4-res">payload.results[0]  <span style="color:var(--text-muted)">// product_settings_type: delivery_method</span>
+  └─ product_settings_id = 8bd2d339… <span style="color:var(--text-muted)">// == delivery_method_id (mail) do detail</span>
+     └─ form_attributes[0] = {
+          "attribute_key": "delivery_info_1",
+          "collection_id": "4fc60dc7",
+          "label": { "en": "World Of Warcraft - Character Name" }
+        }</pre>
+
+          <div class="deriva-box">
+            <span class="lbl deriva">Derivações do Fluxo →</span>
+            <div class="deriva-flow">
+              <span class="chip">collection_id 4fc60dc7</span>
+              <span class="arrow">→</span>
+              <span class="chip">delivery_info[] no passo 6</span>
+            </div>
+          </div>
+          <div class="note">
+            <b>O <i>value</i> (ex “LEA”) é INPUT do comprador:</b> Nome do personagem. Não nasce de API nenhuma; a API exige como <b>parâmetro por compra</b> (<code style="font-family:var(--font-mono);color:#fff">characterName</code>).
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section class="card" id="p5" data-cat="order">
+        <div class="chead">
+          <span class="num">5</span>
+          <div class="chead-content">
+            <h2>Checkout histories — trava de carrinho</h2>
+            <div class="fn">Precisa voltar vazio. Repare: o “product” aqui corresponde exatamente ao relation_id obtido no passo 3.</div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-get">GET</span> https://sls.g2g.com/gcart/1004386074/product/lgc_1_2299_ac3f85c1-7562-437e-b125-e89576b9a38e/checkout_histories</span>
+            <button class="copy" data-copy="raw-p5-res">copiar</button>
+          </div>
+          <div class="block-header" style="margin-top: 4px;">
+            <span class="lbl res">Response — 200 OK</span>
+          </div>
+          <pre id="raw-p5-res">{ "checkout_histories": [] }   <span style="color:var(--color-ok)">✔ vazio = sem trava de checkout, pode comprar</span></pre>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section class="card" id="p6" data-cat="order">
+        <div class="chead">
+          <span class="num">6</span>
+          <div class="chead-content">
+            <h2>Buy-now — cria 1 pedido REAL por execução</h2>
+            <div class="fn">Ordem de chaves idêntica à do frontend. <i>unit_price</i> vai na moeda da oferta (USD); o total em BRL é calculado no passo 8. <b>Não é idempotente: cada POST gera <i>auth_token</i> + <i>order_id</i> novos.</b></div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-post">POST</span> https://sls.g2g.com/gcart/buy-now</span>
+            <button class="copy" data-copy="rawbuy">copiar</button>
+          </div>
+          <pre id="rawbuy">{
+  "product_type": "Offer",
+  "product": {
+    "offer_id": "G1744088792265KM",
+    "quantity": 2000,
+    "unit_price": 0.0479,
+    "currency": "USD",
+    "seller_id": "493848"
+  },
+  "currency": "BRL",
+  "language": "pt",
+  "user_id": "1004386074",
+  "checkout_info": {
+    "delivery_method_details": {
+      "delivery_method_id": "8bd2d339-44a1-4564-b19c-ba932f33cfb7",
+      "delivery_info": [
+        { "collection_id": "4fc60dc7", "value": "LEA" }
+      ],
+      "remember": false
+    },
+    "gp_checkout_info": {
+      "buyer_gp_balance": 0,
+      "gp_used": 0,
+      "gp_used_in_checkout_currency": 0
+    }
+  }
+}</pre>
+
+          <div class="block-header">
+            <span class="lbl res">Response — 200 (confirmado no HAR 41M)</span>
+            <button class="copy" data-copy="raw-p6-res">copiar</button>
+          </div>
+          <pre id="raw-p6-res">{
+  "code": 2000,
+  "payload": {
+    "auth_token": "<span class="tok">1a03…8ec5 (32hex, uso único)</span>",
+    "checkout_version": "v4"
+  }
+}</pre>
+
+          <div class="deriva-box">
+            <span class="lbl deriva">Derivações do Fluxo →</span>
+            <div class="deriva-flow">
+              <span class="chip">auth_token</span>
+              <span class="arrow">→</span>
+              <span class="chip">query ?token= do passo 7 (mesmo valor, validado)</span>
+            </div>
+          </div>
+          <div class="note">
+            HAR <code style="font-family:var(--font-mono);color:#fff">www.g2g.com_Archive [26-09-08 16-11-57]</code> [236] trouxe o body que faltava na captura antiga: <code style="font-family:var(--font-mono);color:#fff">auth_token fcb4…12f3 + checkout_version v4</code> (200un, value <code style="font-family:var(--font-mono);color:#fff">l3w</code>). <b>Cada POST = 1 pedido novo:</b> <code style="font-family:var(--font-mono);color:#fff">1788894440354GMGK</code> (2000un) → <code style="font-family:var(--font-mono);color:#fff">1788897862001VSXQ</code> (200un = 49.69) → <code style="font-family:var(--font-mono);color:#fff">1788898616101ZWXU</code> (200un = 49.69, run da API). O token antigo nunca é reutilizado.
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section class="card" id="p7" data-cat="order">
+        <div class="chead">
+          <span class="num">7</span>
+          <div class="chead-content">
+            <h2>WebSocket — nasce 1 pedido novo por token</h2>
+            <div class="fn">URL exata do frontend (sem path adicional). Um único frame com order_id → fecha e segue para o gateway de pagamento. <b>Token de uso único: reutilização gera timeout ou erro.</b></div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-ws">WSS</span> wss://gcart-ws.g2g.com?token=<span class="tok">1a03…8ec5</span></span>
+            <button class="copy" data-copy="raw-p7-res">copiar</button>
+          </div>
+          <div class="block-header" style="margin-top: 4px;">
+            <span class="lbl res">Frame recebido — type: message</span>
+          </div>
+          <pre id="raw-p7-res">{
+  "order_id": "1788894440354GMGK",
+  "pipwave_token": "<span class="tok">le14…XNQa (32)</span>",
+  "pipwave_api_key": "<span class="tok">FUN3…B6UL (40)</span>",
+  "redirect_url": "https://secure.pipwave.com/pay?…",
+  "code": 2000,
+  "type": "message"
+}</pre>
+
+          <div class="deriva-box">
+            <span class="lbl deriva">Derivações do Fluxo →</span>
+            <div class="deriva-flow">
+              <span class="chip">order_id</span>
+              <span class="arrow">→</span>
+              <span class="chip">passo 8 + /secure/payment?order_id=…</span>
+            </div>
+          </div>
+          <div class="note">
+            Regras do frontend espelhadas no código: <b>message_code presente = erro</b>; sem order_id = erro; <b>payment_status “paid”</b> = redireciona tela de sucesso. Ruído devidamente ignorado na captura: Firebase anônimo e <b>sardine.ai (antifraude)</b> — comportamento esperado.
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section class="card" id="p8" data-cat="order">
+        <div class="chead">
+          <span class="num">8</span>
+          <div class="chead-content">
+            <h2>Summary — o total REAL</h2>
+            <div class="fn">Fonte definitiva da meta. É este total que decide parar em ≥ 3500, e não a estimativa preliminar da busca.</div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-get">GET</span> https://sls.g2g.com/order/1788894440354GMGK/summary?include_items=1&amp;buyer_id=1004386074&amp;include_ga_info=1</span>
+            <button class="copy" data-copy="raw-p8-res">copiar</button>
+          </div>
+          <div class="block-header" style="margin-top: 4px;">
+            <span class="lbl res">Response — 200 OK</span>
+          </div>
+          <pre id="raw-p8-res">{
+  "order_id": "1788894440354GMGK",
+  "payment_status": "to_pay",
+  "sub_total": "496.89",
+  "checkout_total_amount": "496.89",
+  "total": "496.89",
+  "checkout_currency": "BRL",
+  "auto_cancel_at": 1788901640000,   <span style="color:var(--text-muted)">// ≈ +2h, expira sozinho</span>
+  "order_items": [{
+    "seller_id": "493848",
+    "items": [{
+      "offer_id": "G1744088792265KM",
+      "purchased_qty": 2000,
+      "offer_unit_price": "0.05",
+      "offer_currency": "USD",
+      "unit_name": "K Gold"
+    }]
+  }]
+}</pre>
+        </div>
+      </section>
+
+      <!-- 8b -->
+      <section class="card" id="p8b" data-cat="pay">
+        <div class="chead">
+          <span class="num">8b</span>
+          <div class="chead-content">
+            <h2>Escolha do método — clicar em PIX</h2>
+            <div class="fn">A tela de pagamento abre no <b>cartão</b> por padrão (<code style="font-family:var(--font-mono)">autoopen_cat: cat_1</code>). É aqui que você <b>clica em PIX</b>. O menu é retornado por <code style="font-family:var(--font-mono)">get-config</code>.</div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-post">POST</span> https://api.pipwave.com/payment/sdk/{pipwave_token}/get-config</span>
+            <button class="copy" data-copy="raw-p8b-req">copiar</button>
+          </div>
+          <pre id="raw-p8b-req">{
+  "timestamp": 1788907377,
+  "api_key": "FUN3…B6UL",
+  "referrer_url": "https://www.g2g.com//categories/wow-gold",
+  "location_url": "https://www.g2g.com/secure/payment?order_id=…&amp;pipwave_token=<span class="tok">6WuT…cqlH</span>&amp;…"
+}</pre>
+
+          <div class="block-header">
+            <span class="lbl res">Response — 200 · Menu de Opções (payable_amount 49.72 BRL)</span>
+            <button class="copy" data-copy="raw-p8b-res">copiar</button>
+          </div>
+          <pre id="raw-p8b-res">cat_1  Credit &amp; Debit Card   <span style="color:var(--text-muted)">/* abre sozinho por padrão */</span>
+  ├─ id 891 · airwallex.visa_mor · Visa
+  └─ id 892 · airwallex.mastercard_mor · Mastercard
+cat_13 Cryptocurrency (13 moedas: BTC, ETH, USDT×5, USDC×4, Binance Pay…)
+cat_2  Online Banking
+  └─ <b>id 856 · tazapay.PIX-QR · PIX</b>  <span style="color:var(--color-ok)">← CLIQUE OBRIGATÓRIO AQUI</span></pre>
+
+          <div class="deriva-box">
+            <span class="lbl deriva">Derivações do Fluxo →</span>
+            <div class="deriva-flow">
+              <span class="chip">clicar em PIX (id 856)</span>
+              <span class="arrow">→</span>
+              <span class="chip">get-payment-method-details (passo 9)</span>
+            </div>
+          </div>
+          <div class="note">
+            Sem esse clique o fluxo não avança: o <code style="font-family:var(--font-mono)">submit-payment</code> só existe após a seleção do método. Para cartão, o clique seria em <code style="font-family:var(--font-mono)">airwallex.visa_mor / mastercard_mor</code> (etapa do 3DS em seguida).
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section class="card" id="p9" data-cat="pay">
+        <div class="chead">
+          <span class="num">9</span>
+          <div class="chead-content">
+            <h2>Pix — submit → redirect (ramo pagamento)</h2>
+            <div class="fn">Ao escolher <b>PIX</b>, o SDK pipwave consolida a cobrança e redireciona para a tela Tazapay. Verificado na extensão com request e response completos.</div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-post">POST</span> https://api.pipwave.com/payment/sdk/{pipwave_token}/get-payment-method-details</span>
+            <button class="copy" data-copy="raw-p9-req1">copiar</button>
+          </div>
+          <pre id="raw-p9-req1">{
+  "timestamp": 1788907331,
+  "api_key": "FUN3…B6UL",
+  "version": "pipwave HPP v1.0 pwsdk v2.1.0",
+  "payment_method_code": "tazapay.PIX-QR"
+}</pre>
+
+          <div class="block-header">
+            <span class="lbl res">Response — 200 (Total com taxa)</span>
+            <button class="copy" data-copy="raw-p9-res1">copiar</button>
+          </div>
+          <pre id="raw-p9-res1">{
+  "status": 200,
+  "message": {
+    "amount": {
+      "surcharge": 2.98,
+      "tax": 0,
+      "total": 52.7,
+      "total_formatted": "&lt;span…&gt;52.70&lt;/span&gt; BRL",
+      "currency": "BRL",
+      "handling_fees": "2.98",
+      "final_total": "52.70"
+    },
+    "required_param": [],
+    "checkbox_param": []
+  },
+  "code": "200"
+}</pre>
+
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-post">POST</span> …/submit-payment</span>
+            <button class="copy" data-copy="rawpix">copiar</button>
+          </div>
+          <pre id="rawpix">{
+  "timestamp": 1788907338,
+  "api_key": "FUN3…B6UL",
+  "version": "pipwave HPP v1.0 pwsdk v2.1.0",
+  "payment_method_code": "tazapay.PIX-QR",
+  "user_input": {
+    "pw-phone-verification-token": "",
+    "disclaimer_message_agreement": "1",
+    "tazapay_session_id": "8a33…aa41"
+  }
+}</pre>
+
+          <div class="block-header">
+            <span class="lbl res">Response — 200 OK</span>
+            <button class="copy" data-copy="raw-p9-res2">copiar</button>
+          </div>
+          <pre id="raw-p9-res2">{
+  "status": 200,
+  "message": "",
+  "redirect_url": "https://secure.pipwave.com/load?token=<span class="tok">Qsxk…bqYX</span>",
+  "params": [],
+  "code": "200"
+}</pre>
+
+          <div class="deriva-box">
+            <span class="lbl deriva">Derivações do Fluxo →</span>
+            <div class="deriva-flow">
+              <span class="chip">tazapay_session_id</span>
+              <span class="arrow">→</span>
+              <span class="chip">device-intel shield-fp (enviado anteriormente)</span>
+              <span class="chip">redirect_url</span>
+              <span class="arrow">→</span>
+              <span class="chip">302 load?token= → load/checkout?pw_id=…&amp;token_id=… (passo 10)</span>
+            </div>
+          </div>
+          <div class="note">
+            Ordem exata: <code style="font-family:var(--font-mono)">get-config → device-intel → get-payment-method-details → submit-payment → prepayment-check</code> (<code style="font-family:var(--font-mono)">challenge: null</code> no Pix) → <b>302</b>. <code style="font-family:var(--font-mono)">pw_id</code> real observado: <code style="font-family:var(--font-mono)">pw20260909072713965</code>. Cada token gera um <code style="font-family:var(--font-mono)">pw_id</code> novo.
+          </div>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section class="card" id="p10" data-cat="pay">
+        <div class="chead">
+          <span class="num">10</span>
+          <div class="chead-content">
+            <h2>Tazapay checkout — a "outra tela"</h2>
+            <div class="fn">Checkout hospedado pela Tazapay. É nesta tela que é solicitado o <b>CPF</b> e disponibilizado o Pix copia-e-cola.</div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-get">GET</span> https://checkout.tazapay.com/transaction/{id}</span>
+            <button class="copy" data-copy="raw-p10-res">copiar</button>
+          </div>
+          <pre id="raw-p10-res">id real de exemplo: ymVXJICIWZMwmpJIw-3K4qea5NrSw2Mihj6QvcT-R1M=
+shell: main-D7kwmRAm.js · Main-tRGMWr4_.js · shieldHelper · paymentNomenclature
+pollers: PaymentDetailPoller · PaymentAwaiting (consultam status periodicamente)</pre>
+
+          <div class="deriva-box">
+            <span class="lbl deriva">Derivações do Fluxo →</span>
+            <div class="deriva-flow">
+              <span class="chip">tela de CPF</span>
+              <span class="arrow">→</span>
+              <span class="chip">POST com CPF → response com BR Code (passo 11)</span>
+            </div>
+          </div>
+          <div class="note">
+            Antifraude atuante: <code style="font-family:var(--font-mono)">device_score 50 · is_bot true</code> no Chromium do Playwright (não bloqueou o Pix). No cartão isso pode acarretar challenge 3DS.
+          </div>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section class="card" id="p11" data-cat="pay">
+        <div class="chead">
+          <span class="num">11</span>
+          <div class="chead-content">
+            <h2>CPF → Pix copia-e-cola <span class="st" style="border-color:var(--color-ok);color:var(--color-ok);">Captura Validada ao Vivo</span></h2>
+            <div class="fn">Endpoint definitivo: submissão do <b>CPF</b> via <code style="font-family:var(--font-mono)">POST /v3/payin/attempt</code> e retorno do <b>BR Code oficial (Stark Infra / Tazapay)</b> em Base64.</div>
+          </div>
+        </div>
+        <div class="cbody">
+          <div class="block-header">
+            <span class="lbl req"><span class="method-badge m-post">POST</span> https://service.tazapay.com/v3/payin/attempt</span>
+            <button class="copy" data-copy="raw-p11-req">copiar</button>
+          </div>
+          <pre id="raw-p11-req">{
+  "payin_id": "chk_dagd2mdtnl4jvba6ea70",
+  "payment_method_type": "pix_brl",
+  "psp_metadata": {
+    "document_id": "21275117783",
+    "document_type": "cpf"
+  },
+  "redirect_url": "https://checkout.tazapay.com/transaction/0tNsi7qBSRhxhqvw1bD6nTy1FhTrc7dkSPMRuUK4I0U=",
+  "device_fingerprint": "0bae6f20abfe11f1afcba3f38a56c7a9"
+}</pre>
+
+          <div class="block-header">
+            <span class="lbl res">Response — 200 OK (Payload com QR Code em Base64)</span>
+            <button class="copy" data-copy="raw-p11-res">copiar</button>
+          </div>
+          <pre id="raw-p11-res">{
+  "status": "success",
+  "data": {
+    "payment_attempt_id": "pat_dagd6iuvrq32n14nd120",
+    "psp_reference_id": "118445783",
+    "instrument": {
+      "expiry_date": "2026-09-09T03:37:29Z",
+      "qr_code": "MDAwMjAxMDEwMjEyMjY3OTAwMTRici5nb3YuYmNiLnBpeDI1NTdicmNvZGUuc3RhcmtpbmZyYS5jb20vdjIvZTQzZjMyZjJmNjA1NDA0MGE5NzcyMThiZWFiZmRmMWI1MjA0MDAwMDUzMDM5ODY1ODAyQlI1OTI1V0VwYXltZW50cyBUYXphcGF5IFB0ZSBMdDYwMDhDdXJpdGliYTYyMDcwNTAzKioqNjMwNDRGQ0I="
+    }
+  }
+}</pre>
+
+          <div class="block-header" style="margin-top:10px;">
+            <span class="lbl res" style="color:#34d399;border-color:rgba(52,211,153,0.4)">BR Code Decodificado — Pix Copia-e-Cola Puro</span>
+            <button class="copy" data-copy="raw-p11-brcode">copiar</button>
+          </div>
+          <pre id="raw-p11-brcode" style="color:#34d399;font-weight:600;word-break:break-all;white-space:pre-wrap;">00020101021226790014br.gov.bcb.pix2557brcode.starkinfra.com/v2/e43f32f2f6054040a977218beabfdf1b5204000053039865802BR5925WEpayments Tazapay Pte Lt6008Curitiba62070503***63044FCB</pre>
+
+          <div class="deriva-box">
+            <span class="lbl deriva">Derivações do Fluxo →</span>
+            <div class="deriva-flow">
+              <span class="chip">token da URL</span>
+              <span class="arrow">→</span>
+              <span class="chip">header x-session-token</span>
+              <span class="chip">GET /v3/payin/session/{token}</span>
+              <span class="arrow">→</span>
+              <span class="chip">payin_id</span>
+              <span class="chip">POST /v3/payin/attempt</span>
+              <span class="arrow">→</span>
+              <span class="chip">base64_decode(qr_code) = Pix Copia-e-Cola</span>
+            </div>
+          </div>
+          <div class="note">
+            <b>Fluxo 100% Mapeado de Ponta a Ponta:</b> O token em Base64 retornado pelo gateway é convertido diretamente na linha digitável padrão EMV/BCB do Pix.
+          </div>
+        </div>
+      </section>
+
+      <!-- VERDICT SECTION -->
+      <div class="verdict">
+        <div class="verdict-header">
+          <h2>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>Veredito da Validação</span>
+          </h2>
+          <span class="verdict-badge">Código Validado · Comportamento por Design</span>
+        </div>
+
+        <div class="verdict-codes">
+          <code>PENDING — 200un K Gold | to_pay 49.69 BRL, expira via auto_cancel_at (~2h) | HTTP 200</code>
+          <code>HAR 16-11-57 [236/251]: 1788897862001VSXQ | 49.69 BRL to_pay | HTTP 200</code>
+          <code>API Live: 1788898616101ZWXU | 49.69 BRL to_pay | HTTP 200</code>
+        </div>
+
+        <p>
+          O status não é <b>APPROVED</b> nem <b>DECLINED</b> porque nenhum débito bancário foi executado: o pipeline foi rigorosamente validado até a emissão do pedido <i>to_pay</i>, que expira de forma autônoma. <b>Executar novamente equivale a criar um novo pedido, estritamente por design:</b> o backend da G2G emite <i>auth_token</i> e <i>order_id</i> inéditos a cada requisição <code style="font-family:var(--font-mono)">POST /gcart/buy-now</code>. Para atingir a meta de R$ 3.500, o algoritmo recalcula <code style="font-family:var(--font-mono)">units = ⌊budget / converted_unit_price⌋</code> utilizando a cotação em tempo real do passo 3 e confirma os valores finais no summary do passo 8.
+        </p>
+      </div>
+
+    </main>
+
+    <!-- FOOTER EVIDENCES -->
+    <footer class="app-footer">
+      <p>
+        <b>Evidências Técnicas:</b>
+        <code>captures/20260908_150049/</code> (buy-now_request_raw.txt · ws_frames.jsonl · summary_*.json) ·
+        <code>www.g2g.com_Archive [26-09-08 16-11-57].har</code> ([236] buy-now 200un l3w → auth_token + checkout_version v4 · [251] summary 49.69 BRL) ·
+        <code>API live 1788898616101ZWXU = 49.69 BRL to_pay</code>
+      </p>
+      <p>
+        <b>Arquitetura de Código:</b>
+        <code>src/g2g.ts</code> ·
+        <code>POST /api/optimize-g2g</code> (cotação, idempotente e segura) ·
+        <code>POST /api/buy-g2g {"characterName": …}</code> (gera 1 pedido real to_pay por invocação) ·
+        PIX: <code>www.g2g.com.har</code> + extensão <code>auto_22-43-57</code>
+      </p>
+    </footer>
+  </div>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    // -------------------------------------------------------------
+    // NAVIGATION SPY, FILTERS & COPY MECHANISM
+    // -------------------------------------------------------------
+    const stepNav = document.getElementById('stepnav');
+    const links = [...stepNav.querySelectorAll('a')];
+    const cards = [...document.querySelectorAll('section.card')];
+    const secs = links.map(a => document.querySelector(a.getAttribute('href')));
+
+    // Scroll spy for active step
+    addEventListener('scroll', () => {
+      let cur = 0;
+      secs.forEach((s, i) => {
+        if (s && s.getBoundingClientRect().top < 180) cur = i;
+      });
+      links.forEach((a, i) => a.classList.toggle('active', i === cur));
+    }, { passive: true });
+
+    // Universal copy buttons
+    document.querySelectorAll('button.copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.copy;
+        const targetEl = document.getElementById(targetId);
+        if (!targetEl) return;
+
+        const textToCopy = targetEl.innerText || targetEl.textContent;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          const originalText = btn.innerHTML;
+          btn.classList.add('copied');
+          btn.innerHTML = '✓ copiado!';
+          setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.innerHTML = originalText;
+          }, 1800);
+        }).catch(err => {
+          console.error('Falha ao copiar:', err);
+        });
+      });
+    });
+
+    // Category filtering
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const cat = btn.dataset.filter;
+        cards.forEach(card => {
+          if (cat === 'all' || card.dataset.cat === cat) {
+            card.style.display = '';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+        links.forEach(a => {
+          if (cat === 'all' || a.dataset.cat === cat) {
+            a.style.display = '';
+          } else {
+            a.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // Search filter
+    const searchInput = document.getElementById('stepsearch');
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.toLowerCase().trim();
+      cards.forEach(card => {
+        const text = card.innerText.toLowerCase();
+        const matches = text.includes(q);
+        card.style.display = matches ? '' : 'none';
+        
+        // sync nav link
+        const targetLink = links.find(a => a.getAttribute('href') === '#' + card.id);
+        if (targetLink) targetLink.style.display = matches ? '' : 'none';
+      });
+    });
+
+    // -------------------------------------------------------------
+    // LIVE STREAM ENGINE (SSE)
+    // -------------------------------------------------------------
+    const API = 'http://localhost:3001';
+    const liveBtn = document.getElementById('livebtn');
+    const liveMain = document.getElementById('livemain');
+    const liveRows = document.getElementById('liverows');
+    const liveStatus = document.getElementById('livestatus');
+
+    const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    function appendRow(id, html, rowClass = 'row-success') {
+      let d = document.getElementById(id);
+      if (!d) {
+        d = document.createElement('div');
+        d.className = 'lrow ' + rowClass;
+        d.id = id;
+        liveRows.appendChild(d);
+      } else {
+        d.className = 'lrow ' + rowClass;
+      }
+      d.innerHTML = html;
+      liveRows.scrollTop = liveRows.scrollHeight;
+      return d;
+    }
+
+    function renderStep(e) {
+      const formattedData = typeof e.data === 'object' ? JSON.stringify(e.data, null, 2) : String(e.data);
+      let extraLink = '';
+      if (e.step === '10' && e.data && e.data.checkoutUrl) {
+        extraLink = `<div style="margin-top:8px;"><a href="${esc(e.data.checkoutUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#34d399;color:#0f172a;font-weight:700;padding:6px 14px;border-radius:4px;text-decoration:none;font-size:12px;">🔗 Abrir Checkout Tazapay (Tela de CPF) ↗</a></div>`;
+      }
+      if (e.step === '11' && e.data && e.data.brCode) {
+        extraLink = `
+          <div style="margin-top:10px;padding:10px 12px;background:#0d1f18;border:1px solid #059669;border-radius:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <b style="color:#34d399;font-size:12px;">⚡ PIX COPIA-E-COLA (BR CODE OFICIAL):</b>
+              <button onclick="navigator.clipboard.writeText('${esc(e.data.brCode)}');this.innerText='✓ Copiado!';" style="background:#34d399;color:#0f172a;border:none;padding:4px 10px;border-radius:4px;font-weight:700;cursor:pointer;font-size:11px;">Copiar Pix</button>
+            </div>
+            <div style="font-family:var(--font-mono);color:#6ee7b7;font-size:11px;word-break:break-all;user-select:all;">${esc(e.data.brCode)}</div>
+          </div>`;
+      }
+      appendRow(
+        'r-' + e.step,
+        `<span class="ldot">✅</span>
+         <div class="lcontent">
+           <b>Passo ${esc(e.step)}: ${esc(e.name)}</b>
+           <div class="ldata">${esc(formattedData)}</div>
+           ${extraLink}
+         </div>
+         <span class="lms">${e.ms}ms</span>`,
+        'row-success'
+      );
+      liveStatus.textContent = 'Executando: ' + e.name + '…';
+    }
+
+    // Live Read-only Simulation
+    liveBtn.addEventListener('click', () => {
+      const budget = Math.max(1, Number(document.getElementById('livebudget').value) || 3500);
+      liveBtn.disabled = true;
+      liveMain.hidden = false;
+      liveRows.innerHTML = '';
+      liveStatus.textContent = 'Conectando ao servidor ' + API + '…';
+      liveMain.scrollIntoView({ behavior: 'smooth' });
+
+      let gotResponse = false;
+      const es = new EventSource(API + '/api/optimize-g2g/live?budget=' + encodeURIComponent(budget) + '&seoTerm=wow-gold');
+      
+      const timeout = setTimeout(() => {
+        if (!gotResponse) {
+          es.close();
+          liveStatus.textContent = 'API offline? Execute: cd /home/d/Documents/g2g && npm run api';
+          liveBtn.disabled = false;
+        }
+      }, 8000);
+
+      es.onmessage = ev => {
+        gotResponse = true;
+        clearTimeout(timeout);
+        const e = JSON.parse(ev.data);
+
+        if (e.type === 'start') {
+          liveStatus.textContent = `Orçamento: R$ ${e.budget} · ${esc(e.seoTerm)} · ${esc(e.currency)}/${esc(e.country)}`;
+          appendRow('r-start', '<span class="ldot">🚀</span><div class="lcontent"><b>Iniciando fluxo de cotação</b> (modo somente leitura, sem pedido)…</div>', 'row-start');
+        } else if (e.type === 'step') {
+          renderStep(e);
+        } else if (e.type === 'done') {
+          clearTimeout(timeout);
+          es.close();
+          liveBtn.disabled = false;
+          liveStatus.textContent = `Concluído com sucesso em ${e.totalMs}ms`;
+          const b = e.best;
+          appendRow(
+            'r-done',
+            `<span class="ldot">🏆</span>
+             <div class="lcontent">
+               <b>Melhor Oferta: ${esc(b.sellerName)}</b> · ${b.unitsToBuy.toLocaleString('pt-BR')} un ≈ R$ ${b.totalCost.toFixed(2)}
+               <span style="color:var(--color-warn);font-size:12px;">(Estimativa inicial — valor final confirmado no passo 8)</span>
+               <div class="ldata">Offer ID: ${esc(b.offerId)} · Estoque: ${b.inStock.toLocaleString('pt-BR')} · Mínimo: ${b.minQty}</div>
+             </div>
+             <span class="lms">${e.totalMs}ms</span>`,
+            'row-done'
+          );
+        } else if (e.type === 'error') {
+          clearTimeout(timeout);
+          es.close();
+          liveBtn.disabled = false;
+          liveStatus.textContent = 'Erro: ' + e.error;
+          appendRow('r-error', `<span class="ldot">❌</span><div class="lcontent"><b style="color:var(--color-err)">Erro na execução:</b> ${esc(e.error)}</div>`, 'row-start');
+        }
+      };
+
+      es.onerror = () => {
+        if (!gotResponse) {
+          clearTimeout(timeout);
+          es.close();
+          liveStatus.textContent = 'API offline? Execute: cd /home/d/Documents/g2g && npm run api';
+          liveBtn.disabled = false;
+        }
+      };
+    });
+
+    // -------------------------------------------------------------
+    // PAYMENT METHOD SELECTION (PIX vs Card)
+    // -------------------------------------------------------------
+    let payMethod = null;
+    const pixBtn = document.getElementById('paypixbtn');
+    pixBtn.addEventListener('click', () => {
+      payMethod = 'pix';
+      pixBtn.classList.add('sel');
+      liveStatus.textContent = 'Método selecionado: PIX (tazapay) — passos 8b → 9 → 10 → 11';
+      liveMain.hidden = false;
+    });
+
+    // -------------------------------------------------------------
+    // REAL LIVE PURCHASE (Steps 1–8: Creates to_pay order)
+    // -------------------------------------------------------------
+    const buyBtn = document.getElementById('buylivebtn');
+    buyBtn.addEventListener('click', () => {
+      const char = document.getElementById('livechar').value.trim();
+      const qty = document.getElementById('liveqty').value.trim();
+      const cpf = document.getElementById('livecpf') ? document.getElementById('livecpf').value.trim() : '';
+      const confirmed = document.getElementById('liveconfirm').checked;
+
+      if (payMethod !== 'pix') {
+        liveStatus.textContent = 'Selecione o botão PIX antes de prosseguir (cartão disponível após passo 11).';
+        liveMain.hidden = false;
+        liveMain.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      if (!char) {
+        liveStatus.textContent = 'Informe o nome do personagem para entrega antes de comprar.';
+        liveMain.hidden = false;
+        liveMain.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      if (!confirmed) {
+        liveStatus.textContent = 'Marque a confirmação de que este pedido é real antes de prosseguir.';
+        liveMain.hidden = false;
+        liveMain.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+
+      const budget = Math.max(1, Number(document.getElementById('livebudget').value) || 3500);
+      buyBtn.disabled = true;
+      liveBtn.disabled = true;
+      liveMain.hidden = false;
+      liveRows.innerHTML = '';
+      liveStatus.textContent = 'Iniciando emissão do pedido real…';
+      liveMain.scrollIntoView({ behavior: 'smooth' });
+
+      let gotResponse = false;
+      let url = API + '/api/buy-g2g/live?characterName=' + encodeURIComponent(char) + '&budget=' + encodeURIComponent(budget) + '&seoTerm=wow-gold';
+      if (qty) url += '&quantity=' + encodeURIComponent(qty);
+      if (payMethod) url += '&paymentMethod=' + encodeURIComponent(payMethod);
+      if (cpf) url += '&cpf=' + encodeURIComponent(cpf);
+
+      const es = new EventSource(url);
+      const timeout = setTimeout(() => {
+        if (!gotResponse) {
+          es.close();
+          liveStatus.textContent = 'API offline? Execute: cd /home/d/Documents/g2g && npm run api';
+          buyBtn.disabled = false;
+          liveBtn.disabled = false;
+        }
+      }, 10000);
+
+      es.onmessage = ev => {
+        gotResponse = true;
+        clearTimeout(timeout);
+        const e = JSON.parse(ev.data);
+
+        if (e.type === 'start') {
+          liveStatus.textContent = '⚠️ ' + e.aviso;
+          appendRow('r-start', '<span class="ldot">🚀</span><div class="lcontent"><b>Iniciando emissão de pedido real to_pay e checkout PIX</b>…</div>', 'row-start');
+        } else if (e.type === 'step') {
+          renderStep(e);
+        } else if (e.type === 'done') {
+          clearTimeout(timeout);
+          es.close();
+          buyBtn.disabled = false;
+          liveBtn.disabled = false;
+          liveStatus.textContent = `Pedido ${e.orderId} emitido com status ${e.paymentStatus} — Transição para Checkout Tazapay (Passos 8-11 concluídos em ${e.totalMs}ms)`;
+          const pixBox = e.pixCopiaECola ? `
+            <div style="margin-top:12px;padding:12px 14px;background:#062b1b;border:1px solid #10b981;border-radius:6px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                <b style="color:#34d399;font-size:13px;">⚡ PIX COPIA-E-COLA PRONTO P/ PAGAMENTO (Passo 11):</b>
+                <button onclick="navigator.clipboard.writeText('${esc(e.pixCopiaECola)}');this.innerText='✓ Copiado!';" style="background:#10b981;color:#022c22;font-weight:700;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;">📋 Copiar Código Pix</button>
+              </div>
+              <div style="font-family:var(--font-mono);color:#a7f3d0;background:#021e14;padding:8px;border-radius:4px;word-break:break-all;font-size:11px;user-select:all;">${esc(e.pixCopiaECola)}</div>
+              ${e.pixExpiryDate ? `<div style="font-size:11px;color:#6ee7b7;margin-top:6px;">⏳ Vencimento: ${esc(e.pixExpiryDate)}</div>` : ''}
+            </div>` : '';
+          const checkoutLink = e.checkoutUrl ? `
+            <div style="margin-top:12px;padding:12px 14px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.35);border-radius:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+              <div>
+                <b style="color:var(--color-ok);font-size:14px;">🎯 Checkout Tazapay Liberado (Passo 10 → 11):</b>
+                <span style="color:var(--text-secondary);font-size:12px;display:block;margin-top:2px;">URL direta da transação na Tazapay:</span>
+              </div>
+              <a href="${esc(e.checkoutUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#34d399;color:#0f172a;font-weight:700;border-radius:5px;text-decoration:none;font-size:13px;box-shadow:0 2px 8px rgba(52,211,153,0.3);">
+                <span>Abrir Checkout Tazapay</span> ↗
+              </a>
+            </div>` : '';
+          appendRow(
+            'r-done',
+            `<span class="ldot">🧾</span>
+             <div class="lcontent">
+               <b style="color:#34d399">FLUXO ATÉ PIX COPIA-E-COLA CONCLUÍDO (Passos 8–11): R$ ${e.real} ${esc(e.currency)}</b>
+               <span style="color:var(--text-secondary);font-size:12px;">(Estimativa inicial calculada era R$ ${e.estimado})</span>
+               <div class="ldata">Order ID: ${esc(e.orderId)} · Status: ${esc(e.paymentStatus)} · Token: ${esc(e.pipwaveToken)}</div>
+               ${pixBox}
+               ${checkoutLink}
+             </div>
+             <span class="lms">${e.totalMs}ms</span>`,
+            'row-done'
+          );
+        } else if (e.type === 'error') {
+          clearTimeout(timeout);
+          es.close();
+          buyBtn.disabled = false;
+          liveBtn.disabled = false;
+          liveStatus.textContent = 'Erro: ' + e.error;
+          appendRow('r-error', `<span class="ldot">❌</span><div class="lcontent"><b style="color:var(--color-err)">Falha no pedido:</b> ${esc(e.error)}</div>`, 'row-start');
+        }
+      };
+
+      es.onerror = () => {
+        if (!gotResponse) {
+          clearTimeout(timeout);
+          es.close();
+          liveStatus.textContent = 'API offline? Execute: cd /home/d/Documents/g2g && npm run api';
+          buyBtn.disabled = false;
+          liveBtn.disabled = false;
+        }
+      };
+    });
+  </script>
+</body>
+</html>

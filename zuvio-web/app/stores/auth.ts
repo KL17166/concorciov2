@@ -153,8 +153,7 @@ export const useAuthStore = defineStore('auth', {
     /**
      * Store session state in memory, cookies, and localStorage
      */
-    setSession(data: { token: string; user: UserProfile }) {
-      this.token = data.token
+    setSession(data: { token: string; user: UserProfile }) {      this.token = data.token
       this.user = data.user
       this.signingSecret = null
       this.payloadSecret = null
@@ -174,6 +173,27 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
+     * Atualiza e-mail/telefone do próprio cadastro via BFF → server-consorcio
+     */
+    async updateProfile(data: { email?: string; phone?: string }): Promise<{ success: boolean; message?: string }> {
+      if (!this.token) return { success: false, message: 'Sessão expirada. Entre novamente.' }
+      try {
+        const res = await $fetch<{ success: boolean; message?: string; user?: UserProfile }>('/api/profile', {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${this.token}` },
+          body: data
+        })
+        if (res?.success && res.user && this.user) {
+          this.setSession({ token: this.token, user: { ...this.user, ...res.user } })
+          return { success: true }
+        }
+        return { success: false, message: res?.message || 'Não foi possível salvar.' }
+      } catch (err: any) {
+        return { success: false, message: err?.data?.message || err?.message || 'Erro ao salvar. Tente novamente.' }
+      }
+    },
+
+    /**
      * Clear all session data (Logout)
      */
     async logout() {
@@ -189,7 +209,7 @@ export const useAuthStore = defineStore('auth', {
       }
 
       this.clearSession()
-      navigateTo('/auth/login')
+      navigateTo('/welcome')
     },
 
     clearSession() {

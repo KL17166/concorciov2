@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as csrfMiddleware from '../../middlewares/csrfMiddleware';
+import { prisma } from '../../config/database';
 
 // Domain Sub-routers
 import authRoutes from './authRoutes';
@@ -14,6 +15,7 @@ import reportRoutes from './reportRoutes';
 import securityRoutes from './securityRoutes';
 import gatewayRoutes from './gatewayRoutes';
 import kycRoutes from './kycRoutes';
+import ticketsRoutes from './ticketsRoutes';
 import profileRoutes from './profileRoutes';
 import peopleRoutes from './peopleRoutes';
 
@@ -40,6 +42,29 @@ router.use((req, res, next) => {
 });
 
 // ========================================
+// GLOBAL ALERT BELL DATA (sininho do sidebar)
+// ========================================
+router.use(async (req: any, res: any, next: any) => {
+    res.locals.alertBell = { unread: 0, alerts: [] };
+    try {
+        if (req.method === 'GET' && req.session?.user) {
+            const [alerts, unread] = await Promise.all([
+                (prisma as any).systemAlert.findMany({
+                    where: { read: false },
+                    orderBy: { createdAt: 'desc' },
+                    take: 8
+                }),
+                (prisma as any).systemAlert.count({ where: { read: false } })
+            ]);
+            res.locals.alertBell = { unread, alerts };
+        }
+    } catch (_) {
+        // Sem alertas — sino apagado, sem quebrar a página
+    }
+    next();
+});
+
+// ========================================
 // MOUNT DOMAIN ROUTERS
 // ========================================
 router.use(authRoutes);
@@ -56,5 +81,6 @@ router.use(reportRoutes);
 router.use(securityRoutes);
 router.use(gatewayRoutes);
 router.use(kycRoutes);
+router.use(ticketsRoutes);
 
 export default router;

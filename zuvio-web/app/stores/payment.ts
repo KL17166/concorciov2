@@ -56,7 +56,8 @@ export const usePaymentStore = defineStore('payment', {
 
     async generatePix(
       installmentOrId: Installment | string,
-      maybeToken?: string
+      maybeToken?: string,
+      anticipate = false
     ): Promise<PixPaymentResponse | null> {
       this.isLoading = true
       const authStore = useAuthStore()
@@ -74,7 +75,7 @@ export const usePaymentStore = defineStore('payment', {
         const res = await $fetch<PixPaymentResponse>(`/api/payments/${id}/pix`, {
           method: 'POST',
           headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
-          body: { idTokenPay: token }
+          body: { idTokenPay: token, anticipate }
         })
         this.activePix = res
         return res

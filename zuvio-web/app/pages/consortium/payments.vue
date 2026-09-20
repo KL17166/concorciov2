@@ -19,13 +19,9 @@ import {
   ChevronUp,
   Lock,
   AlertTriangle,
-  QrCode,
-  FileText,
   CreditCard,
   X,
   Sparkles,
-  Zap,
-  Layers,
   Folder,
   FolderOpen
 } from 'lucide-vue-next'
@@ -41,8 +37,10 @@ const consortiumStore = useConsortiumStore()
 const authStore = useAuthStore()
 const paymentStore = usePaymentStore()
 
-// Filter Tab
-const activeTab = ref<'ALL' | 'PENDING' | 'PAID' | 'FUTURE'>('ALL')
+// Primary contract for current user
+const contract = computed<ActiveContract | null>(() => {
+  return consortiumStore.activeContracts[0] || null
+})
 
 // Accordion Collapsible States (Sanduíches)
 const isPaidAccordionOpen = ref(false)
@@ -52,15 +50,9 @@ const openYearGroup = ref<string | null>('2025')
 // Payment modal state
 const isModalOpen = ref(false)
 const selectedInstallmentNumber = ref<number | null>(null)
-const selectedMethod = ref<'PIX' | 'BOLETO'>('PIX')
 const isSubmitting = ref(false)
 const isKycAlertOpen = ref(false)
 const errorMessage = ref<string | null>(null)
-
-// Primary contract for current user
-const contract = computed<ActiveContract | null>(() => {
-  return consortiumStore.activeContracts[0] || null
-})
 
 onMounted(async () => {
   if (consortiumStore.activeContracts.length === 0) {
@@ -95,9 +87,22 @@ const hasPending = computed(() => {
   return paidCount.value < contract.value.totalInstallments
 })
 
-const remainingCount = computed(() => {
-  if (!contract.value) return 0
-  return Math.max(0, contract.value.totalInstallments - paidCount.value)
+const scheduledCount = computed(() => {
+  return futureInstallmentsList.value.length
+})
+
+const progressPct = computed(() => {
+  if (!contract.value?.totalInstallments) return 0
+  return Math.round((paidCount.value / contract.value.totalInstallments) * 100)
+})
+
+const contractStatusLabel = computed(() => {
+  const s = contract.value?.status
+  if (s === 'active') return 'Ativo'
+  if (s === 'pending') return 'Em adesão'
+  if (s === 'finished') return 'Concluído'
+  if (s === 'canceled') return 'Cancelado'
+  return '—'
 })
 
 function formatDate(dateStr?: string | Date): string {
@@ -200,7 +205,6 @@ function openPaymentModal(installmentNumber: number) {
     return
   }
   selectedInstallmentNumber.value = installmentNumber
-  selectedMethod.value = 'PIX'
   isModalOpen.value = true
 }
 
@@ -214,17 +218,14 @@ async function processPayment() {
     const instId = contract.value.installmentIds?.[selectedInstallmentNumber.value] || `inst_${selectedInstallmentNumber.value}`
     const token = contract.value.installmentTokens?.[selectedInstallmentNumber.value] || `tok_${selectedInstallmentNumber.value}`
 
-    if (selectedMethod.value === 'PIX') {
-      await paymentStore.generatePix(instId, token)
-    } else {
-      await paymentStore.generateBoleto(instId, token)
-    }
+    // Fora da parcela atual, o pagamento vai como antecipação explícita
+    const anticipate = isFuture(selectedInstallmentNumber.value)
+    await paymentStore.generatePix(instId, token, anticipate)
 
     isModalOpen.value = false
     router.push({
       path: '/payment',
       query: {
-        method: selectedMethod.value,
         installment: selectedInstallmentNumber.value,
         contractId: contract.value.id
       }
@@ -251,7 +252,7 @@ async function processPayment() {
     <!-- Guard: Adesão Não Paga -->
     <div v-if="contract && !contract.isAdesaoPaid" class="adhesion-guard-container">
       <div class="guard-lock-circle">
-        <Lock :size="56" color="#FF6D00" />
+        <Lock :size="48" color="#263238" />
       </div>
       <h2 class="guard-title">Funcionalidade Bloqueada</h2>
       <p class="guard-description">
@@ -268,11 +269,41 @@ async function processPayment() {
 
     <!-- Main Payments View with Accordions (Sanduíches) -->
     <div v-else-if="contract" class="business-main-container">
+      <!-- 0. Contract Card -->
+      <div class="contract-id-card">
+        <div class="contract-icon-box">
+          <CreditCard :size="22" color="#FF6D00" />
+        </div>
+        <div class="contract-id-meta">
+          <h2 class="contract-id-title">{{ contract.product?.name || 'Consórcio' }}</h2>
+          <div class="contract-id-sub">
+            <span>Grupo {{ contract.groupNumber }}</span>
+            <span class="dot-sep">•</span>
+            <span>Cota {{ contract.quotaNumber }}</span>
+          </div>
+          <div class="contract-progress-track">
+            <div class="contract-progress-fill" :style="{ width: `${progressPct}%` }"></div>
+          </div>
+          <div class="contract-progress-label">{{ paidCount }} de {{ contract.totalInstallments }} pagas ({{ progressPct }}%)</div>
+        </div>
+        <span
+          class="status-pill"
+          :class="{
+            'st-pending': contract.status === 'pending',
+            'st-active': contract.status === 'active',
+            'st-canceled': contract.status === 'canceled',
+            'st-finished': contract.status === 'finished'
+          }"
+        >
+          {{ contractStatusLabel }}
+        </span>
+      </div>
+
       <!-- 1. Summary Header Card -->
       <div class="business-summary-card">
         <div class="summary-indicators-row">
           <!-- Pagas -->
-          <div class="summary-stat-col" @click="activeTab = 'PAID'">
+          <div class="summary-stat-col">
             <div class="stat-icon-circle green">
               <CheckCircle :size="22" color="#4CAF50" />
             </div>
@@ -280,22 +311,22 @@ async function processPayment() {
             <span class="stat-label">Pagas</span>
           </div>
 
-          <!-- Pendente -->
-          <div class="summary-stat-col" @click="activeTab = 'PENDING'">
+          <!-- A pagar (atual) -->
+          <div class="summary-stat-col">
             <div class="stat-icon-circle orange">
               <Clock :size="22" color="#FF9800" />
             </div>
-            <span class="stat-number orange">{{ hasPending ? currentInstallmentIndex : '-' }}</span>
-            <span class="stat-label">Pendente</span>
+            <span class="stat-number orange">{{ hasPending ? currentInstallmentIndex : '—' }}</span>
+            <span class="stat-label">A pagar</span>
           </div>
 
-          <!-- Restantes -->
-          <div class="summary-stat-col" @click="activeTab = 'FUTURE'">
+          <!-- Agendadas -->
+          <div class="summary-stat-col">
             <div class="stat-icon-circle grey">
               <Hourglass :size="22" color="#9E9E9E" />
             </div>
-            <span class="stat-number grey">{{ remainingCount }}</span>
-            <span class="stat-label">Restantes</span>
+            <span class="stat-number grey">{{ scheduledCount }}</span>
+            <span class="stat-label">Agendadas</span>
           </div>
         </div>
 
@@ -334,50 +365,14 @@ async function processPayment() {
         </div>
       </div>
 
-      <!-- 3. Navigation Filter Tabs -->
-      <div class="filter-pills-row">
-        <button
-          class="pill-btn"
-          :class="{ active: activeTab === 'ALL' }"
-          @click="activeTab = 'ALL'"
-        >
-          <Layers :size="15" />
-          <span>Todas ({{ contract.totalInstallments }})</span>
-        </button>
-        <button
-          class="pill-btn orange"
-          :class="{ active: activeTab === 'PENDING' }"
-          @click="activeTab = 'PENDING'"
-        >
-          <Clock :size="15" />
-          <span>Pendente ({{ hasPending ? 1 : 0 }})</span>
-        </button>
-        <button
-          class="pill-btn green"
-          :class="{ active: activeTab === 'PAID' }"
-          @click="activeTab = 'PAID'; isPaidAccordionOpen = true"
-        >
-          <CheckCircle :size="15" />
-          <span>Pagas ({{ paidCount }})</span>
-        </button>
-        <button
-          class="pill-btn blue"
-          :class="{ active: activeTab === 'FUTURE' }"
-          @click="activeTab = 'FUTURE'; isFutureAccordionOpen = true"
-        >
-          <Zap :size="15" />
-          <span>Antecipar ({{ remainingCount - (hasPending ? 1 : 0) }})</span>
-        </button>
-      </div>
-
-      <!-- ── SECTION A: PARCELA ATUAL / PENDENTE (HERO HIGHLIGHT) ──────────── -->
+      <!-- ── SECTION A: PARCELA ATUAL / A PAGAR (HERO HIGHLIGHT) ──────────── -->
       <div
-        v-if="(activeTab === 'ALL' || activeTab === 'PENDING') && hasPending"
+        v-if="hasPending"
         class="highlight-pending-section"
       >
         <div class="section-label-bar">
           <span class="label-badge orange">BOLA DA VEZ</span>
-          <span class="section-title-sm">Parcela Pendente Atual</span>
+          <span class="section-title-sm">Parcela A Pagar</span>
         </div>
 
         <div
@@ -413,7 +408,6 @@ async function processPayment() {
 
       <!-- ── SECTION B: SANDUÍCHE DE PARCELAS PAGAS (ACCORDION) ─────────────── -->
       <div
-        v-if="activeTab === 'ALL' || activeTab === 'PAID'"
         class="sandwich-accordion-card green-theme"
       >
         <!-- Accordion Header Toggle -->
@@ -472,9 +466,9 @@ async function processPayment() {
         </div>
       </div>
 
-      <!-- ── SECTION C: SANDUÍCHE DE PARCELAS FUTURAS & ANTECIPAÇÃO (ACCORDION) -->
+      <!-- ── SECTION C: SANDUÍCHE DE PARCELAS AGENDADAS & ANTECIPAÇÃO (ACCORDION) -->
       <div
-        v-if="(activeTab === 'ALL' || activeTab === 'FUTURE') && futureInstallmentsList.length > 0"
+        v-if="futureInstallmentsList.length > 0"
         class="sandwich-accordion-card blue-theme"
       >
         <!-- Accordion Header Toggle -->
@@ -488,10 +482,10 @@ async function processPayment() {
             </div>
             <div class="sandwich-header-texts">
               <h3 class="sandwich-title">
-                Antecipar Parcelas ({{ futureInstallmentsList.length }} disponíveis)
+                Parcelas Agendadas ({{ futureInstallmentsList.length }})
               </h3>
               <span class="sandwich-subtitle discount-badge">
-                Economize até 30% com desconto de amortização
+                Antecipe e economize com desconto de amortização
               </span>
             </div>
           </div>
@@ -605,26 +599,6 @@ async function processPayment() {
           </div>
         </div>
 
-        <!-- Method Selector Tabs -->
-        <div class="method-selector-tabs">
-          <button
-            class="method-tab"
-            :class="{ active: selectedMethod === 'PIX' }"
-            @click="selectedMethod = 'PIX'"
-          >
-            <QrCode :size="18" />
-            <span>PIX</span>
-          </button>
-          <button
-            class="method-tab"
-            :class="{ active: selectedMethod === 'BOLETO' }"
-            @click="selectedMethod = 'BOLETO'"
-          >
-            <FileText :size="18" />
-            <span>Boleto Bancário</span>
-          </button>
-        </div>
-
         <!-- Error Alert -->
         <div v-if="errorMessage" class="modal-error-banner">
           <AlertTriangle :size="16" color="#D32F2F" />
@@ -637,7 +611,7 @@ async function processPayment() {
           :disabled="isSubmitting"
           @click="processPayment"
         >
-          <span v-if="!isSubmitting">Pagar via {{ selectedMethod }}</span>
+          <span v-if="!isSubmitting">Pagar via PIX</span>
           <span v-else>Processando...</span>
         </button>
       </div>
@@ -664,3 +638,110 @@ async function processPayment() {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* ── Contract ID Card ── */
+.contract-id-card {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border, #E0E0E0);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.contract-icon-box {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(255, 109, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.contract-id-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.contract-id-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-secondary, #263238);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.contract-id-sub {
+  font-size: 12px;
+  color: #757575;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot-sep {
+  color: #B0BEC5;
+}
+
+.contract-progress-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #EEEEEE;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.contract-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #FF6D00, #FF8F00);
+  transition: width 0.3s ease;
+}
+
+.contract-progress-label {
+  font-size: 10.5px;
+  color: #757575;
+  margin-top: 4px;
+}
+
+.status-pill {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.st-pending {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+.st-active {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.st-canceled {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.st-finished {
+  background: #E3F2FD;
+  color: #1565C0;
+}
+</style>

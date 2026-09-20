@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useConsortiumStore } from '~/stores/consortium'
@@ -21,7 +21,8 @@ import {
   TrendingUp,
   UserPlus,
   Home,
-  FileCheck
+  FileCheck,
+  Camera
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -139,6 +140,29 @@ function handleLogout() {
   router.push('/login')
   toast.info('Sessão encerrada com sucesso.')
 }
+
+// ── Cache local de fotos do checkout ──
+const docsCacheOn = computed(() => checkoutStore.docsCacheEnabled)
+const docsCacheCount = computed(() => checkoutStore.docsCacheCount())
+
+onMounted(() => {
+  checkoutStore.initDocsCache()
+})
+
+function toggleDocsCache() {
+  checkoutStore.setDocsCacheEnabled(!checkoutStore.docsCacheEnabled)
+  toast.info(
+    checkoutStore.docsCacheEnabled
+      ? 'Cache de fotos LIGADO — anexos serão reaproveitados.'
+      : 'Cache de fotos DESLIGADO.',
+    'Dev'
+  )
+}
+
+function clearDocsCache() {
+  checkoutStore.clearDocsCache()
+  toast.info('Cache de fotos limpo.', 'Dev')
+}
 </script>
 
 <template>
@@ -226,14 +250,14 @@ function handleLogout() {
                 <div class="meta-title-row">
                   <span class="meta-title">Mariana Oliveira</span>
                 </div>
-                <span class="preset-cpf-sub">CPF: 222.333.444-05</span>
+                <span class="preset-cpf-sub">CPF: 330.410.158-62</span>
               </div>
               <div class="preset-btn-actions">
                 <button
                   type="button"
                   class="btn-action-fill"
                   title="Preencher campos no formulário de login"
-                  @click="fillLoginPreset('222.333.444-05', '123456')"
+                  @click="fillLoginPreset('330.410.158-62', '123456')"
                 >
                   Preencher
                 </button>
@@ -242,7 +266,7 @@ function handleLogout() {
                   class="btn-action-bypass"
                   title="Preencher e enviar requisição real de login ao servidor"
                   :disabled="isLoggingIn"
-                  @click="directLoginPreset('222.333.444-05', '123456')"
+                  @click="directLoginPreset('330.410.158-62', '123456')"
                 >
                   <Send :size="12" /> Entrar
                 </button>
@@ -308,6 +332,29 @@ function handleLogout() {
               <div class="fill-meta">
                 <span class="fill-title">Ir para KYC</span>
                 <span class="fill-sub">Submissão de documentos</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Section: Cache Local de Fotos -->
+        <div class="section-container">
+          <div class="section-label">
+            <span>CACHE LOCAL DE FOTOS</span>
+          </div>
+          <div class="form-fillers-grid">
+            <button type="button" class="btn-form-fill" @click="toggleDocsCache">
+              <Camera :size="15" color="#FF6D00" />
+              <div class="fill-meta">
+                <span class="fill-title">Fotos em cache: {{ docsCacheOn ? 'LIGADO' : 'DESLIGADO' }}</span>
+                <span class="fill-sub">{{ docsCacheCount }}/3 fotos salvas no navegador</span>
+              </div>
+            </button>
+            <button v-if="docsCacheCount > 0" type="button" class="btn-form-fill" @click="clearDocsCache">
+              <X :size="15" color="#D32F2F" />
+              <div class="fill-meta">
+                <span class="fill-title">Limpar cache</span>
+                <span class="fill-sub">Apaga as fotos salvas</span>
               </div>
             </button>
           </div>

@@ -72,7 +72,7 @@ app.use(cors({
 // BODY PARSERS
 // ========================================
 app.use(express.json({
-    limit: '2mb',
+    limit: '15mb',
     verify: (req: any, _res, buf) => {
         // Save raw body for webhook HMAC signature verification
         if (req.originalUrl.includes('/webhooks/')) {
@@ -80,7 +80,7 @@ app.use(express.json({
         }
     }
 }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // ========================================
 // RATE LIMITING

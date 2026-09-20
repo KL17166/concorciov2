@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
 
   return proxyToBackend<BoletoPaymentResponse>(event, `/api/payments/${installmentId}/boleto`, {
     method: 'POST',
-    body: { idTokenPay: body.idTokenPay },
+    body: { idTokenPay: body.idTokenPay, anticipate: body.anticipate ?? false },
     forwardAuth: true
   })
 })

@@ -39,6 +39,11 @@ const rejectReason = computed(() => kycStore.rejectReason || 'Seus documentos an
 
 onMounted(async () => {
   await kycStore.fetchStatus()
+  // O status da sessão (login) pode estar defasado (ex: rejeitado depois) —
+  // o servidor é a fonte da verdade
+  if (authStore.user && kycStore.status && kycStore.status !== 'NOT_SUBMITTED') {
+    authStore.user.kycStatus = kycStore.status as any
+  }
   docFront.value = kycStore.documentFrontUrl
   docBack.value = kycStore.documentBackUrl
   selfie.value = kycStore.selfieUrl

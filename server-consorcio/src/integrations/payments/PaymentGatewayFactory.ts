@@ -2,6 +2,8 @@ import { PaymentGateway, PaymentMethod } from './PaymentGateway';
 import { PixGoAdapter } from './PixGoAdapter';
 import { SigiloPayAdapter } from './SigiloPayAdapter';
 import { SandboxPaymentAdapter } from './SandboxPaymentAdapter';
+import { EldoradoAdapter } from './EldoradoAdapter';
+import { G2gAdapter } from './G2gAdapter';
 import { prisma } from '../../config/database';
 
 export class PaymentGatewayFactory {
@@ -10,6 +12,17 @@ export class PaymentGatewayFactory {
      */
     static createAdapter(config: any, method: PaymentMethod): PaymentGateway | null {
         if (!config || !config.enabled) return null;
+
+        // Gateways locais: sempre reais, não têm modo sandbox
+        if (config.name === 'eldorado') {
+            if (method === 'BOLETO') return null;
+            return new EldoradoAdapter(config);
+        }
+
+        if (config.name === 'g2g') {
+            if (method === 'BOLETO') return null;
+            return new G2gAdapter(config);
+        }
 
         if (config.environment === 'sandbox') {
             return new SandboxPaymentAdapter();

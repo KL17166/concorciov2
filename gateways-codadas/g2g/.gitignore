@@ -1,0 +1,27 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+
+# Perfis de browser (dados sensíveis / binários)
+.pw-profile-3ds/
+.pw-profile-3ds-chrome/
+.pw-profile/
+
+# Cookies e sessão (dados sensíveis)
+cookies.json
+cookies*.json
+
+# Arquivos HAR (capturas de tráfego com dados sensíveis)
+*.har
+
+# Capturas brutas de sessão (dados de sessão reais)
+captures/
+
+# Logs
+*.log
+
+# Arquivos de SO
+.DS_Store
+Thumbs.db

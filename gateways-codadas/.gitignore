@@ -1,0 +1,46 @@
+# Root — nunca subir segredos / artefatos locais
+.env
+.env.*
+!.env.example
+
+# Sessões / cookies / credenciais
+.sessao/
+*.sessao/
+cookies.json
+cookies*.json
+*cookies*.json
+eldorado-state.json
+eldorado-meta.json
+
+# Capturas e tráfego
+captures/
+*.har
+*.log
+flow.txt
+requests_*.json
+diagnose_report.json
+analysis_summary.json
+pix_*.txt
+pix_*.json
+*-trace.zip
+
+# Perfis de browser
+.pw-profile/
+.pw-profile-*/
+.pw-profile-3ds/
+.pw-profile-3ds-chrome/
+
+# Deps / build
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+*.pyo
+
+# Extensão — artefatos gerados
+_metadata/
+
+# SO
+.DS_Store
+Thumbs.db

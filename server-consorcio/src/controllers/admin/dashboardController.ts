@@ -5,28 +5,26 @@ import { logger } from '../../config/logger';
 // GET /admin/dashboard
 export const getDashboard = async (req: Request, res: Response) => {
     try {
-        const today = new Date();
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
         // === BATCH 1: All count/stat queries in parallel ===
         const [
             totalUsers,
             totalContracts,
             activeContracts,
             contemplatedContracts,
-            pendingPayments,
-            overduePayments,
-            paidPayments,
+            pendingAdesoes,
+            openTickets,
+            kycPending,
             recentContracts,
-            recentPayments
+            recentTickets,
+            statusGroups
         ] = await Promise.all([
             prisma.user.count({ where: { role: 'CLIENT' } }),
             prisma.subscription.count(),
             prisma.subscription.count({ where: { status: 'ACTIVE' } }),
             prisma.subscription.count({ where: { contemplated: true } }),
-            prisma.installment.count({ where: { status: 'PENDING' } }),
-            prisma.installment.count({ where: { status: 'OVERDUE' } }),
-            prisma.installment.count({ where: { status: 'PAID' } }),
+            prisma.installment.count({ where: { number: 1, status: { in: ['PENDING', 'OVERDUE'] } } }),
+            (prisma as any).supportTicket.count({ where: { status: 'OPEN' } }),
+            prisma.user.count({ where: { kycStatus: 'SUBMITTED' } }),
             prisma.subscription.findMany({
                 take: 5,
                 orderBy: { createdAt: 'desc' },
@@ -35,91 +33,36 @@ export const getDashboard = async (req: Request, res: Response) => {
                     plan: { include: { product: true } }
                 }
             }),
-            prisma.installment.findMany({
+            (prisma as any).supportTicket.findMany({
                 take: 5,
-                where: { status: 'PAID' },
-                orderBy: { paymentDate: 'desc' },
-                include: {
-                    subscription: { include: { user: true } }
-                }
-            })
+                orderBy: { createdAt: 'desc' },
+                include: { user: { select: { name: true } } }
+            }),
+            prisma.subscription.groupBy({ by: ['status'], _count: { status: true } })
         ]);
 
-        // === BATCH 2: Single query for all paid installments in the last 12 months ===
-        const twelveMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 11, 1);
-
-        const allPaidInstallments = await prisma.installment.findMany({
-            where: {
-                status: 'PAID',
-                paymentDate: { gte: twelveMonthsAgo }
-            },
-            select: {
-                amount: true,
-                paymentDate: true
-            }
-        });
-
-        // Total received this month (from the fetched data)
-        const totalReceivedThisMonth = allPaidInstallments
-            .filter(inst => inst.paymentDate && inst.paymentDate >= firstDayOfMonth)
-            .reduce((sum, inst) => sum + Number(inst.amount), 0);
-
-        // === Build cash flow data by grouping in JS ===
-        const cashFlowData: Record<string, Array<{label: string, total: number}>> = {
-            weekly: [],
-            monthly: [],
-            yearly: []
-        };
-
-        // Weekly: last 8 weeks
-        for (let i = 7; i >= 0; i--) {
-            const endDate = new Date();
-            endDate.setDate(endDate.getDate() - (i * 7));
-            endDate.setHours(23, 59, 59, 999);
-            const startDate = new Date(endDate);
-            startDate.setDate(startDate.getDate() - 6);
-            startDate.setHours(0, 0, 0, 0);
-
-            const total = allPaidInstallments
-                .filter(inst => inst.paymentDate && inst.paymentDate >= startDate && inst.paymentDate <= endDate)
-                .reduce((sum, inst) => sum + Number(inst.amount), 0);
-
-            const label = `${startDate.getDate().toString().padStart(2,'0')}/${(startDate.getMonth()+1).toString().padStart(2,'0')}`;
-            cashFlowData.weekly.push({ label, total });
-        }
-
-        // Monthly: last 6 months
+        // === Contratos criados por mês (últimos 6) p/ o gráfico ===
+        const contractsByMonth: Array<{ label: string; total: number }> = [];
         for (let i = 5; i >= 0; i--) {
             const date = new Date();
             date.setMonth(date.getMonth() - i);
             const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
             const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
-
-            const total = allPaidInstallments
-                .filter(inst => inst.paymentDate && inst.paymentDate >= startOfMonth && inst.paymentDate <= endOfMonth)
-                .reduce((sum, inst) => sum + Number(inst.amount), 0);
-
-            cashFlowData.monthly.push({
+            const count = await prisma.subscription.count({
+                where: { createdAt: { gte: startOfMonth, lte: endOfMonth } }
+            });
+            contractsByMonth.push({
                 label: date.toLocaleDateString('pt-BR', { month: 'short' }),
-                total
+                total: count
             });
         }
 
-        // Yearly: last 12 months
-        for (let i = 11; i >= 0; i--) {
-            const date = new Date();
-            date.setMonth(date.getMonth() - i);
-            const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-            const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
-
-            const total = allPaidInstallments
-                .filter(inst => inst.paymentDate && inst.paymentDate >= startOfMonth && inst.paymentDate <= endOfMonth)
-                .reduce((sum, inst) => sum + Number(inst.amount), 0);
-
-            cashFlowData.yearly.push({
-                label: date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
-                total
-            });
+        const contractsByStatus = {
+            pending: 0, active: 0, contemplated: 0, cancelled: 0, completed: 0
+        };
+        for (const g of statusGroups as any[]) {
+            const key = String(g.status).toLowerCase();
+            if (key in contractsByStatus) (contractsByStatus as any)[key] = g._count.status;
         }
 
         // Fetch system alerts & gateway failover notifications
@@ -148,14 +91,14 @@ export const getDashboard = async (req: Request, res: Response) => {
                 totalContracts,
                 activeContracts,
                 contemplatedContracts,
-                totalReceivedThisMonth,
-                pendingPayments,
-                overduePayments,
-                paidPayments
+                pendingAdesoes,
+                openTickets,
+                kycPending
             },
             recentContracts,
-            recentPayments,
-            cashFlowData,
+            recentTickets,
+            contractsByMonth,
+            contractsByStatus,
             systemAlerts,
             unreadAlertsCount
         });

@@ -25,6 +25,8 @@ export interface PaymentResult {
     expirationDate: string | null;
     message?: string;
     isManualApproval?: boolean;
+    /** Valor original da parcela antes do ajuste da gateway (p/ exibir "desconto"). */
+    requestedAmount?: number;
 }
 
 export interface PaymentGateway {
