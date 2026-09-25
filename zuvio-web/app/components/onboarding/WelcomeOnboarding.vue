@@ -71,11 +71,27 @@ function onKeyDown(e: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
+  // Trava a altura UMA vez no carregamento — a barra de URL do celular
+  // expandindo/recolhendo não mexe mais no layout
+  lockViewportHeight()
+  window.addEventListener('orientationchange', handleOrientationChange)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('orientationchange', handleOrientationChange)
 })
+
+// Mede a altura visível uma única vez e congela em --app-h.
+// Só mede de novo ao girar o aparelho (retrato <-> paisagem).
+function lockViewportHeight() {
+  if (typeof window === 'undefined') return
+  document.documentElement.style.setProperty('--app-h', `${window.innerHeight}px`)
+}
+
+function handleOrientationChange() {
+  window.setTimeout(lockViewportHeight, 300)
+}
 
 // ── Modals State ────────────────────────────────────────────────────────────
 const showInfoModal = ref(false)
@@ -619,13 +635,19 @@ function goToLogin() {
   width: 100%;
   max-width: 100%;
   min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  height: 100svh;
+  height: var(--app-h, 100svh);
+  max-height: var(--app-h, 100svh);
+  overscroll-behavior-y: none;
   margin: 0 auto;
   background-color: #FAFAFA;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
   font-family: 'Outfit', sans-serif;
@@ -639,6 +661,7 @@ function goToLogin() {
   flex-direction: column;
   align-items: center;
   z-index: 20;
+  flex-shrink: 0;
 }
 
 /* 4 Carousel Dots (matching reference) */
@@ -725,18 +748,21 @@ function goToLogin() {
 /* ── Slides Viewport ──────────────────────────────────────────────────────── */
 .slides-viewport {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
-  min-height: 480px;
-  padding: 10px 20px 0;
+  padding: 10px 20px 150px;
+  overflow: hidden;
 }
 
 .slide-content {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   width: 100%;
+  overflow: hidden;
 }
 
 /* Typography */
@@ -748,7 +774,7 @@ function goToLogin() {
 }
 
 .slide-headline {
-  font-size: 21px;
+  font-size: clamp(18px, 5.2vw + 1svh, 21px);
   font-weight: 700;
   color: #1E293B;
   line-height: 1.35;
@@ -793,10 +819,24 @@ function goToLogin() {
 .montage-wrapper {
   position: relative;
   flex: 1;
-  min-height: 320px;
+  min-height: 0;
+  max-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+/* Fotos principais: tamanho só pela LARGURA (nunca pela altura) — sem corte */
+.sedan-img,
+.suv-img,
+.sport-moto-img,
+.foreground-moto-box img {
+  object-fit: contain !important;
+  width: min(94%, 430px);
+  max-width: 100%;
+  height: auto;
+  max-height: none;
 }
 
 /* Floating Shapes & Badges */
@@ -1344,6 +1384,7 @@ function goToLogin() {
   bottom: 30px !important;
   right: -7px !important;
   width: 420px !important;
+  max-width: 100% !important;
   z-index: 10;
 }
 
@@ -1354,9 +1395,15 @@ function goToLogin() {
   filter: drop-shadow(0 16px 20px rgba(0, 0, 0, 0.25));
 }
 
-/* ── Bottom Action Section (Docked) ───────────────────────────────────────── */
+/* ── Bottom Action Section: segue o usuário (fixo no rodapé) ─────────────── */
 .onboarding-actions {
-  padding: 16px 20px 28px;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1866,6 +1913,18 @@ function goToLogin() {
   .onboarding-container {
     border-left: 1px solid #E2E8F0;
     border-right: 1px solid #E2E8F0;
+  }
+}
+
+/* ── Telas baixas: encolhe texto e montagem, botões sempre visíveis ────────── */
+@media (max-height: 740px) {
+  .slide-text-block {
+    margin-top: 8px;
+    margin-bottom: 10px;
+  }
+  .onboarding-actions {
+    padding-top: 8px;
+    gap: 8px;
   }
 }
 </style>
