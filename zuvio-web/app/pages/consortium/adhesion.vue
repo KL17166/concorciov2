@@ -99,6 +99,15 @@ const hasRealPrice = computed(() => {
   return (paymentStore.installments?.length || 0) > 0 || (checkoutStore.paymentData?.amount || 0) > 0
 })
 
+const desconto = computed(() => {
+  const req = checkoutStore.paymentData?.requestedAmount
+  const paid = adhesionAmount.value
+  if (typeof req === 'number' && req > 0 && paid > 0 && req > paid) {
+    return req - paid
+  }
+  return 0
+})
+
 const originalAmount = computed(() => {
   const req = checkoutStore.paymentData?.requestedAmount
   return typeof req === 'number' && desconto.value > 0 ? req : null

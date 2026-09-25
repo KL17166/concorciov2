@@ -8,12 +8,14 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["node"]
   },
   "include": [
     "src/**/*",
     "prisma/**/*",
-    "migrate_admin_to_master.ts"
+    "migrate_admin_to_master.ts",
+    "replace_moto.ts"
   ],
   "exclude": [
     "node_modules"

@@ -72,7 +72,7 @@ function autoSelectBestPlan() {
   if (!product.value || availablePlans.value.length === 0) return
   if (selectedPlan.value) return
 
-  let bestMatch: ConsortiumPlan = availablePlans.value[0]
+  let bestMatch: ConsortiumPlan = availablePlans.value[0]!
   let smallestDifference = Number.POSITIVE_INFINITY
   const targetMonthlyPrice = product.value.monthlyPrice || (product.value.price / (product.value.maxDuration || 80))
 

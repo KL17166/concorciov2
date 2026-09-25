@@ -7,7 +7,6 @@ import {
   X,
   Sparkles,
   ChevronRight,
-  ChevronLeft,
   ShieldCheck,
   Percent,
   Smartphone,
@@ -128,7 +127,7 @@ const simCfg = computed(() => SIM_CONFIG[simType.value])
 function setSimType(t: SimKind) {
   simType.value = t
   simValue.value = SIM_CONFIG[t].def
-  simMonths.value = SIM_CONFIG[t].months.includes(simMonths.value) ? simMonths.value : SIM_CONFIG[t].months[1]
+  simMonths.value = SIM_CONFIG[t].months.includes(simMonths.value) ? simMonths.value : (SIM_CONFIG[t].months.find((_, i) => i === 1) ?? SIM_CONFIG[t].months[0] as number)
 }
 
 const estimatedMonthly = computed(() => {
@@ -169,14 +168,6 @@ function goToLogin() {
       <!-- Carousel nav: prev + 4 dots + next (dots clicáveis, setas sutis, teclado ←/→) -->
       <div class="dots-indicator" role="tablist" aria-label="Indicadores dos slides">
         <button
-          type="button"
-          class="carousel-nav-btn"
-          aria-label="Slide anterior"
-          @click="prevSlide"
-        >
-          <ChevronLeft :size="16" />
-        </button>
-        <button
           v-for="index in totalSlides"
           :key="index"
           type="button"
@@ -189,14 +180,6 @@ function goToLogin() {
         >
           <span class="dot-inner"></span>
         </button>
-        <button
-          type="button"
-          class="carousel-nav-btn"
-          aria-label="Próximo slide"
-          @click="nextSlide"
-        >
-          <ChevronRight :size="16" />
-        </button>
       </div>
 
       <!-- Brand Logo & Service Header -->
@@ -208,7 +191,7 @@ function goToLogin() {
           <span class="brand-name">KATARI</span>
         </div>
         <span class="brand-subname">
-          {{ currentSlide === 1 ? 'Banco & Consórcio' : currentSlide === 0 ? 'Proteção & Consórcio' : 'Consórcios' }}
+          {{ currentSlide === 1 ? 'Banco & Consórcio' : currentSlide === 0 ? 'Consórcio' : 'Consórcios' }}
         </span>
       </div>
     </header>
@@ -650,18 +633,26 @@ function goToLogin() {
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+  touch-action: pan-y;
   font-family: 'Outfit', sans-serif;
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.04);
 }
 
 /* ── Top Header ───────────────────────────────────────────────────────────── */
 .onboarding-header {
-  padding: 7px 20px 8px;
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  padding: calc(env(safe-area-inset-top, 0px)) 20px 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
   z-index: 20;
   flex-shrink: 0;
+  background: linear-gradient(180deg, #FAFAFA 70%, rgba(250, 250, 250, 0));
 }
 
 /* 4 Carousel Dots (matching reference) */
@@ -669,7 +660,7 @@ function goToLogin() {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 0px;
 }
 
 .dot-btn {
@@ -693,9 +684,6 @@ function goToLogin() {
 
 .dot-btn.active .dot-inner {
   background-color: var(--color-primary, #FF6D00);
-  width: 22px;
-  border-radius: 9999px;
-  box-shadow: 0 2px 8px rgba(255, 109, 0, 0.35);
 }
 
 /* Brand Bar */
@@ -754,6 +742,8 @@ function goToLogin() {
   position: relative;
   padding: 10px 20px 150px;
   overflow: hidden;
+  /* compensa o header fixo */
+  padding-top: 108px;
 }
 
 .slide-content {
