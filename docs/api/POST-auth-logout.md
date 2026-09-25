@@ -1,0 +1,16 @@
+# POST /api/auth/logout
+- **Ativado por:** botão Sair do app
+  - BFF espelho: `zuvio-web/server/api/auth/logout.post.ts`
+  - Fluxo: encerra sessão, descarta token no client
+- **Auth / rate-limit:** `authenticate` (Bearer JWT)
+  - App: `generalLimiter` + `securityMiddleware` (sem limiter específico)
+- **Request:** sem body nem params
+  - `jti`/`exp` extraídos do Bearer atual (decode, sem verify extra)
+- **O que o servidor retorna:**
+  - 200 `{ success: true, message: 'Logout realizado com sucesso.' }`
+  - 401 → sem token ou token inválido/revogado (via `authenticate`)
+  - Falha de Redis não falha o logout (só warn)
+- **Efeitos:**
+  - Redis: `jti:blacklist:{jti}` (TTL do JWT) — revogação imediata
+  - Redis: `del` de `signing:session:{jti}` e `payload:session:{jti}`
+  - Destroi `req.session` (fallback do painel admin)

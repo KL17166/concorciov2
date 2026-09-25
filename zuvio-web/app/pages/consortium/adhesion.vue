@@ -6,6 +6,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useCheckoutStore } from '~/stores/checkout'
 import { usePaymentStore } from '~/stores/payment'
 import { useToast } from '~/composables/useToast'
+import { trackEvent } from '~/composables/useTrack'
 import { formatCurrency } from '~~/shared/utils/currency'
 import type { ActiveContract } from '~~/shared/types/catalog'
 import QRCode from 'qrcode'
@@ -84,12 +85,29 @@ const pixCode = computed(() => {
   return checkoutStore.paymentData?.copyPaste || ''
 })
 
-// A Eldorado raramente gera o valor cheio — a diferença vira "desconto" p/ o cliente
-const desconto = computed(() => {
+// Foto SÓ se for do produto de verdade: vinda do contrato (servidor) ou do
+// catálogo real da API. Mocks/fallbacks (ex: Titan hardcoded) nunca aparecem.
+const photoUrl = computed(() => {
+  if (contract.value?.product?.imageUrl) return contract.value.product.imageUrl
+  if (consortiumStore.productsReal && product.value?.imageUrl) return product.value.imageUrl
+  return null
+})
+
+// Valor SÓ quando puxado de verdade (parcela do servidor ou PIX gerado).
+// Antes exibia "R$ 0,00" — agora skeleton até ter número real.
+const hasRealPrice = computed(() => {
+  return (paymentStore.installments?.length || 0) > 0 || (checkoutStore.paymentData?.amount || 0) > 0
+})
+
+const originalAmount = computed(() => {
   const req = checkoutStore.paymentData?.requestedAmount
-  const act = checkoutStore.paymentData?.amount
-  if (typeof req === 'number' && typeof act === 'number' && req - act > 0.005) {
-    return req - act
+  return typeof req === 'number' && desconto.value > 0 ? req : null
+})
+
+const descontoPct = computed(() => {
+  const req = checkoutStore.paymentData?.requestedAmount
+  if (typeof req === 'number' && req > 0 && desconto.value > 0) {
+    return Math.round((desconto.value / req) * 100)
   }
   return 0
 })
@@ -200,6 +218,7 @@ async function copyToClipboard(text: string) {
     await navigator.clipboard.writeText(text)
     isCopied.value = true
     toast.success('Código copiado para a área de transferência!')
+    trackEvent({ event: 'COPY_PIX_CLICK', screen: 'adhesion', metadata: { productId: contract.value?.product?.id || '' } })
     setTimeout(() => {
       isCopied.value = false
     }, 3000)
@@ -215,6 +234,8 @@ async function generateAdhesionPix() {
   if (!first?.id || !first?.idTokenPay) return
   isGeneratingPix.value = true
   pixError.value = null
+  const pid = contract.value?.product?.id || ''
+  trackEvent({ event: 'GENERATE_QR_CLICK', screen: 'adhesion', entityType: 'installment', entityId: first.id, metadata: { productId: pid } })
   try {
     const res = await paymentStore.generatePix(first.id, first.idTokenPay, false)
     if (res && (res as any).copyPaste) {
@@ -225,6 +246,7 @@ async function generateAdhesionPix() {
         qrCode: (res as any).qrCode || null,
         expirationDate: (res as any).expirationDate || null
       }
+      trackEvent({ event: 'QR_SHOWN', screen: 'adhesion', entityType: 'installment', entityId: first.id, metadata: { productId: pid } })
     } else {
       pixError.value = 'Não foi possível gerar o PIX. Tente novamente.'
     }
@@ -244,6 +266,7 @@ async function checkPaymentStatus() {
   if (contract.value && (contract.value.isAdesaoPaid || contract.value.status === 'active')) {
     isPaymentConfirmed.value = true
     toast.success('Pagamento da adesão confirmado com sucesso no servidor!', 'Parabéns!')
+    trackEvent({ event: 'PAYMENT_CONFIRMED_VIEW', screen: 'adhesion', entityType: 'subscription', entityId: contract.value.id, metadata: { productId: contract.value?.product?.id || '' } })
   } else {
     toast.info('Aguardando compensação do banco ou aprovação do gateway.', 'Pendente')
   }
@@ -253,9 +276,12 @@ async function checkPaymentStatus() {
     || route.query.subscriptionId as string
     || contract.value?.id
   if (subId) {
+    trackEvent({ event: 'VERIFY_PAYMENT_CLICK', screen: 'adhesion', entityType: 'subscription', entityId: subId, metadata: { productId: contract.value?.product?.id || '' } })
+    const first = paymentStore.installments?.find(i => i.number === 1) || paymentStore.installments?.[0]
     $fetch(`/api/subscription/${subId}/payment-check`, {
       method: 'POST',
-      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+      body: { installmentId: first?.id }
     }).catch(() => {})
   }
 
@@ -284,11 +310,12 @@ function handleFinish() {
         <div class="summary-top-row">
           <div class="product-thumb-box">
             <img
-              v-if="product.imageUrl"
-              :src="product.imageUrl"
+              v-if="photoUrl"
+              :src="photoUrl"
               :alt="product.name"
               class="product-thumb-img"
             />
+            <div v-else-if="!consortiumStore.productsLoaded && !contract" class="product-thumb-skeleton skel"></div>
             <div v-else class="product-thumb-placeholder">
               <Sparkles :size="24" color="#FF6D00" />
             </div>
@@ -302,8 +329,14 @@ function handleFinish() {
           </div>
           <div class="amount-col">
             <span class="amount-label">Valor da Adesão</span>
-            <span class="amount-val">{{ formatCurrency(adhesionAmount) }}</span>
-            <span v-if="desconto > 0" class="discount-pill">Desconto de {{ formatCurrency(desconto) }}</span>
+            <template v-if="hasRealPrice">
+              <span v-if="originalAmount !== null" class="amount-original">{{ formatCurrency(originalAmount) }}</span>
+              <span class="amount-val">{{ formatCurrency(adhesionAmount) }}</span>
+              <span v-if="desconto > 0" class="discount-pill">Desconto de {{ formatCurrency(desconto) }}{{ descontoPct > 0 ? ` (${descontoPct}%)` : '' }}</span>
+            </template>
+            <template v-else>
+              <span class="amount-skeleton skel"></span>
+            </template>
           </div>
         </div>
       </section>
@@ -602,6 +635,46 @@ function handleFinish() {
   color: #2E7D32;
   font-size: 11.5px;
   font-weight: 800;
+}
+
+/* ── Preço com desconto: original riscado pequeno no canto superior ── */
+.amount-original {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9E9E9E;
+  text-decoration: line-through;
+  align-self: flex-end;
+}
+
+/* ── Skeleton (valor/foto ainda não puxados — nunca "R$ 0,00" nem foto errada) ── */
+.skel {
+  position: relative;
+  overflow: hidden;
+  background: #ECEFF1;
+  border-radius: 8px;
+}
+.skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: skel-shimmer 1.4s infinite;
+}
+@keyframes skel-shimmer {
+  100% { transform: translateX(100%); }
+}
+.amount-skeleton {
+  display: block;
+  width: 110px;
+  height: 24px;
+  margin-top: 4px;
+}
+.product-thumb-skeleton {
+  width: 100%;
+  height: 100%;
+  min-width: 64px;
+  min-height: 64px;
 }
 
 /* ── Retry gerar PIX ── */

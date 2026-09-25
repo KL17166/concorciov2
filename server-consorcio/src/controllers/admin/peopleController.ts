@@ -4,7 +4,7 @@ import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 import { hashPassword } from '../../security/password';
 import { ALL_VALID_ROLES } from '../../config/roles';
-import { roleLabel } from '../../security/adminCapabilities';
+import { canManageRole, roleLabel } from '../../security/adminCapabilities';
 
 function parseAddress(address?: string | null): Record<string, string> {
     if (!address) return {};
@@ -239,9 +239,17 @@ export const updateAccess = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
         const actorId = (req as any).session?.user?.id;
+        const actorRole = (req as any).session?.user?.role;
         const role = req.body.role;
         if (!ALL_VALID_ROLES.includes(role)) {
             req.flash('error_msg', 'Perfil de acesso inválido.');
+            return res.redirect(`/admin/people/${id}/edit`);
+        }
+        // B6 (defesa em profundidade — a rota já exige `people.change_role`,
+        // que só MASTER tem): nunca confia só na rota para troca de papel.
+        if (!canManageRole(actorRole, role)) {
+            logger.warn(`[RBAC] Role change blocked: actor ${actorId} (${actorRole}) tried to assign ${role} to ${id}`);
+            req.flash('error_msg', 'Seu perfil não pode atribuir esse nível de acesso. Apenas MASTER gerencia papéis.');
             return res.redirect(`/admin/people/${id}/edit`);
         }
         if (id === actorId && role !== 'MASTER') {

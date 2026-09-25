@@ -11,6 +11,7 @@ definePageMeta({
   alias: ['/register']
 })
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToast()
@@ -115,7 +116,8 @@ async function handleRegister() {
 
     if (result.success) {
       toast.success('Conta criada com sucesso! Seja bem-vindo(a).')
-      router.push('/')
+      const redirectUrl = (route.query.redirect as string) || '/'
+      router.push(redirectUrl)
     } else {
       errors.general = result.message || 'Erro ao criar conta'
       toast.error(errors.general)
@@ -136,6 +138,14 @@ async function handleRegister() {
 
     <div class="safe-area">
       <div class="scroll-content animate-fade-in">
+        <!-- Top Navigation Bar -->
+        <div class="top-nav-bar">
+          <NuxtLink to="/welcome" class="btn-back-link">
+            <ArrowLeft :size="18" />
+            <span>Voltar</span>
+          </NuxtLink>
+        </div>
+
         <div class="logo-container">
           <div class="logo-glow"></div>
           <div class="logo-circle">
@@ -531,6 +541,33 @@ async function handleRegister() {
   border-top-color: #FFFFFF;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
+}
+
+.top-nav-bar {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.btn-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
+}
+
+.btn-back-link:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateX(-2px);
 }
 
 @keyframes spin {

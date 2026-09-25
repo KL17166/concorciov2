@@ -10,6 +10,7 @@ router.get('/kyc/:userId/documents/:fileName', isAdmin, requireCapability('compl
 router.post('/kyc/:userId/approve', isAdmin, requireCapability('compliance.review'), kycController.approveKyc);
 router.post('/kyc/:userId/reject', isAdmin, requireCapability('compliance.review'), kycController.rejectKyc);
 router.post('/kyc/:userId/reopen', isAdmin, requireCapability('compliance.review'), kycController.reopenKyc);
+router.post('/kyc/:userId/propose', isAdmin, requireCapability('compliance.view'), kycController.proposeKyc);
 router.post('/kyc/:userId/override', isAdmin, requireCapability('compliance.review'), kycController.overrideKyc);
 router.post('/kyc/:userId/retrigger', isAdmin, requireCapability('compliance.review'), kycController.retriggerKyc);
 

@@ -6,6 +6,11 @@ const router = Router();
 
 router.get('/bids', isAdmin, requireCapability('bids.view'), bidsController.getBids);
 router.get('/bids/pending', isAdmin, requireCapability('bids.view'), bidsController.getPendingBids);
+router.get('/bids/payments', isAdmin, requireCapability('bids.view'), bidsController.getBidPayments);
+router.post('/bids/payments/:paymentId/confirm', isAdmin, requireCapability('bids.manage'), bidsController.confirmBidPayment);
+router.post('/bids/payments/:paymentId/refuse', isAdmin, requireCapability('bids.manage'), bidsController.refuseBidPayment);
+router.post('/bids/payments/:paymentId/refund-request', isAdmin, requireCapability('bids.manage'), bidsController.requestBidRefund);
+router.post('/bids/payments/:paymentId/refund-confirm', isAdmin, requireCapability('bids.manage'), bidsController.confirmBidRefund);
 router.get('/bids/draw', isAdmin, requireCapability('bids.manage'), bidsController.getDrawPage);
 router.post('/bids/draw', isAdmin, requireCapability('bids.manage'), bidsController.performDraw);
 router.get('/bids/:id', isAdmin, requireCapability('bids.view'), bidsController.getBidDetails);

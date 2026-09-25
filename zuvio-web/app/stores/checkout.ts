@@ -219,6 +219,7 @@ export const useCheckoutStore = defineStore('checkout', {
               })
               if (pixRes?.success) {
                 this.paymentData = {
+                  installmentId: firstInst.id,
                   amount: pixRes.amount,
                   requestedAmount: pixRes.requestedAmount ?? pixRes.amount,
                   copyPaste: pixRes.copyPaste,

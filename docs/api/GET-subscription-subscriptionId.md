@@ -1,0 +1,17 @@
+# GET /api/subscription/:subscriptionId
+- **Ativado por:** tela de detalhe do contrato
+  - BFF espelho: `zuvio-web/server/api/subscription/[subscriptionId].get.ts`
+  - Handler: `getSingleSubscription` → `getSubscriptionDetails`
+- **Auth / rate-limit:** `authenticate` (sem `checkOwnership` na rota)
+  - Dono checado dentro de `getSubscriptionDetails` (subscriptionId + JWT)
+  - App: `generalLimiter` + `securityMiddleware`
+- **Request:** param `subscriptionId`
+  - Sem body; sem schema zod
+- **O que o servidor retorna:**
+  - 200 detalhe do contrato (parcelas/status)
+  - 401 → não autenticado
+  - 403 → contrato de outro usuário
+  - 404 → contrato inexistente
+- **Efeitos:**
+  - Somente leitura
+  - Sem escrita, sem auditoria

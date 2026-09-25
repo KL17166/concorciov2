@@ -13,6 +13,7 @@ const DEFAULT_GATEWAYS = [
         supportsPix: true,
         supportsBoleto: false,
         supportsCard: false,
+        requiresManualReview: false,
     },
     {
         name: 'sigilopay',
@@ -21,6 +22,7 @@ const DEFAULT_GATEWAYS = [
         supportsPix: true,
         supportsBoleto: false,
         supportsCard: false,
+        requiresManualReview: false,
     },
     {
         name: 'eldorado',
@@ -29,6 +31,7 @@ const DEFAULT_GATEWAYS = [
         supportsPix: true,
         supportsBoleto: false,
         supportsCard: false,
+        requiresManualReview: true,
     },
     {
         name: 'g2g',
@@ -37,6 +40,7 @@ const DEFAULT_GATEWAYS = [
         supportsPix: true,
         supportsBoleto: false,
         supportsCard: false,
+        requiresManualReview: true,
     }
 ];
 
@@ -114,7 +118,8 @@ export const updateGateway = async (req: Request, res: Response) => {
         const {
             apiKey, apiSecret, webhookSecret, baseUrl,
             environment, platformId,
-            isDefaultPix, isDefaultBoleto, isDefaultCard
+            isDefaultPix, isDefaultBoleto, isDefaultCard,
+            requiresManualReview
         } = req.body;
 
         // If setting as default for a method, unset all others first
@@ -137,20 +142,23 @@ export const updateGateway = async (req: Request, res: Response) => {
             });
         }
 
-        await prisma.gatewayConfig.update({
-            where: { id },
-            data: {
-                apiKey: apiKey || null,
-                apiSecret: apiSecret || null,
-                webhookSecret: webhookSecret || null,
-                baseUrl: baseUrl || null,
-                environment: environment || 'sandbox',
-                platformId: platformId || null,
-                isDefaultPix: isDefaultPix === 'true',
-                isDefaultBoleto: isDefaultBoleto === 'true',
-                isDefaultCard: isDefaultCard === 'true',
-            }
-        });
+        // PATCH parcial: só persiste os campos enviados (ausente = mantém).
+        // Antes, salvar uma caixinha apagava apiKey/baseUrl das demais.
+        // Checkbox manual vem como ["false","true"] (hidden + marcado) — vale o último.
+        const last = (v: unknown) => (Array.isArray(v) ? v[v.length - 1] : v);
+        const data: any = {};
+        if (apiKey !== undefined) data.apiKey = apiKey || null;
+        if (apiSecret !== undefined) data.apiSecret = apiSecret || null;
+        if (webhookSecret !== undefined) data.webhookSecret = webhookSecret || null;
+        if (baseUrl !== undefined) data.baseUrl = baseUrl || null;
+        if (environment !== undefined) data.environment = environment || 'sandbox';
+        if (platformId !== undefined) data.platformId = platformId || null;
+        data.isDefaultPix = last(isDefaultPix) === 'true';
+        data.isDefaultBoleto = last(isDefaultBoleto) === 'true';
+        data.isDefaultCard = last(isDefaultCard) === 'true';
+        if (requiresManualReview !== undefined) data.requiresManualReview = last(requiresManualReview) === 'true';
+
+        await prisma.gatewayConfig.update({ where: { id }, data });
 
         req.flash('success_msg', 'Configuração do gateway atualizada com sucesso!');
         res.redirect('/admin/gateways');

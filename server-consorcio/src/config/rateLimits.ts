@@ -118,6 +118,16 @@ export const kycSubmitLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+// Pixel próprio: generoso (telas geram vários eventos) mas limitado por usuário.
+export const trackingLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: isProduction ? 200 : 2000,
+    keyGenerator: secureKeyGenerator,
+    message: { error: 'Muitos eventos de telemetria. Aguarde alguns minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 export const sessionLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
     max: isProduction ? 120 : 1000,

@@ -1,0 +1,16 @@
+# GET /api/kyc/status
+- **Ativado por:** tela KYC (exibe status da análise)
+  - BFF espelho: `zuvio-web/server/api/kyc/status.get.ts`
+  - Handler: `getClientKycStatus` (lê `user` direto, sem application)
+- **Auth / rate-limit:** `authenticate`
+  - App: `generalLimiter` + `securityMiddleware` (sem limiter específico)
+- **Request:** sem body nem params
+  - `userId` vem do JWT; select só dos 5 campos de KYC
+- **O que o servidor retorna:**
+  - 200 `{ kycStatus, rejectReason, documentsUploaded: boolean }`
+  - `documentsUploaded` = as 3 URLs presentes
+  - 401 → não autenticado
+  - 404 NOT_FOUND → usuário não encontrado
+- **Efeitos:**
+  - Somente leitura (`user`: status + motivo + 3 URLs)
+  - Sem escrita

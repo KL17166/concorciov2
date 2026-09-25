@@ -4,7 +4,9 @@ import { useRouter } from 'vue-router'
 import { useConsortiumStore } from '~/stores/consortium'
 import { useAuthStore } from '~/stores/auth'
 import { usePaymentStore } from '~/stores/payment'
+import { useCheckoutStore } from '~/stores/checkout'
 import { formatCurrency } from '~~/shared/utils/currency'
+import { trackEvent } from '~/composables/useTrack'
 import type { ActiveContract } from '~~/shared/types/catalog'
 import {
   ArrowLeft,
@@ -36,6 +38,70 @@ const router = useRouter()
 const consortiumStore = useConsortiumStore()
 const authStore = useAuthStore()
 const paymentStore = usePaymentStore()
+const checkoutStore = useCheckoutStore()
+
+// Multi-seleção p/ 1 PIX combinado (adesão + mês + antecipações)
+const selectedNumbers = ref<number[]>([])
+const isBatchSubmitting = ref(false)
+const batchError = ref<string | null>(null)
+
+function toggleSelect(n: number) {
+  if (isPaid(n)) return
+  const i = selectedNumbers.value.indexOf(n)
+  if (i >= 0) selectedNumbers.value.splice(i, 1)
+  else selectedNumbers.value.push(n)
+}
+
+const batchTotal = computed(() => {
+  return [...selectedNumbers.value].sort((a, b) => a - b)
+    .reduce((s, n) => s + getInstallmentValue(n), 0)
+})
+
+async function processBatchPayment() {
+  if (!contract.value || selectedNumbers.value.length === 0) return
+  if (authStore.user?.kycStatus === 'REJECTED') {
+    isKycAlertOpen.value = true
+    return
+  }
+  // Adesão nunca fura: se em aberto e fora da seleção, inclui sozinha
+  let numbers = [...new Set(selectedNumbers.value)].sort((a, b) => a - b)
+  if (!isPaid(1) && !numbers.includes(1)) numbers = [1, ...numbers]
+  isBatchSubmitting.value = true
+  batchError.value = null
+  try {
+    const items = numbers.map(n => ({
+      number: n,
+      idTokenPay: contract.value!.installmentTokens?.[n] || `tok_${n}`
+    }))
+    trackEvent({
+      event: 'GENERATE_QR_CLICK', screen: 'payments', entityType: 'batch',
+      entityId: contract.value.id, metadata: { numbers, count: numbers.length }
+    })
+    const res = await paymentStore.generateBatchPix(contract.value.id, items)
+    if (!res?.copyPaste) throw new Error('Não foi possível gerar o PIX combinado.')
+    checkoutStore.paymentData = {
+      batchId: res.batchId,
+      batchItems: res.items,
+      installmentIds: res.items.map((it: any) => it.installmentId),
+      amount: res.totalAmount,
+      requestedAmount: res.totalAmount,
+      copyPaste: res.copyPaste,
+      qrCode: res.qrCode || null,
+      expirationDate: res.expiresAt,
+      provider: res.provider,
+      isManualApproval: res.isManualApproval
+    }
+    trackEvent({
+      event: 'QR_SHOWN', screen: 'payments', entityType: 'batch',
+      entityId: res.batchId, metadata: { numbers, count: numbers.length }
+    })
+    router.push({ path: '/payment', query: { batch: '1', contractId: contract.value.id } })
+  } catch (err: any) {
+    batchError.value = err?.data?.message || err?.message || 'Erro ao gerar PIX combinado. Tente novamente.'
+  } finally {
+    isBatchSubmitting.value = false
+  }
+}
 
 // Primary contract for current user
 const contract = computed<ActiveContract | null>(() => {
@@ -85,6 +151,62 @@ const currentInstallmentIndex = computed(() => {
 const hasPending = computed(() => {
   if (!contract.value) return false
   return paidCount.value < contract.value.totalInstallments
+})
+
+// Vencidas de verdade (status OVERDUE do servidor; fallback: vencimento < hoje).
+// "A pagar" = o que exige ação AGORA — parcela futura (ex: vence 10/10) NÃO entra
+// aqui (antes exibia o NÚMERO da parcela atual, ex: 2, e a soma estourava 60).
+const overdueNumbers = computed(() => {
+  const fromServer = paymentStore.installments?.filter(i => i.status === 'OVERDUE').map(i => i.number) || []
+  if (fromServer.length > 0 || (paymentStore.installments?.length || 0) > 0) return fromServer
+  if (!contract.value?.installmentDueDates) return []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const paid = new Set(contract.value.paidInstallments || [])
+  const out: number[] = []
+  for (const [numStr, dueStr] of Object.entries(contract.value.installmentDueDates)) {
+    const num = Number(numStr)
+    if (paid.has(num)) continue
+    const due = new Date(dueStr as string)
+    if (!isNaN(due.getTime()) && due < today) out.push(num)
+  }
+  return out.sort((a, b) => a - b)
+})
+
+const overdueCount = computed(() => overdueNumbers.value.length)
+
+// Parcela do mês corrente (pelo vencimento) e se ela já está paga.
+// Se a do mês já foi paga, a SECTION A vira "tudo certo" em vez de "BOLA DA VEZ".
+const thisMonthNumber = computed(() => {
+  if (!contract.value?.installmentDueDates) return null
+  const now = new Date()
+  for (const [numStr, dueStr] of Object.entries(contract.value.installmentDueDates)) {
+    const due = new Date(dueStr as string)
+    if (!isNaN(due.getTime()) && due.getMonth() === now.getMonth() && due.getFullYear() === now.getFullYear()) {
+      return Number(numStr)
+    }
+  }
+  return null
+})
+
+const thisMonthPaid = computed(() => {
+  return thisMonthNumber.value !== null && isPaid(thisMonthNumber.value)
+})
+
+const thisMonthPaidDate = computed(() => {
+  if (thisMonthNumber.value === null) return null
+  const inst = paymentStore.installments?.find(i => i.number === thisMonthNumber.value && i.status === 'PAID')
+  if (inst?.paymentDate) {
+    const d = new Date(inst.paymentDate)
+    if (!isNaN(d.getTime())) return d.toLocaleDateString('pt-BR')
+  }
+  return null
+})
+
+const thisMonthLabel = computed(() => {
+  const d = new Date()
+  const name = d.toLocaleDateString('pt-BR', { month: 'long' })
+  return name.charAt(0).toUpperCase() + name.slice(1)
 })
 
 const scheduledCount = computed(() => {
@@ -163,9 +285,14 @@ const paidInstallmentsList = computed(() => {
 
 const futureInstallmentsList = computed(() => {
   if (!contract.value) return []
+  // Agendadas = TODAS as não-pagas e não-vencidas, INCLUINDO a atual
+  // (a parcela da vez também está agendada — antes ela caía no vão entre
+  // "paga" e "futura" e a soma não fechava). `isFuture()` (estrito) segue
+  // separado p/ a lógica de antecipação — não mexer.
+  const overdue = new Set(overdueNumbers.value)
   const list: number[] = []
   for (let i = 1; i <= contract.value.totalInstallments; i++) {
-    if (isFuture(i)) list.push(i)
+    if (!isPaid(i) && !overdue.has(i)) list.push(i)
   }
   return list
 })
@@ -220,6 +347,13 @@ async function processPayment() {
 
     // Fora da parcela atual, o pagamento vai como antecipação explícita
     const anticipate = isFuture(selectedInstallmentNumber.value)
+    trackEvent({
+      event: 'GENERATE_QR_CLICK',
+      screen: 'payments',
+      entityType: 'installment',
+      entityId: instId,
+      metadata: { productId: contract.value?.product?.id || '', installmentNumber: selectedInstallmentNumber.value, anticipate }
+    })
     await paymentStore.generatePix(instId, token, anticipate)
 
     isModalOpen.value = false
@@ -311,12 +445,12 @@ async function processPayment() {
             <span class="stat-label">Pagas</span>
           </div>
 
-          <!-- A pagar (atual) -->
+          <!-- A pagar (vencidas — exigem ação agora) -->
           <div class="summary-stat-col">
             <div class="stat-icon-circle orange">
               <Clock :size="22" color="#FF9800" />
             </div>
-            <span class="stat-number orange">{{ hasPending ? currentInstallmentIndex : '—' }}</span>
+            <span class="stat-number orange">{{ hasPending ? overdueCount : '—' }}</span>
             <span class="stat-label">A pagar</span>
           </div>
 
@@ -370,6 +504,17 @@ async function processPayment() {
         v-if="hasPending"
         class="highlight-pending-section"
       >
+        <div v-if="thisMonthPaid" class="all-good-card">
+          <div class="all-good-icon">
+            <CheckCircle :size="34" color="#4CAF50" />
+          </div>
+          <div class="all-good-title">Tudo certo por aqui ✓</div>
+          <div class="all-good-desc">
+            A parcela de {{ thisMonthLabel }} já foi paga{{ thisMonthPaidDate ? ` em ${thisMonthPaidDate}` : '' }}. Nenhuma cobrança em aberto este mês.
+          </div>
+        </div>
+
+        <template v-else>
         <div class="section-label-bar">
           <span class="label-badge orange">BOLA DA VEZ</span>
           <span class="section-title-sm">Parcela A Pagar</span>
@@ -404,6 +549,7 @@ async function processPayment() {
             </button>
           </div>
         </div>
+        </template>
       </div>
 
       <!-- ── SECTION B: SANDUÍCHE DE PARCELAS PAGAS (ACCORDION) ─────────────── -->
@@ -536,8 +682,16 @@ async function processPayment() {
                   v-for="idx in insts"
                   :key="idx"
                   class="installment-card is-future"
+                  :class="{ 'is-selected': selectedNumbers.includes(idx) }"
                   @click="openPaymentModal(idx)"
                 >
+                  <input
+                    type="checkbox"
+                    class="batch-check"
+                    :checked="selectedNumbers.includes(idx)"
+                    :aria-label="`Incluir parcela ${idx} no PIX combinado`"
+                    @click.stop="toggleSelect(idx)"
+                  />
                   <div class="installment-number-box future">{{ idx }}</div>
                   <div class="installment-details-col">
                     <div class="installment-title">Parcela {{ idx }} de {{ contract.totalInstallments }}</div>
@@ -617,8 +771,20 @@ async function processPayment() {
       </div>
     </div>
 
-    <!-- ── KYC Rejected Alert Modal ──────────────────────────────────────── -->
-    <div v-if="isKycAlertOpen" class="modal-overlay" @click.self="isKycAlertOpen = false">
+    <!-- ── Barra do PIX combinado (multi-seleção) ─────────────────────────── -->
+    <div v-if="selectedNumbers.length > 0" class="batch-bar">
+      <div class="batch-info">
+        <strong>{{ selectedNumbers.length }} parcela{{ selectedNumbers.length > 1 ? 's' : '' }}</strong>
+        <span>{{ formatCurrency(batchTotal) }} em 1 PIX</span>
+      </div>
+      <button class="btn-batch-pay" :disabled="isBatchSubmitting" @click="processBatchPayment">
+        <span v-if="!isBatchSubmitting">GERAR PIX COMBINADO</span>
+        <span v-else>Gerando...</span>
+      </button>
+    </div>
+    <p v-if="batchError" class="batch-error">{{ batchError }}</p>
+
+    <!-- ── KYC Rejected Alert Modal ──────────────────────────────────────── -->    <div v-if="isKycAlertOpen" class="modal-overlay" @click.self="isKycAlertOpen = false">
       <div class="kyc-alert-dialog">
         <div class="alert-icon-title-row">
           <AlertTriangle :size="24" color="#D32F2F" />
@@ -640,6 +806,29 @@ async function processPayment() {
 </template>
 
 <style scoped>
+/* ── Tudo certo (parcela do mês já paga — no lugar do BOLA DA VEZ) ── */
+.all-good-card {
+  background: #F1F8E9;
+  border: 1px solid #C5E1A5;
+  border-radius: 16px;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+.all-good-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #2E7D32;
+}
+.all-good-desc {
+  font-size: 13.5px;
+  color: #558B2F;
+  line-height: 1.5;
+}
+
 /* ── Contract ID Card ── */
 .contract-id-card {
   background: #FFFFFF;
@@ -744,4 +933,27 @@ async function processPayment() {
   background: #E3F2FD;
   color: #1565C0;
 }
+
+/* ── Multi-seleção p/ PIX combinado ── */
+.batch-check {
+  width: 22px; height: 22px; accent-color: #FF6D00; flex-shrink: 0;
+  margin-right: 2px; cursor: pointer;
+}
+.installment-card.is-selected {
+  outline: 2px solid #FF6D00; outline-offset: -2px;
+}
+.batch-bar {
+  position: sticky; bottom: 12px; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: #263238; color: #fff; border-radius: 14px; padding: 14px 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); margin-top: 16px;
+}
+.batch-info { display: flex; flex-direction: column; font-size: 14px; }
+.batch-info span { opacity: 0.8; font-size: 13px; }
+.btn-batch-pay {
+  background: #FF6D00; color: #fff; border: none; border-radius: 10px;
+  padding: 12px 18px; font-weight: 800; cursor: pointer;
+}
+.btn-batch-pay:disabled { opacity: 0.6; }
+.batch-error { color: #C62828; font-size: 13px; margin-top: 8px; }
 </style>

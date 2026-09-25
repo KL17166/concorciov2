@@ -1,0 +1,15 @@
+# reviewKyc
+- **Arquivo:** server-consorcio/src/application/kyc/reviewKyc.ts:11
+- **O que faz:** Aprova ou reprova o KYC de um usuário; ao aprovar, ativa contratos em PENDING_KYC.
+- **O que ativa ela:** Nenhum chamador ativo em `src/` (controllers/routes/jobs não importam ela); admin usa lógica equivalente inline em `approveKyc`/`rejectKyc` (kycController) — POST /admin/kyc/:userId/approve e POST /admin/kyc/:userId/reject
+- **Entradas:**
+  - `userId: string` — precisa existir; `reviewerAdminId: string`
+  - `action: 'approve' | 'reject'`; `reason?: string | null` (default de reprovação se ausente)
+  - Validação: 404 usuário inexistente
+- **Saídas:**
+  - Approve: `{ success: true, message: 'KYC aprovado com sucesso!' }`
+  - Reject: `{ success: true, message: 'KYC reprovado.' }`; erros: 404 usuário não encontrado
+- **Regras/efeitos:**
+  - Approve em transação: `user` → APPROVED (+ reviewedAt/By, limpa rejectReason) + `subscription.updateMany(PENDING_KYC → ACTIVE)`
+  - Reject sem transação: `user` → REJECTED (+ reviewedAt/By, grava rejectReason); não cancela contratos
+  - Tabelas: `user`, `subscription`; side-effects: `logger.info` de APPROVED/REJECTED

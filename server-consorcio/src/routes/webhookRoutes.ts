@@ -16,49 +16,61 @@ router.post('/pixgo', async (req: Request, res: Response) => {
         const config = await prisma.gatewayConfig.findUnique({ where: { name: 'pixgo' } });
         const webhookSecret = config?.webhookSecret || env.PIXGO_WEBHOOK_SECRET;
 
-        if (webhookSecret) {
-            if (!signature) {
-                return res.status(401).json({
-                    error: 'Assinatura ausente',
-                    message: 'O header x-pixgo-signature é obrigatório para autenticar webhooks.'
-                });
-            }
-
-            const payload = (req as any).rawBody ? (req as any).rawBody.toString('utf8') : JSON.stringify(req.body);
-            const expectedSignature = crypto
-                .createHmac('sha256', webhookSecret)
-                .update(payload)
-                .digest('hex');
-
-            const sigBuffer = Buffer.from(signature, 'hex');
-            const expectedBuffer = Buffer.from(expectedSignature, 'hex');
-
-            if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
-                return res.status(401).json({
-                    error: 'Assinatura inválida',
-                    message: 'A assinatura do webhook não corresponde.'
-                });
-            }
-
-            // Timestamp Validation (5 min tolerance)
-            const timestampHeader = req.headers['x-pixgo-timestamp'] as string;
-            if (timestampHeader) {
-                const requestTime = parseInt(timestampHeader, 10);
-                const currentTime = Math.floor(Date.now() / 1000);
-                const tolerance = 300;
-
-                if (isNaN(requestTime) || Math.abs(currentTime - requestTime) > tolerance) {
-                    return res.status(401).json({
-                        error: 'Timestamp inválido ou expirado',
-                        message: 'A requisição é muito antiga ou está no futuro.'
-                    });
-                }
-            }
+        // Fail-closed: sem segredo configurado, NENHUM webhook é aceito.
+        // Antes, com secret ausente, qualquer valor em x-pixgo-signature autenticava
+        // e liquidava parcelas/lances sem pagamento real.
+        if (!webhookSecret) {
+            logger.error('[Webhook PixGo] Rejected: no webhook secret configured (fail-closed)');
+            return res.status(500).json({
+                error: 'WEBHOOK_NOT_CONFIGURED',
+                message: 'Webhook sem segredo configurado. Configure PIXGO_WEBHOOK_SECRET.'
+            });
         }
 
         if (!signature) {
-            logger.warn('[Webhook PixGo] No signature header and no secret configured — rejecting');
-            return res.status(401).json({ error: 'Assinatura ausente' });
+            return res.status(401).json({
+                error: 'Assinatura ausente',
+                message: 'O header x-pixgo-signature é obrigatório para autenticar webhooks.'
+            });
+        }
+
+        const payload = (req as any).rawBody ? (req as any).rawBody.toString('utf8') : JSON.stringify(req.body);
+        const expectedSignature = crypto
+            .createHmac('sha256', webhookSecret)
+            .update(payload)
+            .digest('hex');
+
+        let sigBuffer: Buffer;
+        try {
+            sigBuffer = Buffer.from(signature, 'hex');
+        } catch {
+            return res.status(401).json({
+                error: 'Assinatura inválida',
+                message: 'A assinatura do webhook não corresponde.'
+            });
+        }
+        const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+
+        if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+            return res.status(401).json({
+                error: 'Assinatura inválida',
+                message: 'A assinatura do webhook não corresponde.'
+            });
+        }
+
+        // Timestamp Validation (5 min tolerance)
+        const timestampHeader = req.headers['x-pixgo-timestamp'] as string;
+        if (timestampHeader) {
+            const requestTime = parseInt(timestampHeader, 10);
+            const currentTime = Math.floor(Date.now() / 1000);
+            const tolerance = 300;
+
+            if (isNaN(requestTime) || Math.abs(currentTime - requestTime) > tolerance) {
+                return res.status(401).json({
+                    error: 'Timestamp inválido ou expirado',
+                    message: 'A requisição é muito antiga ou está no futuro.'
+                });
+            }
         }
 
         const { event, data } = req.body;

@@ -16,7 +16,8 @@ export const generateToken = (req: Request, res: Response, next: NextFunction) =
 };
 
 export const validateToken = (req: Request, res: Response, next: NextFunction) => {
-    const token = req.body._csrf || req.query._csrf || req.headers['csrf-token'];
+    // req.body pode ser undefined em multipart (multer ainda não rodou no middleware global)
+    const token = req.body?._csrf || req.query._csrf || req.headers['csrf-token'];
 
     if (!token || token !== req.session.csrfToken) {
         // For API/programmatic requests: return 403 JSON

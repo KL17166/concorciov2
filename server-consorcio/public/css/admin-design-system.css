@@ -526,3 +526,238 @@ a:focus-visible {
     background: color-mix(in srgb, var(--admin-brand) 10%, transparent);
 }
 
+
+/* ==========================================================================
+   TEMA SÓBRIO PROFISSIONAL (2026-09-23)
+   Princípio: chrome neutro, cor só com significado (status), um raio, um cabeçalho.
+   Neutraliza os ~400 estilos coloridos inline das telas em um só lugar.
+   ========================================================================== */
+
+:root {
+    --ops-ink: #0f172a;
+    --ops-ink-soft: #334155;
+    --ops-line: #e2e8f0;
+    --ops-fill: #f1f5f9;
+    --ops-accent: #1e293b;
+    --ops-ok: #166534;
+    --ops-bad: #b91c1c;
+    --ops-radius-card: 12px;
+    --ops-radius-ctl: 8px;
+}
+
+/* ---- Cabeçalho padrão: mesma métrica em todas as telas ---- */
+.top-bar { align-items: flex-end; }
+.page-title { font-size: 1.25rem !important; font-weight: 800; letter-spacing: -0.01em; margin: 0; }
+.page-title i, .page-title .bi { color: var(--admin-muted) !important; }
+.main-content .text-muted.mb-0 { font-size: 0.85rem; }
+.top-bar-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+/* ---- Botões: primário escuro único, resto outline neutro ---- */
+.btn { border-radius: var(--ops-radius-ctl) !important; font-weight: 600; }
+.btn-primary {
+    background-color: var(--ops-accent) !important;
+    border-color: var(--ops-accent) !important;
+}
+.btn-primary:hover { background-color: #0f172a !important; border-color: #0f172a !important; }
+.btn-success { background-color: #166534 !important; border-color: #166534 !important; }
+.btn-warning {
+    background-color: transparent !important; color: #713f12 !important;
+    border-color: #e2e8f0 !important;
+}
+.btn-warning:hover { background-color: var(--ops-fill) !important; }
+.btn-outline-secondary, .btn-outline-primary {
+    color: var(--ops-ink-soft) !important; border-color: var(--ops-line) !important;
+}
+.btn-outline-secondary:hover, .btn-outline-primary:hover {
+    background-color: var(--ops-fill) !important; color: var(--ops-ink) !important;
+}
+.btn-outline-danger { border-radius: var(--ops-radius-ctl) !important; }
+
+/* ---- Selos: todos neutros; significado via ponto + texto ---- */
+.badge, .badge-premium, .gw-pill, .ops-kind, .ops-chip, .bell-chip, .paidclick-badge {
+    border-radius: 999px !important;
+    background: var(--ops-fill) !important;
+    color: var(--ops-ink-soft) !important;
+    border: 1px solid var(--ops-line) !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
+}
+.badge.bg-success, .badge.bg-danger, .badge.bg-warning, .badge.bg-info, .badge.bg-primary,
+.badge-premium, .gw-pill, .ops-status, .ops-counter {
+    background: var(--ops-fill) !important;
+    color: var(--ops-ink-soft) !important;
+    border: 1px solid var(--ops-line) !important;
+    text-shadow: none !important;
+}
+.badge::before, .badge-premium::before, .ops-status::before {
+    content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: #94a3b8; margin-right: 5px; vertical-align: 1px;
+}
+.badge.bg-success::before, .badge-premium::before { background: var(--ops-ok); }
+/* ponto do badge-premium é genérico neutro por padrão */
+.badge.bg-danger::before { background: var(--ops-bad); }
+.badge.bg-warning::before { background: #b45309; }
+.badge.bg-info::before, .badge.bg-primary::before { background: #475569; }
+.badge.bg-dark::before { background: #0f172a; }
+.badge.bg-secondary::before { background: #94a3b8; }
+
+/* ---- Cards de estatística: número escuro grande, rótulo cinza, ícone neutro ---- */
+.stat-icon-wrapper, [class*="stat-icon"] {
+    background: var(--ops-fill) !important; color: #475569 !important;
+    border: 1px solid var(--ops-line) !important;
+}
+.premium-stat-card .fw-bold, .premium-stat-card [style*="font-size: 1.8rem"],
+.admin-stat__value {
+    color: var(--ops-ink) !important;
+}
+.info-label { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.7rem; }
+
+/* ---- Tabelas: cabeçalho discreto, números tabulares ---- */
+.table thead th {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--admin-muted); background: var(--admin-surface-muted);
+    border-bottom: 1px solid var(--admin-border); white-space: nowrap;
+}
+.table tbody tr:hover { background: rgba(15, 23, 42, 0.025) !important; }
+.table td, .table th { font-variant-numeric: tabular-nums; }
+.card, .premium-table-container, .premium-info-card, .ops-filter-card, .ops-list-card {
+    border-radius: var(--ops-radius-card) !important;
+    border: 1px solid var(--admin-border) !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
+}
+.alert { border-radius: 12px !important; border: 1px solid transparent; }
+.mono-code, code {
+    background: var(--ops-fill); border: 1px solid var(--ops-line);
+    border-radius: 6px; padding: 0.1rem 0.4rem; font-size: 0.75rem; color: var(--ops-ink-soft);
+}
+
+/* ---- Abas de filtro: texto escuro, ativa neutra ---- */
+.btn-group .btn.btn-sm { border-radius: 8px !important; }
+.btn-group .btn-warning, .btn-group .btn-success, .btn-group .btn-danger, .btn-group .btn-primary {
+    background: var(--ops-accent) !important; border-color: var(--ops-accent) !important; color: #fff !important;
+}
+.btn-group .btn-outline-warning, .btn-group .btn-outline-success, .btn-group .btn-outline-danger {
+    color: var(--ops-ink-soft) !important; border-color: var(--ops-line) !important; background: transparent !important;
+}
+
+/* ---- Sidebar: sino sóbrio ---- */
+.bell-badge { background: #f8fafc !important; color: #0f172a !important; box-shadow: none !important; }
+.bell-alert-item { border-left: 3px solid #cbd5e1 !important; background: var(--bg-primary) !important; }
+.bell-alert-item.crit { border-left-color: var(--ops-bad) !important; }
+.bell-alert-icon { background: var(--ops-fill) !important; color: #475569 !important; }
+.bell-alert-icon.crit { background: #fef2f2 !important; color: var(--ops-bad) !important; }
+
+/* ---- Modo escuro: neutros invertem, sem arco-íris ---- */
+[data-theme="dark"] .badge, [data-theme="dark"] .badge-premium, [data-theme="dark"] .gw-pill,
+[data-theme="dark"] .ops-kind, [data-theme="dark"] .ops-chip, [data-theme="dark"] .bell-chip,
+[data-theme="dark"] .paidclick-badge, [data-theme="dark"] .ops-status, [data-theme="dark"] .ops-counter {
+    background: #1e293b !important; color: #cbd5e1 !important; border-color: #334155 !important;
+}
+[data-theme="dark"] .btn-primary { background-color: #e2e8f0 !important; border-color: #e2e8f0 !important; color: #0f172a !important; }
+[data-theme="dark"] .btn-warning { color: #e2e8f0 !important; border-color: #334155 !important; }
+[data-theme="dark"] .stat-icon-wrapper, [data-theme="dark"] [class*="stat-icon"] {
+    background: #1e293b !important; color: #94a3b8 !important; border-color: #334155 !important;
+}
+[data-theme="dark"] .premium-stat-card .fw-bold, [data-theme="dark"] .premium-stat-card [style*="font-size: 1.8rem"] {
+    color: #f8fafc !important;
+}
+
+/* Números de estatística sempre tinta escura (neutraliza color inline legado) */
+.premium-stat-card [style*="color:"] { color: var(--ops-ink, #0f172a) !important; }
+[data-theme="dark"] .premium-stat-card [style*="color:"] { color: #f8fafc !important; }
+/* Ícones de sino/título herdam — sem cor própria */
+.bell-alert-icon, .page-title .bi { color: inherit; }
+.bell-alert-icon { color: #475569; }
+.bell-alert-icon.crit { color: var(--ops-bad, #b91c1c); }
+
+/* Rede anti-gradiente: nenhum botão/avatar/nav com arco-íris, em nenhum tema */
+.btn-primary, .sidebar-nav a.active, .sidebar-header, .user-avatar,
+[class*="user-avatar"], .person-avatar {
+    background-image: none !important;
+}
+.sidebar-header { background-color: #1e293b !important; }
+.sidebar-nav a.active { background-color: rgba(255, 255, 255, 0.12) !important; color: #fff !important; box-shadow: none !important; }
+.user-avatar, [class*="user-avatar"], .person-avatar { background-color: #475569 !important; }
+
+/* Abas ativas (Todos/Ativos/...) — mesma língua do primário sóbrio */
+.btn-outline-primary.active, .btn-outline-success.active, .btn-outline-warning.active,
+.btn-outline-danger.active, .btn-outline-info.active {
+    background-color: var(--ops-accent, #1e293b) !important;
+    background-image: none !important;
+    border-color: var(--ops-accent, #1e293b) !important;
+    color: #fff !important;
+    box-shadow: none !important;
+}
+[data-theme="dark"] .btn-outline-primary.active, [data-theme="dark"] .btn-outline-success.active,
+[data-theme="dark"] .btn-outline-warning.active, [data-theme="dark"] .btn-outline-danger.active,
+[data-theme="dark"] .btn-outline-info.active {
+    background-color: #e2e8f0 !important; border-color: #e2e8f0 !important; color: #0f172a !important;
+}
+
+/* Avatares/ícones com gradiente inline legado → bloco sóbrio único */
+div[style*="linear-gradient"], span[style*="linear-gradient"] {
+    background: #475569 !important;
+    background-image: none !important;
+}
+
+/* Outline/botões claros no MODO ESCURO — texto escuro sobre fundo escuro é ilegível */
+[data-theme="dark"] .btn-outline-secondary, [data-theme="dark"] .btn-outline-primary,
+[data-theme="dark"] .btn-outline-success, [data-theme="dark"] .btn-outline-warning,
+[data-theme="dark"] .btn-outline-danger, [data-theme="dark"] .btn-outline-info {
+    color: #cbd5e1 !important; border-color: #475569 !important; background: transparent !important;
+}
+[data-theme="dark"] .btn-outline-secondary:hover, [data-theme="dark"] .btn-outline-primary:hover,
+[data-theme="dark"] .btn-outline-success:hover, [data-theme="dark"] .btn-outline-warning:hover,
+[data-theme="dark"] .btn-outline-danger:hover, [data-theme="dark"] .btn-outline-info:hover {
+    background-color: #1e293b !important; color: #f8fafc !important; border-color: #64748b !important;
+}
+[data-theme="dark"] .btn-light {
+    background-color: #334155 !important; border-color: #475569 !important; color: #f1f5f9 !important;
+}
+[data-theme="dark"] .btn-danger {
+    background-color: #991b1b !important; border-color: #991b1b !important; color: #fff !important;
+    background-image: none !important;
+}
+[data-theme="dark"] .btn-close { filter: invert(1); }
+/* Abas de filtro inativas: selo de contagem legível no escuro */
+[data-theme="dark"] .btn-group .badge, [data-theme="dark"] .btn .badge {
+    background: #334155 !important; color: #e2e8f0 !important; border-color: #475569 !important;
+}
+
+/* Ações de fila no escuro: Amarelo/ciano sólidos viram texto claro + borda (hover nunca clareia) */
+[data-theme="dark"] .btn-warning {
+    background-color: transparent !important; background-image: none !important;
+    color: #fcd34d !important; border-color: #475569 !important;
+}
+[data-theme="dark"] .btn-warning:hover {
+    background-color: rgba(252, 211, 77, 0.12) !important; color: #fde68a !important;
+    border-color: #92600e !important;
+}
+.btn-info, .btn-info:hover {
+    background-color: transparent !important; background-image: none !important;
+    color: #334155 !important; border: 1px solid #cbd5e1 !important;
+}
+[data-theme="dark"] .btn-info, [data-theme="dark"] .btn-info:hover {
+    background-color: transparent !important; color: #cbd5e1 !important; border-color: #475569 !important;
+}
+[data-theme="dark"] .btn-info:hover { background-color: #1e293b !important; color: #f8fafc !important; }
+
+/* Cabeçalho de tabela legível no escuro */
+[data-theme="dark"] .table thead th { color: #94a3b8 !important; }
+
+/* Botão expandir do sanduíche legível no escuro */
+[data-theme="dark"] .admin-sandwich-btn-expand { color: #cbd5e1 !important; }
+[data-theme="dark"] .admin-sandwich-btn-expand:hover { background: #1e293b !important; }
+
+/* Estado vazio: medalhão sempre circular (96px fixos, sem padding que ovaliza) */
+.empty-icon {
+    width: 96px; height: 96px; flex: 0 0 96px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50% !important; aspect-ratio: 1 / 1;
+    background: var(--ops-fill, #f1f5f9) !important;
+    background-image: none !important;
+    border: 1px solid var(--ops-line, #e2e8f0);
+}
+.empty-icon i, .empty-icon .bi { color: #64748b !important; font-size: 2.2rem !important; }
+[data-theme="dark"] .empty-icon { background: #1e293b !important; border-color: #334155 !important; }
+[data-theme="dark"] .empty-icon i, [data-theme="dark"] .empty-icon .bi { color: #94a3b8 !important; }

@@ -29,14 +29,22 @@ export class PaymentFailoverService {
                 // Normaliza o Pix para garantir QR Code gerado
                 const normalizedResult = await ensurePixQrCode(rawResult, request.method);
 
+                // Flag manual vem da config (/admin/gateways) OU do adapter (eldorado/g2g/sandbox não têm webhook).
+                // O app só mostra "confirmação manual" quando esta flag for true.
+                try {
+                    const cfg = await prisma.gatewayConfig.findUnique({ where: { name: gateway.name } });
+                    if (cfg?.requiresManualReview) normalizedResult.isManualApproval = true;
+                } catch { /* config ausente = mantém flag do adapter */ }
+
                 // Se houve falha em gateway(s) anterior(es), mas esta teve sucesso, registra aviso de contingência para o admin
                 if (failedAttempts.length > 0) {
+                    const short = (s: string) => (s || '').replace(/\s+/g, ' ').slice(0, 140);
                     const failedSummary = failedAttempts
-                        .map(f => `${f.gatewayName}: "${f.errorMessage}"`)
+                        .map(f => `${f.gatewayName}: "${short(f.errorMessage)}"`)
                         .join(' | ');
 
                     const alertTitle = `Falha em Gateway de Pagamento (Recuperado com Sucesso)`;
-                    const alertMessage = `O cliente ${request.customer.name} (CPF: ${request.customer.document}) tentou gerar pagamento de R$ ${request.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}, mas ocorreu falha [${failedSummary}]. O pagamento foi concluído automaticamente com sucesso pela gateway de contingência ${gateway.name}.`;
+                    const alertMessage = `${request.customer.name} tentou gerar pagamento de R$ ${request.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}, mas falhou [${failedSummary}]. Concluído pela contingência ${gateway.name}.`;
 
                     logger.warn(`[PaymentFailover] ${alertMessage}`);
 
@@ -90,7 +98,8 @@ export class PaymentFailoverService {
         const lastError = failedAttempts[failedAttempts.length - 1];
 
         const criticalTitle = `Falha Crítica: Todas as Gateways de Pagamento Falharam`;
-        const criticalMessage = `O cliente ${request.customer.name} (CPF: ${request.customer.document}) NÃO conseguiu gerar o pagamento no valor de R$ ${request.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Todas as gateways ativas (${failedNames}) falharam. Motivo principal: "${lastError?.errorMessage}".`;
+        const shortReason = String(lastError?.errorMessage || '').replace(/\s+/g, ' ').slice(0, 160);
+        const criticalMessage = `${request.customer.name} NÃO conseguiu gerar o pagamento de R$ ${request.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${failedNames}). Motivo: "${shortReason}". Detalhe técnico no log do servidor.`;
 
         logger.error(`[PaymentFailover] ${criticalMessage}`);
 

@@ -16,6 +16,13 @@ export interface Bid {
   }
   groupNumber?: string
   quotaNumber?: string
+  payment?: {
+    id: string
+    provider: string
+    status: 'RESERVED' | 'ACTIVE' | 'PAID' | 'EXPIRED' | 'CANCELLED'
+    expiresAt: string | null
+    paidAt: string | null
+  } | null
 }
 
 export interface CreateBidPayload {

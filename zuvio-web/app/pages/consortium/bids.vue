@@ -6,6 +6,7 @@ import { useConsortiumStore } from '~/stores/consortium'
 import { useBidStore } from '~/stores/bid'
 import { useKycStore } from '~/stores/kyc'
 import { useToast } from '~/composables/useToast'
+import { trackEvent } from '~/composables/useTrack'
 import { formatCurrency } from '~~/shared/utils/currency'
 import type { ActiveContract } from '~~/shared/types/catalog'
 import {
@@ -31,7 +32,8 @@ import {
   Check,
   Loader2,
   Sparkles,
-  Trophy
+  Trophy,
+  Clock
 } from 'lucide-vue-next'
 import QRCode from 'qrcode'
 
@@ -70,6 +72,15 @@ const isKycApproved = computed(() => {
   return authStore.isKycApproved || kycStore.status === 'APPROVED'
 })
 
+// Só mostra "aprovação manual" quando a gateway que gerou o PIX for manual
+// (flag vem do backend via gateway_configs.requiresManualReview; fallback pelo provider p/ respostas antigas).
+const isManualGateway = computed(() => {
+  const p = pixData.value
+  if (!p) return true
+  if (typeof p.isManualApproval === 'boolean') return p.isManualApproval
+  return ['eldorado', 'g2g', 'sandbox', 'pending'].includes(String(p.provider || '').toLowerCase())
+})
+
 const contract = computed<ActiveContract | null>(() => {
   if (bidStore.approvedBid?.subscriptionId) {
     const found = consortiumStore.activeContracts.find(c => c.id === bidStore.approvedBid?.subscriptionId)
@@ -83,6 +94,7 @@ const contract = computed<ActiveContract | null>(() => {
 })
 
 onMounted(async () => {
+  // SCREEN_VIEW global via middleware track.global (sem duplicar aqui)
   await Promise.all([
     consortiumStore.activeContracts.length === 0 ? consortiumStore.loadHomeData() : Promise.resolve(),
     bidStore.fetchUserBids(),
@@ -238,6 +250,7 @@ async function handleConfirmBid() {
     isConfirmModalOpen.value = false
 
     if (res.success) {
+      trackEvent({ event: 'BID_CREATED', screen: 'bids', metadata: { productId: contract.value?.product?.id || '' } })
       toastMessage.value = {
         type: 'success',
         text: `Lance de ${effectivePercentage.value.toFixed(1)}% (${formatCurrency(bidValue.value)}) registrado com sucesso na próxima assembleia!`
@@ -276,6 +289,7 @@ function handleProceedToPixFromKyc() {
 async function handleOpenPix(bidId: string) {
   isGeneratingPix.value = true
   toastMessage.value = null
+  trackEvent({ event: 'GENERATE_QR_CLICK', screen: 'bids', entityType: 'bid', entityId: bidId, metadata: { productId: contract.value?.product?.id || '' } })
   try {
     const res = await bidStore.generatePix(bidId)
     const code = res?.pixCopiaECola || res?.qrCodeText
@@ -286,6 +300,8 @@ async function handleOpenPix(bidId: string) {
     }
     pixData.value = res
     isPixModalOpen.value = true
+    trackEvent({ event: 'QR_SHOWN', screen: 'bids', entityType: 'bid', entityId: bidId, metadata: { reused: !!res?.reused, productId: contract.value?.product?.id || '' } })
+    await bidStore.fetchUserBids()
   } catch (err: any) {
     const errorMsg =
       err?.data?.message ||
@@ -306,9 +322,35 @@ function copyPixCode() {
   if (!pixData.value?.pixCopiaECola) return
   navigator.clipboard.writeText(pixData.value.pixCopiaECola)
   hasCopiedPix.value = true
+  const bidId = bidStore.approvedBid?.id
+  if (bidId) trackEvent({ event: 'COPY_PIX_CLICK', screen: 'bids', entityType: 'bid', entityId: bidId })
   setTimeout(() => {
     hasCopiedPix.value = false
   }, 3000)
+}
+
+async function handleBidPaidClick() {
+  const bidId = bidStore.approvedBid?.id
+  if (!bidId) return
+  if (!pixData.value?.pixCopiaECola) return
+  isPixModalOpen.value = false
+  trackEvent({ event: 'VERIFY_PAYMENT_CLICK', screen: 'bids', entityType: 'bid', entityId: bidId })
+  try {
+    await $fetch(`/api/bids/${bidId}/payment-check`, {
+      method: 'POST',
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+    })
+    toast.success(
+      isManualGateway.value
+        ? 'Pagamento avisado! Confirmação manual em até 30 min úteis — avisaremos aqui no app.'
+        : 'Pagamento registrado! A confirmação é automática — aguarde alguns segundos.',
+      'Obrigado'
+    )
+    // Atualiza status (poll leve igual ao checkout/payment.vue)
+    setTimeout(() => { bidStore.fetchUserBids().catch(() => {}) }, 8000)
+  } catch (_) {
+    // best-effort: o clique já foi registrado no pixel
+  }
 }
 
 async function handleConfirmCancelBid(bidId: string) {
@@ -410,6 +452,14 @@ async function handleConfirmCancelBid(bidId: string) {
               <span>{{ bidStore.approvedBid?.percentage }}% do crédito</span>
               <span class="dot-sep">•</span>
               <span>{{ bidStore.approvedBid?.type === 'FREE' ? 'Lance Livre' : 'Lance Fixo' }}</span>
+            </div>
+            <div v-if="bidStore.approvedBid?.payment?.status === 'PAID'" class="bid-payment-status paid">
+              <CheckCircle2 :size="15" color="#059669" />
+              <span>Pagamento confirmado. Aguarde a liberação do crédito.</span>
+            </div>
+            <div v-else-if="bidStore.approvedBid?.payment?.status === 'ACTIVE'" class="bid-payment-status pending">
+              <Clock :size="15" color="#D97706" />
+              <span>PIX gerado — após pagar, acompanhe a confirmação aqui no app.</span>
             </div>
           </div>
 
@@ -958,10 +1008,15 @@ async function handleConfirmCancelBid(bidId: string) {
         </div>
 
         <div class="pix-instructions">
-          <p class="pix-inst-text">
+          <p v-if="isManualGateway" class="pix-inst-text">
             1. Abra o app do seu banco e escolha <strong>PIX</strong>.<br />
             2. Escaneie o QR Code ou cole o código acima.<br />
-            3. A confirmação da contemplação e liberação do crédito ocorre em instantes.
+            3. A confirmação é manual pela nossa equipe (em até 30 min úteis) — após pagar, toque em “Já realizei o pagamento”.
+          </p>
+          <p v-else class="pix-inst-text">
+            1. Abra o app do seu banco e escolha <strong>PIX</strong>.<br />
+            2. Escaneie o QR Code ou cole o código acima.<br />
+            3. A confirmação é automática — aguarde alguns segundos após pagar.
           </p>
         </div>
 
@@ -975,7 +1030,7 @@ async function handleConfirmCancelBid(bidId: string) {
           <span>Cadastro aprovado! Crédito liberado para faturamento logo após o PIX.</span>
         </div>
 
-        <button type="button" class="btn-done-pix" @click="isPixModalOpen = false">
+        <button type="button" class="btn-done-pix" :disabled="!pixData?.pixCopiaECola" :title="!pixData?.pixCopiaECola ? 'Copie o código PIX primeiro' : ''" @click="handleBidPaidClick">
           Entendi, já realizei o pagamento
         </button>
       </div>
@@ -1154,6 +1209,28 @@ async function handleConfirmCancelBid(bidId: string) {
 
 .dot-sep {
   color: #CBD5E1;
+}
+
+.bid-payment-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.bid-payment-status.paid {
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+.bid-payment-status.pending {
+  background: #FFFBEB;
+  color: #92400E;
+  border: 1px solid #FDE68A;
 }
 
 .approved-timeline-box {

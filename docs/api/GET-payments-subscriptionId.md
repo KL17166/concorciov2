@@ -1,0 +1,18 @@
+# GET /api/payments/:subscriptionId
+- **Ativado por:** tela de parcelas do contrato
+  - BFF espelho: `zuvio-web/server/api/payments/[subscriptionId].get.ts`
+  - Handler: `listSubscriptionPayments` → use-case com `isAdmin: false`
+- **Auth / rate-limit:** `authenticate`
+  - Dono checado no use-case (`requesterUserId` vs dono do contrato)
+  - App: `paymentGenerationLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** param `subscriptionId` (contrato)
+  - Sem body; sem schema zod
+  - Atenção: mesmo prefixo do POST, mas aqui o param é contrato, não parcela
+- **O que o servidor retorna:**
+  - 200 array de parcelas formatadas do contrato
+  - 401 → não autenticado
+  - 403 → contrato de outro usuário
+  - 404 → contrato inexistente
+- **Efeitos:**
+  - Somente leitura (`installments` do contrato)
+  - Sem escrita

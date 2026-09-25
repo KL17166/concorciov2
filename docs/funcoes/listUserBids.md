@@ -1,0 +1,14 @@
+# listUserBids
+- **Arquivo:** server-consorcio/src/application/bids/listUserBids.ts:3
+- **O que faz:** Lista todos os lances do usuário com dados do produto, grupo/cota e último voucher PIX.
+- **O que ativa ela:** `listClientBids` (bidsApiController) — GET /api/bids/:userId (com `checkOwnership`)
+- **Entradas:**
+  - `userId: string` (de `params.userId`); sem validação própria — ownership checado no middleware/rota
+- **Saídas:**
+  - Sucesso: array de `{ id, subscriptionId, type, percentage, amount, status, isWinner, createdAt, product{id,name,imageUrl}, groupNumber, quotaNumber, payment{id,provider,status,expiresAt,paidAt} | null }`
+  - `payment` é o voucher mais recente (`payments[0]`); `null` se o lance nunca gerou PIX
+  - Erros: nenhum próprio (repasse de erro do repositório)
+- **Regras/efeitos:**
+  - Leitura pura via `BidRepository.findUserBids`; sem transação, sem escrita
+  - Tabelas lidas: `bid` + `subscription` + `plan` + `product` + `bidPayment`
+  - Side-effects: nenhum; usado pela UI para "aguardando confirmação" vs "pago"

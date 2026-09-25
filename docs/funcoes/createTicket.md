@@ -1,0 +1,15 @@
+# createTicket
+- **Arquivo:** server-consorcio/src/application/support/tickets.ts:16
+- **O que faz:** Abre um ticket de suporte (ex: pedido de cancelamento de contrato ativo).
+- **O que ativa ela:** `openTicket` (ticketsApiController) — POST /api/tickets
+- **Entradas:**
+  - `userId: string` (do JWT); `subscriptionId?: string`; `type?: string` (default `'CANCELLATION'`); `subject`, `message` (obrigatórios, trim, limite 120/2000 chars)
+  - Com `subscriptionId`: 404 contrato inexistente; 403 contrato de outro usuário; 400 se já há ticket OPEN/IN_PROGRESS do contrato nas últimas 24h (dedupe)
+  - Validação: 400 assunto e mensagem obrigatórios
+- **Saídas:**
+  - Sucesso (201 no controller): ticket criado com `status: 'OPEN'`
+  - Erros: 400 assunto/mensagem obrigatórios ou atendimento já aberto; 403 acesso negado; 404 contrato não encontrado
+- **Regras/efeitos:**
+  - Sem transação: `subscription.findUnique` (quando informado) + dedupe + `supportTicket.create`
+  - Tabelas: `subscription` (leitura), `supportTicket` (leitura de dedupe + insert)
+  - Side-effects: `logger.warn [Ticket]` com id, tipo, usuário e contrato

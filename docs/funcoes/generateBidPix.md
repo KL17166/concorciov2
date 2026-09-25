@@ -1,0 +1,17 @@
+# generateBidPix
+- **Arquivo:** server-consorcio/src/application/bids/generateBidPix.ts:25
+- **O que faz:** Gera (ou reutiliza) o voucher PIX de um lance APPROVED, com reserva idempotente e failover de gateway.
+- **O que ativa ela:** `generateClientBidPix` (bidsApiController) — POST /api/bids/:id/pix
+- **Entradas:**
+  - `bidId: string` (de `params.id`); `requesterUserId: string` (do JWT)
+  - Validações: 404 lance inexistente; 403 lance de outro usuário; 400 se lance não está APPROVED; 400 se contrato CANCELLED
+  - Concorrência: voucher ACTIVE válido → reutiliza; RESERVED < 2 min → 429 "aguarde"; RESERVED velho → expira e emite outro
+- **Saídas:**
+  - Sucesso: `{ bidId, bidPaymentId, amount, percentage, productName, provider, isManualApproval, qrCode, qrCodeText, pixCopiaECola, expiresAt, reused }`
+  - `isManualApproval` = flag do adapter OU `gateway_configs.requiresManualReview` (tela /admin/gateways); reutilização resolve via `bidPayment.provider`. O app só exibe “confirmação manual” quando true.
+  - Reutilização retorna `qrCode: null` e `copyPaste` salvo; erros: 404/403/400 acima + 429 em processamento + erro da gateway (marca reserva EXPIRED)
+- **Regras/efeitos:**
+  - Transação `Serializable` (10s): reserva `bidPayment` (RESERVED), expira ACTIVE/RESERVED velhos; TTL do voucher 30 min
+  - Gateway via `PaymentFailoverService.executePaymentWithFailover` com `external_id = bid-<bidId>`; falha marca reserva EXPIRED
+  - Tabelas: `bid`, `subscription`+`user`+`plan`+`product` (leitura), `bidPayment` (reserva + ativação ACTIVE com provider/externalId/copyPaste/expiresAt)
+  - Side-effects: cobrança real na gateway; `logger.info` da geração/reutilização

@@ -1,0 +1,20 @@
+# POST /api/bids
+- **Ativado por:** tela de lances (dar lance no contrato)
+  - BFF espelho: `zuvio-web/server/api/bids/index.post.ts`
+  - Handler: `createClientBid` → `createBid` (application)
+- **Auth / rate-limit:** `authenticate` + `transactionRateLimiter`
+  - App: `bidLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** body zod `CreateBidSchema` (`schemas/bidSchema.ts`)
+  - `subscriptionId`: uuid do contrato
+  - `type`: FREE | FIXED
+  - `percentage`: 0–100 (coerce)
+  - `amount`: > 0 (coerce)
+- **O que o servidor retorna:**
+  - 201 `{ success: true, message: 'Lance registrado com sucesso!', bid }`
+  - 400 BAD_REQUEST → validação ou regra de negócio (ex: contrato inelegível)
+  - 401/403 → sem auth ou não dono do contrato
+  - 404 → contrato inexistente
+  - 429 → rate limit
+- **Efeitos:**
+  - Cria `bid` vinculado ao `subscription` (regras em `createBid`)
+  - Erro padronizado por `handleApiError` (com `requestId`)

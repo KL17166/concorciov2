@@ -1,0 +1,18 @@
+# GET /api/products
+- **Ativado por:** vitrine/catálogo do app
+  - BFF espelho: `zuvio-web/server/api/products/index.get.ts`
+  - Fluxo: listagem pública antes do login/adesão
+- **Auth / rate-limit:** pública (sem `authenticate`)
+  - App: `generalLimiter` + `securityMiddleware`
+- **Request:** query opcional
+  - `?type=MOTO` (uppercased no handler)
+  - `?category=` (filtro exato)
+  - Sem body
+- **O que o servidor retorna:**
+  - 200 array de produtos ativos (`active: true`) com `plans` ativos ordenados por `durationMonths`
+  - Cada plano traz `monthlyInstallment` calculado (price × taxas ÷ meses)
+  - `price` como number; `imageUrls`/`specs` parseados com fallback seguro
+  - 500 → falha de banco (via errorHandler)
+- **Efeitos:**
+  - Somente leitura (`product.findMany` + `plans`)
+  - Alias legado `/api/motorcycles` serve o mesmo handler

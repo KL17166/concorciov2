@@ -1,0 +1,17 @@
+# POST /api/bids/:id/payment-check
+- **Ativado por:** botão "Já paguei" do PIX do lance
+  - BFF espelho: `zuvio-web/server/api/bids/[id]/payment-check.post.ts`
+  - Handler: `notifyClientBidPaymentCheck` → `notifyBidPaymentCheck`
+- **Auth / rate-limit:** `authenticate` + `transactionRateLimiter`
+  - App: `bidLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** param `id` (bid)
+  - Sem body; dono via JWT (`requesterUserId`)
+- **O que o servidor retorna:**
+  - 200 `{ success: true, notified }`
+  - 401/403 → sem auth ou não dono
+  - 404 → lance inexistente
+  - 429 → rate limit
+- **Efeitos:**
+  - Cria alerta/notificação de conferência para a equipe
+  - Registra evento `VERIFY_PAYMENT_CLICK` (tracking, best-effort, nunca quebra)
+  - Não baixa o pagamento sozinho

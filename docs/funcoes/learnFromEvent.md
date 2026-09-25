@@ -1,0 +1,13 @@
+# learnFromEvent
+- **Arquivo:** server-consorcio/src/services/learningService.ts
+- **O que faz:** Atualiza os pesos do algoritmo a cada evento do pixel (aprendizado online). É o coração do loop: quanto mais uso, melhor o ranking.
+- **O que ativa ela:** `recordTrackingEvent` (após gravar o evento), best-effort com try/catch (nunca quebra o fluxo)
+- **Entradas:** `userId` (do JWT, pode ser null), `TrackEventInput` (usa `event` + `metadata.productId` 8-64 chars)
+- **Saídas:** `Promise<void>` (sem retorno útil; falhas só em warn)
+- **Regras/efeitos:**
+  - `GENERATE_QR_CLICK/QR_SHOWN` → `aff:PROD:<id>` (+1 usuário) + `pop:PROD:<id>` (+1 global)
+  - `BID_CREATED` → sinal forte 3x nos mesmos pesos (intenção real de compra)
+  - `COPY_PIX_CLICK` → `aff` +1 do usuário
+  - `VERIFY_PAYMENT_CLICK` → EMA `prop:verify` (usuário) e `conv:qr_verify` (global), ALPHA=0.2
+  - `PAYMENT_CONFIRMED_VIEW` → EMA `prop:pay` e `conv:verify_paid`
+  - Tabela `learning_weights` via upsert atômico (`scope+key` único)

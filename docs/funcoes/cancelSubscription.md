@@ -1,0 +1,14 @@
+# cancelSubscription
+- **Arquivo:** server-consorcio/src/application/subscriptions/cancelSubscription.ts:15
+- **O que faz:** Cancela um contrato e suas parcelas pendentes/vencidas, com regra distinta para cliente e admin.
+- **O que ativa ela:** `cancelClientSubscription` — POST /api/subscriptions/:subscriptionId/cancel; `cancelContract` (contractsController) — POST /admin/contracts/:id/cancel
+- **Entradas:**
+  - `subscriptionId: string`; `requesterUserId: string`; `requesterRole: 'CLIENT'|'MASTER'|'MANAGER'|'SUPPORT'`
+  - Admin = MASTER/MANAGER/SUPPORT (pode cancelar qualquer status); cliente só o próprio contrato e só se status PENDING
+  - Validações: 404 contrato inexistente; 403 cliente em contrato de outro; 400 cliente tentando cancelar contrato não-PENDING
+- **Saídas:**
+  - Sucesso: `{ success: true, message: 'Contrato cancelado com sucesso.' }` (ou 'já está cancelado' se repetido — idempotente)
+  - Erros: 404 contrato não encontrado; 403 acesso negado; 400 apenas pendentes podem ser cancelados pelo cliente
+- **Regras/efeitos:**
+  - Transação única: `subscription` → CANCELLED (`balanceDue = 0`) + `installment.updateMany(PENDING,OVERDUE → CANCELLED)`; parcelas PAID preservadas
+  - Tabelas: `subscription`, `installment`; side-effects: `logger.info` com role e solicitante

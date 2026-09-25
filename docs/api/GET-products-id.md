@@ -1,0 +1,17 @@
+# GET /api/products/:id
+- **Ativado por:** tela de detalhe do produto
+  - BFF espelho: `zuvio-web/server/api/products/[id].get.ts`
+  - Fluxo: usuário abre produto da vitrine para ver planos
+- **Auth / rate-limit:** pública (sem `authenticate`)
+  - App: `generalLimiter` + `securityMiddleware`
+- **Request:** param `id` (string, PK do produto)
+  - Sem body, sem query
+- **O que o servidor retorna:**
+  - 200 produto com `plans` ativos + `monthlyInstallment` por plano
+  - `price` como number; `imageUrls`/`specs` parseados com fallback
+  - Não filtra por `active` (busca por id direto)
+  - 404 → produto não encontrado
+  - 500 → falha de banco
+- **Efeitos:**
+  - Somente leitura (`product.findUnique` + `plans`)
+  - Também atende `/api/motorcycles/:id` (mesmo router)

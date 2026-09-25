@@ -1,0 +1,14 @@
+# getSubscriptionDetails
+- **Arquivo:** server-consorcio/src/application/subscriptions/getSubscriptionDetails.ts:6
+- **O que faz:** Retorna o detalhe completo de um contrato (progresso, próxima parcela, parcelas, lances, plano/produto).
+- **O que ativa ela:** `getSingleSubscription` (subscriptionsApiController) — GET /api/subscription/:subscriptionId
+- **Entradas:**
+  - `subscriptionId: string` (de `params.subscriptionId`); `requesterUserId?: string` (do JWT)
+  - Validações: 404 contrato inexistente; 403 quando `requesterUserId` informado e não é o dono
+- **Saídas:**
+  - Sucesso: `{ id, userId, productId, planId, groupNumber, quotaNumber, creditValue, balanceDue, status (minúsculo), isAdesaoPaid, currentInstallment, totalInstallments, paidInstallments[], nextPaymentAmount, dueDate, progressPercentage, installmentValues/Ids/DueDates/Tokens, contemplated…, plan, product, installments[] (com valueToPay), bids[] }`
+  - Erros: 404 contrato não encontrado; 403 acesso negado
+- **Regras/efeitos:**
+  - Leitura pura via `SubscriptionRepository.findById`; sem transação, sem escrita
+  - `currentInstallment` = menor número não-pago; `isAdesaoPaid` = status ACTIVE ou parcela 1 PAID; `dueDate` default '15/09/2026' se sem próxima
+  - Tabelas lidas: `subscription` + `installments` + `plan` + `product` + `bids`; side-effects: nenhum

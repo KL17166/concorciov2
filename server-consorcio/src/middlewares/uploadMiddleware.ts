@@ -91,7 +91,13 @@ export const upload = multer({
     fileFilter: fileFilter,
     limits: {
         fileSize: 5 * 1024 * 1024, // 5MB limit
-        files: 1 // Only 1 file per request
+        files: 1, // Only 1 file per request
+        // B10 (CVE-2026-5079, multer <2.2.0): teto de partes/fields contra DoS
+        // via multipart aninhado + nome de campo gigante.
+        parts: 10,
+        fields: 10,
+        fieldNameSize: 100,
+        fieldSize: 1024 * 1024 // 1MB (formulários do painel são pequenos)
     }
 });
 
@@ -113,3 +119,30 @@ export const verifyUploadedMagicBytes = (req: any, res: any, next: any) => {
     }
     next();
 };
+
+const CATALOG_TMP_DIR = path.join(process.cwd(), 'storage', 'catalog-tmp');
+if (!fs.existsSync(CATALOG_TMP_DIR)) {
+    fs.mkdirSync(CATALOG_TMP_DIR, { recursive: true });
+}
+
+// Upload de foto do catálogo: só imagem (sem PDF), 5MB, com as mesmas travas anti-DoS.
+export const catalogUpload = multer({
+    storage: multer.diskStorage({
+        destination: (_req: any, _file: any, cb: any) => cb(null, CATALOG_TMP_DIR),
+        filename: (_req: any, file: any, cb: any) => {
+            const ext = path.extname(file.originalname).toLowerCase();
+            cb(null, `catalog-${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`);
+        }
+    }),
+    fileFilter: (_req: any, file: any, cb: any) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        const okExt = ['.jpg', '.jpeg', '.png', '.webp'];
+        const okMime = ['image/jpeg', 'image/png', 'image/webp', 'application/octet-stream'];
+        if (BLOCKED_EXTENSIONS.includes(ext)) return cb(new Error(`Tipo de arquivo bloqueado: ${ext}.`), false);
+        if (!okExt.includes(ext)) return cb(new Error(`Extensão não permitida: ${ext}. Use JPG, PNG ou WebP.`), false);
+        // MIME é só hint (curl/navegadores variam) — a trava real é o magic bytes no controller.
+        if (!okMime.includes(file.mimetype)) return cb(new Error(`Tipo MIME não permitido: ${file.mimetype}.`), false);
+        cb(null, true);
+    },
+    limits: { fileSize: 5 * 1024 * 1024, files: 1, parts: 10, fields: 10, fieldNameSize: 100, fieldSize: 1024 * 1024 }
+});

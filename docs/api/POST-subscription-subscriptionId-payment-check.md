@@ -1,0 +1,17 @@
+# POST /api/subscription/:subscriptionId/payment-check
+- **Ativado por:** botão "Verificar Pagamento" do contrato
+  - BFF espelho: `zuvio-web/server/api/subscription/[subscriptionId]/payment-check.post.ts`
+  - Handler: `notifySubscriptionPaymentCheck` → `notifyPaymentCheck`
+- **Auth / rate-limit:** `authenticate` (sem limiter de rota)
+  - App: `generalLimiter` + `securityMiddleware`
+  - Note o singular: `/subscription/` (não `/subscriptions/`)
+- **Request:** param `subscriptionId`; body opcional `{ installmentId }` (o app SEMPRE manda — adesão, atual ou antecipada)
+  - Sem installmentId: usa a 1ª parcela em aberto (fallback da adesão); dono via JWT (`requesterUserId`)
+- **O que o servidor retorna:**
+  - 200 `{ success: true, notified }`
+  - 401/403 → sem auth ou não dono
+  - 404 → contrato inexistente
+- **Efeitos:**
+  - Cria `SystemAlert PAYMENT_CHECK` (`status OPEN`) com parcela exata: título `... — Adesão | Parcela N | Parcela N (antecipação)` + details (kind, installmentId/Number/Status/dueDate, amount, provider, isAntecipacao)
+  - 403 se `installmentId` for de outro contrato; dedupe 5min por contrato
+  - Não altera status de parcela sozinho

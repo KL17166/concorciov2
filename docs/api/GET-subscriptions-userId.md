@@ -1,0 +1,16 @@
+# GET /api/subscriptions/:userId
+- **Ativado por:** tela Meus Contratos
+  - BFF espelho: `zuvio-web/server/api/subscriptions/[userId].get.ts`
+  - Handler: `listUserSubscriptions` → `getUserSubscriptions`
+- **Auth / rate-limit:** `authenticate` + `checkOwnership('user','userId')`
+  - App: `subscriptionRouteRateLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** param `userId` (igual ao do JWT)
+  - Sem body; sem schema zod
+- **O que o servidor retorna:**
+  - 200 array de contratos do usuário
+  - 400 → param ausente (via `checkOwnership`)
+  - 401 → não autenticado
+  - 403 → `userId` de outro usuário
+- **Efeitos:**
+  - Somente leitura (`subscription` por `userId`)
+  - Sem escrita, sem auditoria

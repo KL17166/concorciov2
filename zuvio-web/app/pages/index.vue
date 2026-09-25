@@ -9,6 +9,10 @@ import { formatCurrency } from '~~/shared/utils/currency'
 import { PRODUCT_CATEGORIES } from '~~/shared/utils/catalogData'
 import type { Product, ActiveContract, ProductTypeKey } from '~~/shared/types/catalog'
 import ApprovedBidModal from '~/components/bids/ApprovedBidModal.vue'
+
+definePageMeta({
+  middleware: 'auth'
+})
 import {
   Search,
   CheckCircle,
@@ -27,10 +31,6 @@ import {
   SlidersHorizontal
 } from 'lucide-vue-next'
 
-definePageMeta({
-  middleware: 'auth'
-})
-
 const authStore = useAuthStore()
 const consortiumStore = useConsortiumStore()
 const checkoutStore = useCheckoutStore()
@@ -40,10 +40,13 @@ const toast = useToast()
 const currentContractIndex = ref(0)
 
 onMounted(async () => {
-  await Promise.all([
-    consortiumStore.loadHomeData(),
-    bidStore.fetchUserBids()
-  ])
+  authStore.initFromStorage()
+  if (authStore.isAuthenticated) {
+    await Promise.all([
+      consortiumStore.loadHomeData(),
+      bidStore.fetchUserBids()
+    ])
+  }
 })
 
 function openProductDetail(product: Product) {
@@ -84,6 +87,7 @@ function handlePayAdhesion(contract: ActiveContract) {
 </script>
 
 <template>
+  <!-- Dashboard do Consórcio (rota protegida: visitante é redirecionado a /welcome pelo middleware auth) -->
   <div class="flutter-home-scaffold">
     <!-- Main Scroll View -->
     <div class="home-scroll-container">
@@ -1220,6 +1224,10 @@ function handlePayAdhesion(contract: ActiveContract) {
   outline: none;
   font-size: 15px;
   color: #1A1A1A;
+}
+
+.overlay-input:focus-visible {
+  box-shadow: none;
 }
 
 .btn-clear-query {

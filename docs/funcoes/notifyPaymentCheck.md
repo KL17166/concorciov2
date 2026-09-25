@@ -1,0 +1,17 @@
+# notifyPaymentCheck
+- **Arquivo:** server-consorcio/src/application/payments/notifyPaymentCheck.ts:18
+- **O que faz:** Registra que o cliente clicou em "Verificar Pagamento", criando alerta rico para baixa manual (com tipo, parcela/adesão, valor, gateway).
+- **O que ativa ela:** `notifySubscriptionPaymentCheck` (subscriptionsApiController) — POST /api/subscription/:subscriptionId/payment-check
+- **Entradas:**
+  - `subscriptionId: string` (params); `requesterUserId: string` (JWT)
+  - Validações: 404 contrato inexistente; 403 contrato de outro usuário
+  - Anti-spam POR CONJUNTO: mesmo conjunto de parcelas em 5min suprime; conjunto diferente gera novo pedido
+- **Saídas:**
+  - Sucesso: `{ notified: true }` (criou alerta) ou `{ notified: false }` (deduplicado)
+  - Erros: 404 contrato não encontrado; 403 acesso negado
+- **Regras/efeitos:**
+  - Resolve as N parcelas (ou fallback 1ª em aberto); título `... — Adesão | Parcela N | Adesão + Parcelas 2 e 3 | Parcelas 2, 3 e 5 (+ com antecipação)`; `isAntecipacao` quando `number > 1ª em aberto`
+  - `details`: `items[{installmentId, number, amount, status, dueDate, anticipated}], count, totalAmount, hasAntecipacao` (+ campos singulares p/ compat)
+  - `details`: `kind/kindLabel` (ADESAO|PARCELA|CONTRATO), `installmentId/Number/Status/dueDate`, `amount`, `paymentMethod`, `provider`, `productName/planName`, grupo/cota, cliente
+  - Tabelas: `subscription` (leitura), `systemAlert` (leitura de dedupe + insert)
+  - Side-effects: `logger.warn [PaymentCheck]`; alerta aparece no sino + Central com chips (tipo, valor, gateway, vencimento)

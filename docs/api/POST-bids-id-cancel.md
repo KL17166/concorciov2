@@ -1,0 +1,17 @@
+# POST /api/bids/:id/cancel
+- **Ativado por:** botão Cancelar lance
+  - BFF espelho: `zuvio-web/server/api/bids/[id]/cancel.post.ts`
+  - Handler: `cancelClientBid` → `cancelBid` com `isAdmin: false`
+- **Auth / rate-limit:** `authenticate` + `transactionRateLimiter`
+  - App: `bidLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** param `id` (bid)
+  - Sem body; dono resolvido via JWT (`requesterUserId`)
+- **O que o servidor retorna:**
+  - 200 `{ success: true, message, bid }` (retorno de `cancelBid`)
+  - 400 → lance em status não cancelável
+  - 401/403 → sem auth ou não dono
+  - 404 → lance inexistente
+  - 429 → rate limit
+- **Efeitos:**
+  - Atualiza status do `bid` (cancelamento pelo dono)
+  - Sem reembolso automático neste endpoint

@@ -1,0 +1,18 @@
+# POST /api/subscriptions/:subscriptionId/cancel
+- **Ativado por:** botão Cancelar contrato
+  - BFF espelho: `zuvio-web/server/api/subscriptions/[subscriptionId]/cancel.post.ts`
+  - Handler: `cancelClientSubscription` → `cancelSubscription`
+- **Auth / rate-limit:** `authenticate` + `transactionRateLimiter`
+  - Papel via JWT (`requesterRole`, default CLIENT)
+  - App: `subscriptionRouteRateLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** param `subscriptionId`
+  - Sem body; dono via JWT (`requesterUserId`)
+- **O que o servidor retorna:**
+  - 200 `{ success: true, message }`
+  - 400 → status não cancelável
+  - 401/403 → sem auth ou não dono
+  - 404 → contrato inexistente
+  - 429 → rate limit
+- **Efeitos:**
+  - Atualiza status do `subscription` (cancelamento)
+  - Pode exigir ticket de cancelamento conforme regra de negócio

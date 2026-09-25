@@ -7,7 +7,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test:welcome": "node --test tests/e2e/welcome.test.mjs"
   },
   "dependencies": {
     "@pinia/nuxt": "^1.0.2",

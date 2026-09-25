@@ -1,0 +1,14 @@
+# createSubscription
+- **Arquivo:** server-consorcio/src/application/subscriptions/createSubscription.ts:29
+- **O que faz:** Cria contrato + parcelas e aloca grupo/cota atomicamente, com checagens de KYC, plano e limite de contratos.
+- **O que ativa ela:** `createClientSubscription` — POST /api/subscriptions (channel CLIENT_APP, valida `CreateClientSubscriptionSchema`); `createContract` (contractsController) — POST /admin/contracts/new (channel ADMIN_PANEL)
+- **Entradas:**
+  - `userId`, `planId`, `productId?`, `groupNumber?`/`quotaNumber?`, `termsAccepted?`, `termsIpAddress?`, docs KYC opcionais, `channel: 'CLIENT_APP'|'ADMIN_PANEL'`
+  - Validações: 404 usuário/plano inexistente; 403 `KYC_REJECTED`; 400 plano inativo, produto divergente, duração fora de min/max, limite 5 ativos (só CLIENT_APP)
+- **Saídas:**
+  - Sucesso: `{ success: true, subscription (PENDING), installments (nº 1 vence hoje, demais dia 10), plan+product }`
+  - Erros: 404/403/400 acima (erros de negócio não são retentados)
+- **Regras/efeitos:**
+  - Transação `Serializable` (15s, retry 3x em colisão): re-checa KYC, `allocateGroupAndQuota`, cria subscription + N installments com `idTokenPay`, auto-submete KYC se docs enviados
+  - Financeiro via `calculatePlanFinancials`; parcela 1 = adesão (vencimento hoje)
+  - Tabelas: `user`, `subscription`, `installment`, `consortiumPlan/product` (leitura); side-effects: `logger.info/warn/error`

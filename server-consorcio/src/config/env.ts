@@ -10,10 +10,18 @@ const envSchema = z.object({
     PORT: z.string().default('3000').transform(Number),
     DATABASE_URL: z.string().url(),
     JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
+    // B9: access token curto (15m). Antes o .env trazia "7d" e o controller ainda
+    // lia `process.env` bruto, ignorando qualquer validação — janela de abuso de
+    // token roubado era de 7 dias.
+    JWT_EXPIRES_IN: z.string().default('15m'),
     SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
     PASSWORD_PEPPER: z.string().min(16, "PASSWORD_PEPPER deve ter no mínimo 16 caracteres")
         .default(process.env.PASSWORD_PEPPER || (isProd ? '' : 'dev-pepper-secret-minimum-16-chars!')),
     ALLOWED_ORIGINS: z.string().optional(),
+    // B9-fix: alguns clientes legítimos locais (webviews sandboxadas, file://,
+    // Capacitor) enviam `Origin: null`. Em DEV pode ser liberado via flag
+    // (default ligado); em PRODUÇÃO `null` é SEMPRE bloqueado, com ou sem flag.
+    ALLOW_NULL_ORIGIN: z.string().default('true').transform((v) => v === 'true'),
     REDIS_URL: z.string().default('redis://localhost:6379'),
     PIXGO_WEBHOOK_SECRET: z.string().min(16, "PIXGO_WEBHOOK_SECRET deve ter pelo menos 16 caracteres em producao").optional()
         .refine(

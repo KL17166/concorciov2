@@ -12,10 +12,12 @@ import bidRoutes from './bidRoutes';
 import productRoutes from './productRoutes';
 import userRoutes from './userRoutes';
 import reportRoutes from './reportRoutes';
+import trackingRoutes from './trackingRoutes';
 import securityRoutes from './securityRoutes';
 import gatewayRoutes from './gatewayRoutes';
 import kycRoutes from './kycRoutes';
 import ticketsRoutes from './ticketsRoutes';
+import notificationsRoutes from './notificationsRoutes';
 import profileRoutes from './profileRoutes';
 import peopleRoutes from './peopleRoutes';
 
@@ -50,11 +52,11 @@ router.use(async (req: any, res: any, next: any) => {
         if (req.method === 'GET' && req.session?.user) {
             const [alerts, unread] = await Promise.all([
                 (prisma as any).systemAlert.findMany({
-                    where: { read: false },
+                    where: { status: { in: ['OPEN', 'ACK', 'IN_PROGRESS'] } },
                     orderBy: { createdAt: 'desc' },
                     take: 8
                 }),
-                (prisma as any).systemAlert.count({ where: { read: false } })
+                (prisma as any).systemAlert.count({ where: { status: { in: ['OPEN', 'ACK', 'IN_PROGRESS'] } } })
             ]);
             res.locals.alertBell = { unread, alerts };
         }
@@ -78,9 +80,11 @@ router.use(bidRoutes);
 router.use(productRoutes);
 router.use(userRoutes);
 router.use(reportRoutes);
+router.use(trackingRoutes);
 router.use(securityRoutes);
 router.use(gatewayRoutes);
 router.use(kycRoutes);
 router.use(ticketsRoutes);
+router.use(notificationsRoutes);
 
 export default router;

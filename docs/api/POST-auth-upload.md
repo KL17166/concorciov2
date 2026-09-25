@@ -1,0 +1,19 @@
+# POST /api/auth/upload
+- **Ativado por:** fluxo KYC do app (envio de documento frente/verso e selfie)
+  - BFF espelho: `zuvio-web/server/api/auth/upload.post.ts`
+  - Retorna a URL que depois alimenta POST `/api/kyc/submit`
+- **Auth / rate-limit:** `authenticate` + `upload.single('file')` + `verifyUploadedMagicBytes`
+  - App: `generalLimiter` + `securityMiddleware` (sem limiter específico)
+- **Request:** multipart com `file` (obrigatório)
+  - Query `?type=selfie` → `selfieUrl`; `?type=document_back` → `documentBackUrl`; senão → `documentFrontUrl`
+  - `userId` vem do JWT; magic bytes validados antes do Datavalid
+- **O que o servidor retorna:**
+  - 200 `{ message: 'File uploaded successfully', url: '/api/kyc/documents/{userId}/{filename}' }`
+  - 400 → sem arquivo
+  - 401 → não autenticado
+  - 403 → Datavalid reprovou (liveness ou dados divergentes da RFB)
+  - 503 → Datavalid indisponível (só quando `DATAVALID_ENABLED`)
+- **Efeitos:**
+  - Grava arquivo + sidecar JSON do Datavalid; push fire-and-forget ao KYC storage
+  - `user.update` do campo da URL correspondente
+  - Se 3 docs presentes e KYC PENDING → `kycStatus=SUBMITTED`

@@ -37,6 +37,8 @@ export interface Product {
   minDuration: number
   maxDuration: number
   specs?: Record<string, any>
+  // Ordem definida no painel admin (menor = aparece primeiro)
+  displayOrder?: number
 }
 
 export interface ActiveContract {

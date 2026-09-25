@@ -1,0 +1,16 @@
+# PATCH /api/notifications/:id/read
+- **Ativado por:** ação Marcar como lida no app
+  - BFF espelho: `zuvio-web/server/api/notifications/[id]/read.patch.ts`
+  - Handler: `markNotificationRead` (`updateMany` escopado ao dono)
+- **Auth / rate-limit:** `authenticate` + `trackingLimiter`
+  - App: `generalLimiter` + `securityMiddleware`
+- **Request:** param `id` (UUID validado por regex no handler)
+  - Sem body; só notificação do próprio `userId`
+- **O que o servidor retorna:**
+  - 200 `{ success: true, marked: 0|1 }`
+  - ID de outro dono → 200 com `marked: 0` (não vaza existência)
+  - 400 → ID com formato inválido
+  - 401 → não autenticado
+- **Efeitos:**
+  - `notification.updateMany` (`read: true`, `readAt: now`)
+  - Idempotente (segunda chamada retorna `marked: 0`)

@@ -50,7 +50,8 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
                     where: { active: true },
                     orderBy: { durationMonths: 'asc' }
                 }
-            }
+            },
+            orderBy: [{ displayOrder: 'asc' }, { createdAt: 'desc' }]
         });
 
         // Transform response and calculate installments
@@ -59,6 +60,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
             return {
                 ...product,
                 price,
+                displayOrder: (product as any).displayOrder ?? 0,
                 imageUrls: safeParseImageUrls(product.imageUrls),
                 specs: safeParseSpecs(product.specs),
                 plans: (product as any).plans.map((plan: any) => {
@@ -100,6 +102,7 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
         const formattedProduct = {
             ...product,
             price,
+            displayOrder: (product as any).displayOrder ?? 0,
             imageUrls: safeParseImageUrls(product.imageUrls),
             specs: safeParseSpecs(product.specs),
             plans: (product as any).plans.map((plan: any) => {

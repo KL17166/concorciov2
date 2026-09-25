@@ -1,0 +1,18 @@
+# POST /api/webhooks/sigilopay (server-to-server)
+- **Ativado por:** gateway SigiloPay (callback de pagamento)
+  - NÃO é chamado pelo app; sem BFF espelho
+  - Rota montada antes do `securityMiddleware` (app.ts:144)
+- **Auth / rate-limit:** sem `authenticate`/JWT e sem rate limiter
+  - `Authorization: Bearer <webhookSecret|apiSecret>` de `gatewayConfig(sigilopay)`
+  - Comparação com `timingSafeEqual`; sem config → 500
+- **Request:** body `{ status*, reference* (= installmentId), amount?, id? }`
+  - `reference` e `status` devem ser strings não vazias
+- **O que o servidor retorna:**
+  - Status `completed|paid|approved` → status de `processPaymentWebhook` `{ success, message }`
+  - Outro status → 200 `'Event received'` (texto puro)
+  - 500 → config ou segredo ausente
+  - 401 → Bearer inválido
+  - 400 → `reference`/`status` ausentes
+- **Efeitos:**
+  - Liquida parcela/lance via `processPaymentWebhook` (provider sigilopay)
+  - Idempotente por `providerEventId` (ou `reference:status`); log do evento

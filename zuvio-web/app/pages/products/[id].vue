@@ -5,6 +5,7 @@ import { useConsortiumStore } from '~/stores/consortium'
 import { formatCurrency } from '~~/shared/utils/currency'
 import { DEFAULT_PRODUCTS } from '~~/shared/utils/catalogData'
 import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
+import { trackEvent } from '~/composables/useTrack'
 import {
   ArrowLeft,
   ArrowRight,
@@ -90,11 +91,20 @@ onMounted(async () => {
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('keydown', handleKeydown)
 
-  if (consortiumStore.products.length === 0) {
-    await consortiumStore.loadHomeData()
-  }
+  // Garante o catálogo real: a store inicia com DEFAULT_PRODUCTS (5 mocks) e o
+  // guard antigo (length === 0) nunca disparava em deep-link/refresh,
+  // causando "Nenhum produto selecionado" para ids reais do catálogo.
+  await consortiumStore.ensureProductsLoaded()
   isPageLoading.value = false
   autoSelectBestPlan()
+  // Produto visto com identidade: alimenta a afinidade do algoritmo.
+  // Esta página é dona do próprio SCREEN_VIEW (fora do middleware global
+  // para não duplicar): com productId quando resolve, sem quando não.
+  trackEvent({
+    event: 'SCREEN_VIEW',
+    screen: 'products',
+    ...(product.value?.id ? { metadata: { productId: product.value.id } } : {})
+  })
 })
 
 watch(product, () => {

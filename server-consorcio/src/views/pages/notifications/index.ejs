@@ -1,0 +1,137 @@
+<%- include('../../partials/header') %>
+<%- include('../../partials/sidebar', { path: '/notifications' }) %>
+<div class="main-content">
+  <div class="top-bar">
+    <div>
+      <h1 class="page-title">Central de Notificações</h1>
+      <p class="text-muted mb-0">Fila operacional — atendente assume, gerente aprova. O sino mostra a mesma fila.</p>
+    </div>
+    <div class="top-bar-actions">
+      <span class="badge">Abertos: <%= openCount %></span>
+      <span class="badge">Meus: <%= mineCount %></span>
+      <span class="badge">Sem dono: <%= unassignedCount %></span>
+      <button class="theme-toggle" onclick="toggleTheme()"><i class="bi bi-moon-stars" id="themeIcon"></i></button>
+    </div>
+  </div>
+
+  <% if (typeof success_msg !== 'undefined' && success_msg && success_msg.length > 0) { %>
+    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert" style="border-radius:14px;"><i class="bi bi-check-circle-fill me-2"></i><%= success_msg %><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  <% } %>
+  <% if (typeof error_msg !== 'undefined' && error_msg && error_msg.length > 0) { %>
+    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert" style="border-radius:14px;"><i class="bi bi-exclamation-triangle-fill me-2"></i><%= error_msg %><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  <% } %>
+
+  <div class="ops-filter-card mb-3">
+    <div class="card-body">
+      <form method="GET" action="/admin/notifications" class="row g-2 align-items-end">
+        <div class="col-md-2">
+          <label class="form-label">Status</label>
+          <select name="status" class="form-select">
+            <% ['OPEN','ACK','IN_PROGRESS','RESOLVED','DISMISSED','ALL'].forEach(function(s){ %>
+              <option value="<%= s %>" <%= status===s?'selected':'' %>><%= s %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Tipo</label>
+          <input name="type" value="<%= type||'' %>" class="form-control" placeholder="Ex.: verificação, estorno, gateway...">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Busca</label>
+          <input name="q" value="<%= q||'' %>" class="form-control" placeholder="nome, email, CPF, bidId, contrato...">
+        </div>
+        <div class="col-md-3 d-flex gap-3 align-items-end">
+          <div class="form-check"><input class="form-check-input" type="checkbox" name="mine" value="1" <%= mine?'checked':'' %>><label class="form-check-label">Só meus</label></div>
+          <div class="form-check"><input class="form-check-input" type="checkbox" name="unassigned" value="1" <%= unassigned?'checked':'' %>><label class="form-check-label">Sem dono</label></div>
+          <button class="btn btn-primary" style="border-radius:12px;font-weight:700;" type="submit">Filtrar</button>
+          <a class="btn btn-outline-secondary" style="border-radius:12px;" href="/admin/notifications">Limpar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="ops-list-card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead><tr><th style="min-width:110px;">Criado em</th><th style="min-width:150px;">Tipo</th><th>Atendimento</th><th style="min-width:110px;">Dono / Status</th><th class="text-end" style="min-width:210px;">Ações</th></tr></thead>
+          <tbody>
+          <% if (alerts && alerts.length > 0) { %>
+            <% alerts.forEach(function(a){ %>
+              <% const _hl = (typeof highlight !== 'undefined' && highlight===a.id); %>
+              <% const _p = a.parsed || {}; %>
+              <% const _kind = _p.kindLabel || _p.kind || (_p.bidId ? 'Lance' : ''); %>
+              <% const _isAdesao = _p.kind === 'ADESAO'; %>
+              <% const _isLance = _p.kind === 'LANCE' || !!_p.bidId; %>
+              <tr class="ops-row <%= _hl ? 'hl' : '' %>" id="alert-<%= a.id %>">
+                <td class="text-muted" style="white-space:nowrap;font-size:.8rem;"><%= new Date(a.createdAt).toLocaleString('pt-BR') %></td>
+                <td class="ops-type">
+                  <span class="ops-kind"><i class="bi bi-tag"></i> <%= a.typeLabel %></span><br>
+                  <span class="badge mt-1 <%= a.severity==='CRITICAL'?'bg-danger':a.severity==='WARNING'?'bg-warning text-dark':'bg-info text-dark' %>" style="border-radius:999px;"><%= a.severity %></span>
+                  <% if (a.kindLabel && a.kindLabel !== 'Verificação') { %><br><span class="ops-kind <%= _isAdesao?'adesao':(_isLance?'lance':'') %>"><i class="bi <%= _isLance?'bi-trophy':(_isAdesao?'bi-star':'bi-receipt') %>"></i> <%= a.kindLabel %></span><% } else if (a.type === 'PAYMENT_CHECK') { %><br><span class="ops-kind"><i class="bi bi-question-circle"></i> tipo a confirmar — abra o contrato</span><% } %>
+                </td>
+                <td>
+                  <div class="ops-title"><%= a.title %></div>
+                  <% if (_p.customerName) { %>
+                    <div class="ops-msg"><%= _p.customerName %><% if (_p.groupNumber || _p.quotaNumber) { %> · grupo <%= _p.groupNumber || '—' %>/cota <%= _p.quotaNumber || '—' %><% } %></div>
+                  <% } else { %>
+                    <div class="ops-msg" title="<%= a.message %>"><%= a.message %></div>
+                  <% } %>
+                  <div class="ops-meta">
+                    <% if (_p.amount != null) { %><span class="ops-chip amount"><i class="bi bi-cash-coin"></i> R$ <%= (Math.round(Number(_p.amount)*100)/100).toLocaleString('pt-BR',{minimumFractionDigits:2}) %><%= (_p.count > 1) ? ' ('+_p.count+' parcelas)' : '' %></span><% } %>
+                    <% if (_p.isAntecipacao) { %><span class="ops-chip"><i class="bi bi-lightning-charge"></i> ANTECIPAÇÃO</span><% } %>
+                    <% if (_p.provider) { %><span class="ops-chip gateway"><i class="bi bi-plug"></i> <code><%= _p.provider %></code></span><% } %>
+                    <% if (_p.productName) { %><span class="ops-chip"><i class="bi bi-box-seam"></i> <%= _p.productName %></span><% } %>
+                  </div>
+                  <% if (Array.isArray(_p.items) && _p.items.length > 0) { %>
+                    <details class="ops-sandwich">
+                      <summary>Ver as <%= _p.items.length %> parcela<%= _p.items.length > 1 ? 's' : '' %> <i class="bi bi-chevron-down"></i></summary>
+                      <div class="ops-sandwich-rows">
+                        <% _p.items.forEach(function(it) { %>
+                          <div class="ops-sandwich-row">
+                            <span class="ops-sandwich-num"><%= it.number === 1 ? 'Adesão' : 'Parcela '+it.number %></span>
+                            <span class="ops-sandwich-val">R$ <%= (Math.round(Number(it.amount)*100)/100).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></span>
+                            <span class="ops-sandwich-meta"><%= it.dueDate ? 'vence '+new Date(it.dueDate).toLocaleDateString('pt-BR') : '' %><%= it.anticipated ? ' · antecipação' : '' %><%= it.status && it.status !== 'PENDING' ? ' · '+it.status : '' %></span>
+                          </div>
+                        <% }); %>
+                      </div>
+                    </details>
+                  <% } %>
+                </td>
+                <td>
+                  <span class="ops-status <%= a.status %>"><%= a.statusLabel %></span><br>
+                  <small class="text-muted"><%= a.assignedTo ? 'dono: '+String(a.assignedTo).slice(0,8) : 'sem dono' %></small>
+                </td>
+                <td class="text-end">
+                  <div class="ops-actions">
+                    <a href="<%= a.target %>" class="btn btn-sm btn-outline-primary">Abrir</a>
+                    <% if (!a.assignedTo || a.status==='OPEN') { %>
+                      <form method="POST" action="/admin/notifications/<%= a.id %>/claim" style="display:inline;"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-warning" type="submit">Assumir</button></form>
+                    <% } else { %>
+                      <form method="POST" action="/admin/notifications/<%= a.id %>/release" style="display:inline;"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-outline-secondary" type="submit">Liberar</button></form>
+                      <form method="POST" action="/admin/notifications/<%= a.id %>/progress" style="display:inline;"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-info" type="submit">Em andamento</button></form>
+                    <% } %>
+                    <form method="POST" action="/admin/notifications/<%= a.id %>/resolve" style="display:inline;"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-success" type="submit" onclick="return confirm('Concluir este atendimento?')">Concluir</button></form>
+                    <form method="POST" action="/admin/notifications/<%= a.id %>/dismiss" style="display:inline;" onsubmit="return confirm('Dispensar com motivo registrado?')"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="reason" value="Dispensado pela central — verificado e sem ação necessária."><button class="btn btn-sm btn-outline-danger" type="submit">Dispensar</button></form>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          <% } else { %><tr><td colspan="5" class="text-center text-muted py-5"><i class="bi bi-bell-slash" style="font-size:2rem;"></i><br>Nenhum alerta neste filtro.</td></tr><% } %>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-3 pb-3">
+        <div class="text-muted mt-2" style="font-size:.85rem;">Total: <%= total %> alerta(s). Página <%= pagination.page %> de <%= pagination.pages %>.</div>
+        <% if (pagination.pages > 1) { %>
+          <nav><ul class="pagination mt-2">
+            <% for (let p=1; p<=pagination.pages; p++) { %>
+              <li class="page-item <%= p===pagination.page?'active':'' %>"><a class="page-link" style="border-radius:10px;" href="<%= buildPageUrl(p) %>"><%= p %></a></li>
+            <% } %>
+          </ul></nav>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../../partials/footer') %>

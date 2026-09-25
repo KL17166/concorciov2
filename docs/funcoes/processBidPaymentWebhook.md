@@ -1,0 +1,15 @@
+# processBidPaymentWebhook
+- **Arquivo:** server-consorcio/src/application/payments/processBidPaymentWebhook.ts:28
+- **O que faz:** Liquida o voucher PIX de um lance (marca PAID) a partir do webhook da gateway.
+- **O que ativa ela:** Chamada interna de `processPaymentWebhook` quando `external_id`/`reference` casa com `bid-<uuid>` — via POST /webhooks/pixgo e POST /webhooks/sigilopay
+- **Entradas:**
+  - `provider: 'pixgo'|'sigilopay'`; `bidExternalId: string` (formato `bid-<uuid>`); `paidAmount?`; `eventSignature` (idempotência); `providerEventId?`; `rawPayload`
+  - Validações: 400 referência sem prefixo `bid-`; 404 lance inexistente; 404 sem voucher ACTIVE (e sem PAID anterior); 400 valor fora de ±5%; 410 voucher expirado (marca EXPIRED)
+- **Saídas:**
+  - Sucesso: `{ success: true, message: 'Pagamento do lance confirmado.', statusCode: 200 }`
+  - Idempotente: assinatura já PROCESSED ou lance já PAID → `{ success: true, alreadyProcessed: true, statusCode: 200 }`
+  - Falhas: 400/404/410 acima (não lançam, retornam objeto)
+- **Regras/efeitos:**
+  - Transação `Serializable` (10s): re-checa ACTIVE, marca PAID + `paidAt`, expira outros ACTIVE, grava `auditLog BID_PAYMENT_CONFIRMED`
+  - Se lance/contrato CANCELLED após pagar: cria `systemAlert` CRITICAL `BID_ORPHAN_PAYMENT` (estorno/reaproveitamento)
+  - Tabelas: `webhookLog` (dedupe/upsert), `bid`, `bidPayment`, `auditLog`, `systemAlert`; side-effects: `logger` info/error

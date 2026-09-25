@@ -158,6 +158,52 @@
                 </div>
             </div>
 
+            <!-- Learning Row: algoritmo aprendendo com o pixel -->
+            <% if (typeof learning !== 'undefined' && learning) { %>
+            <div class="row g-4 mb-5">
+                <div class="col-md-7">
+                    <div class="premium-stat-card p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <div class="info-label">Funil do app — últimos 7 dias (<%= learning.totalEvents7d %> eventos)</div>
+                                <div style="font-size: 1.1rem; font-weight: 800;">Telas → "Já paguei": <%= learning.conversion %>%</div>
+                            </div>
+                            <div class="stat-icon-wrapper" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
+                                <i class="bi bi-crosshair"></i>
+                            </div>
+                        </div>
+                        <% const maxFunnel = Math.max(1, ...learning.funnel.map(f => f.count)); %>
+                        <% learning.funnel.forEach(function(f) { %>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <code style="width: 190px; font-size: 0.72rem;"><%= f.event %></code>
+                                <div class="progress flex-grow-1" style="height: 8px; border-radius: 6px;">
+                                    <div class="progress-bar" role="progressbar" style="width: <%= Math.round((f.count / maxFunnel) * 100) %>%;"></div>
+                                </div>
+                                <strong style="width: 60px; text-align: right;"><%= f.count %></strong>
+                            </div>
+                        <% }); %>
+                        <small class="text-muted d-block mt-2">QR→verifica: <%= learning.convQrVerify %>% · verifica→pago: <%= learning.convVerifyPaid %>% · <a href="/admin/tracking" class="text-decoration-none">Abrir Tracking →</a></small>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="premium-stat-card p-4">
+                        <div class="info-label">Produtos em alta (interesse real, 30d)</div>
+                        <% if (learning.topProducts && learning.topProducts.length > 0) { %>
+                            <% learning.topProducts.forEach(function(p, i) { %>
+                                <div class="d-flex justify-content-between align-items-center py-1 <%= i < learning.topProducts.length - 1 ? 'border-bottom' : '' %>">
+                                    <span><%= p.name %></span>
+                                    <span class="badge bg-primary rounded-pill"><%= p.hits %></span>
+                                </div>
+                            <% }); %>
+                        <% } else { %>
+                            <p class="text-muted mb-0">Sem sinais ainda — o ranking usa a ordem do admin até o pixel treinar.</p>
+                        <% } %>
+                        <small class="text-muted d-block mt-2"><%= learning.weightCount %> pesos aprendidos · o catálogo do app já reordena sozinho.</small>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+
             <!-- Charts Row -->
             <div class="row g-4 mb-5">
                 <div class="col-md-8">
@@ -228,6 +274,10 @@
                                                             <span class="badge-premium" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2);"><i class="bi bi-trophy-fill"></i>Contemplado</span>
                                                         <% } else if (contract.status === 'CANCELLED') { %>
                                                             <span class="badge-premium" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);"><i class="bi bi-x-circle-fill"></i>Cancelado</span>
+                                                        <% } else if (contract.status === 'PENDING_KYC') { %>
+                                                            <span class="badge-premium" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);"><i class="bi bi-person-check-fill"></i>Aguardando KYC</span>
+                                                        <% } else if (contract.status === 'COMPLETED') { %>
+                                                            <span class="badge-premium" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);"><i class="bi bi-check-all"></i>Concluído</span>
                                                         <% } else { %>
                                                             <span class="badge-premium" style="background: rgba(108, 117, 125, 0.1); color: #6c757d; border: 1px solid rgba(108, 117, 125, 0.2);"><%= contract.status %></span>
                                                         <% } %>

@@ -1,0 +1,18 @@
+# POST /api/kyc/submit
+- **Ativado por:** botão Enviar Documentos do KYC
+  - BFF espelho: `zuvio-web/server/api/kyc/submit.post.ts`
+  - Handler: `submitClientKyc` → `submitKyc` (application)
+- **Auth / rate-limit:** `authenticate`
+  - App: `kycSubmitLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** body zod `SubmitKycSchema` (`schemas/kycSchema.ts`)
+  - `documentFrontUrl`: min 1 (URL vinda do `/api/auth/upload`)
+  - `documentBackUrl`: min 1
+  - `selfieUrl`: min 1
+- **O que o servidor retorna:**
+  - 200 resultado de `submitKyc` (confirmação de envio para análise)
+  - 400 BAD_REQUEST → documentos incompletos
+  - 401 → não autenticado
+  - 429 → rate limit
+- **Efeitos:**
+  - Atualiza docs do `user` e avança `kycStatus` para análise
+  - Não valida biometria aqui (isso ocorre no upload via Datavalid)

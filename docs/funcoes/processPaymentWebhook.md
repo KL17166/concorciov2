@@ -1,0 +1,15 @@
+# processPaymentWebhook
+- **Arquivo:** server-consorcio/src/application/payments/processPaymentWebhook.ts:27
+- **O que faz:** Roteia webhooks de pagamento: referência `bid-*` vai para lance; senão liquida a parcela. Idempotente por assinatura.
+- **O que ativa ela:** `webhookRoutes` — POST /webhooks/pixgo (`payment.completed`, HMAC `x-pixgo-signature`) e POST /webhooks/sigilopay (`completed/paid/approved`, Bearer)
+- **Entradas:**
+  - `provider: 'pixgo'|'sigilopay'`; `installmentId: string` (`external_id`/`reference`); `paidAmount?`; `paymentMethod`; `eventSignature` (assinatura HMAC ou chave de replay); `providerEventId?`; `rawPayload`
+  - Validações: assinatura já PROCESSED → 200 idempotente; 404 parcela inexistente; parcela já PAID → 200 idempotente; 400 valor fora de ±5% do esperado
+- **Saídas:**
+  - Sucesso: `{ success: true, message: 'Pagamento confirmado e liquidado…', statusCode: 200 }`
+  - Repasse de lance: retorna o resultado de `processBidPaymentWebhook` direto
+  - Falhas: 404 parcela não encontrada; 400 valor divergente; 500 falha no `markInstallmentAsPaid` (grava `webhookLog` FAILED)
+- **Regras/efeitos:**
+  - Liquidação via `markInstallmentAsPaid` (transação Serializable: PAID + saldo + ativação/COMPLETED)
+  - `webhookLog` upsert PROCESSED/FAILED (payload truncado em 1000 chars); colisão de log é não-crítica
+  - Tabelas: `webhookLog`, `installment`, `subscription` (+ efeitos do settle); side-effects: `logger` info/warn/error

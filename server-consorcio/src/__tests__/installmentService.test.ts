@@ -2,6 +2,7 @@ import { markInstallmentAsPaid } from '../services/installmentService';
 
 // Mock Prisma with transaction support
 const mockInstallmentFindUnique = jest.fn();
+const mockInstallmentFindFirst = jest.fn();
 const mockInstallmentUpdate = jest.fn();
 const mockInstallmentCount = jest.fn();
 const mockSubscriptionUpdate = jest.fn();
@@ -9,6 +10,7 @@ const mockSubscriptionUpdate = jest.fn();
 const createTxMock = () => ({
     installment: {
         findUnique: (...args: any[]) => mockInstallmentFindUnique(...args),
+        findFirst: (...args: any[]) => mockInstallmentFindFirst(...args),
         update: (...args: any[]) => mockInstallmentUpdate(...args),
         count: (...args: any[]) => mockInstallmentCount(...args),
     },

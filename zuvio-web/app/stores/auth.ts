@@ -8,6 +8,10 @@ const STORAGE_KEYS = {
   USER: 'katari_user_profile'
 }
 
+// B9: sessão dura o mesmo que o JWT do backend (15 min). Antes: 7 dias em
+// localStorage (persistente em disco, legível por qualquer script/extensão).
+const SESSION_MAX_AGE = 60 * 15
+
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
@@ -34,45 +38,24 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     /**
-     * Restore session from cookie or localStorage
+     * Restore session from cookie (memory + cookie only).
+     * B9: SEM fallback de localStorage — JWT em disco era exfiltrável por
+     * qualquer XSS/extensão. Sessão vive em memória (Pinia) + cookie de 15 min.
+     * TODO(prod): migrar para cookie HttpOnly setado pelo BFF (login.post.ts)
+     * e parar de expor `token` no JSON — aí nem o cookie fica legível via JS.
      */
     initFromStorage() {
-      // 1. Check cookies (works on both Server and Client)
       try {
-        const tokenCookie = useCookie<string | null>(STORAGE_KEYS.TOKEN, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
-        const userCookie = useCookie<UserProfile | string | null>(STORAGE_KEYS.USER, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
+        const tokenCookie = useCookie<string | null>(STORAGE_KEYS.TOKEN, { maxAge: SESSION_MAX_AGE, sameSite: 'lax' })
+        const userCookie = useCookie<UserProfile | string | null>(STORAGE_KEYS.USER, { maxAge: SESSION_MAX_AGE, sameSite: 'lax' })
 
         if (tokenCookie.value && userCookie.value) {
           this.token = tokenCookie.value
           this.user = typeof userCookie.value === 'string' ? JSON.parse(userCookie.value) : userCookie.value
           this.isAuthenticated = true
-          return
         }
       } catch (e) {
-        // Continue to localStorage fallback
-      }
-
-      // 2. Client-only localStorage fallback
-      if (typeof window !== 'undefined') {
-        try {
-          const savedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
-          const savedUserStr = localStorage.getItem(STORAGE_KEYS.USER)
-
-          if (savedToken && savedUserStr) {
-            this.token = savedToken
-            this.user = JSON.parse(savedUserStr)
-            this.isAuthenticated = true
-
-            // Sync to cookies
-            const tokenCookie = useCookie<string | null>(STORAGE_KEYS.TOKEN, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
-            const userCookie = useCookie<UserProfile | null>(STORAGE_KEYS.USER, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
-            tokenCookie.value = savedToken
-            userCookie.value = this.user
-          }
-        } catch (err) {
-          console.error('Failed to parse saved auth session:', err)
-          this.clearSession()
-        }
+        this.clearSession()
       }
     },
 
@@ -151,7 +134,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
-     * Store session state in memory, cookies, and localStorage
+     * Store session state in memory + short-lived cookie (NO localStorage — B9)
      */
     setSession(data: { token: string; user: UserProfile }) {      this.token = data.token
       this.user = data.user
@@ -160,15 +143,16 @@ export const useAuthStore = defineStore('auth', {
       this.isAuthenticated = true
 
       try {
-        const tokenCookie = useCookie<string | null>(STORAGE_KEYS.TOKEN, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
-        const userCookie = useCookie<UserProfile | null>(STORAGE_KEYS.USER, { maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' })
+        const tokenCookie = useCookie<string | null>(STORAGE_KEYS.TOKEN, { maxAge: SESSION_MAX_AGE, sameSite: 'lax' })
+        const userCookie = useCookie<UserProfile | null>(STORAGE_KEYS.USER, { maxAge: SESSION_MAX_AGE, sameSite: 'lax' })
         tokenCookie.value = data.token
         userCookie.value = data.user
       } catch (e) {}
 
+      // Limpa resquícios do formato antigo (JWT em disco) se existirem
       if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEYS.TOKEN, data.token)
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user))
+        localStorage.removeItem(STORAGE_KEYS.TOKEN)
+        localStorage.removeItem(STORAGE_KEYS.USER)
       }
     },
 

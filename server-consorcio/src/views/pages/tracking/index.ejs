@@ -1,0 +1,209 @@
+<%- include('../../partials/header') %>
+
+    <%- include('../../partials/sidebar', { path: '/tracking' }) %>
+
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div>
+                    <h1 class="page-title">Tracking — Funil do App</h1>
+                    <p class="text-muted mb-0">Pixel próprio: telas e cliques dos clientes (base p/ algoritmo e ads)</p>
+                </div>
+                <div class="top-bar-actions">
+                    <a href="/admin/tracking?days=7" class="btn btn-sm <%= days === 7 ? 'btn-primary' : 'btn-outline-secondary' %>">7d</a>
+                    <a href="/admin/tracking?days=30" class="btn btn-sm <%= days === 30 ? 'btn-primary' : 'btn-outline-secondary' %>">30d</a>
+                    <a href="/admin/tracking?days=90" class="btn btn-sm <%= days === 90 ? 'btn-primary' : 'btn-outline-secondary' %>">90d</a>
+                    <button class="theme-toggle" onclick="toggleTheme()">
+                        <i class="bi bi-moon-stars" id="themeIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary banner -->
+            <div class="premium-info-card mb-4">
+                <div class="p-4 d-flex align-items-center gap-4 flex-wrap">
+                    <div>
+                        <div class="info-label">Eventos (<%= days %>d)</div>
+                        <div class="fw-bold" style="font-size:1.8rem; color:var(--primary-color);"><%= totalEvents %></div>
+                    </div>
+                    <div style="width:1px; height:40px; background:var(--border-color);"></div>
+                    <div>
+                        <div class="info-label">Usuários únicos</div>
+                        <div class="fw-bold" style="font-size:1.8rem; color:var(--primary-color);"><%= uniqueUsers %></div>
+                    </div>
+                    <div style="width:1px; height:40px; background:var(--border-color);"></div>
+                    <div>
+                        <div class="info-label">Telas → "Já paguei"</div>
+                        <div class="fw-bold" style="font-size:1.8rem; color:var(--success-color);"><%= conversion %>%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Funnel -->
+            <div class="card shadow-sm border-0 mb-4" style="border-radius: 12px;">
+                <div class="card-header bg-transparent border-0 pt-3">
+                    <h5 class="mb-0">Funil de pagamento (últimos <%= days %> dias)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Etapa</th>
+                                    <th class="text-end">Eventos</th>
+                                    <th style="width:40%;">Progresso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% const maxCount = Math.max(1, ...funnel.map(f => f.count)); %>
+                                <% funnel.forEach(function(f) { %>
+                                    <tr>
+                                        <td><code><%= f.event %></code></td>
+                                        <td class="text-end fw-bold"><%= f.count %></td>
+                                        <td>
+                                            <div class="progress" style="height: 10px; border-radius: 6px;">
+                                                <div class="progress-bar" role="progressbar" style="width: <%= Math.round((f.count / maxCount) * 100) %>%;" aria-valuenow="<%= f.count %>" aria-valuemin="0" aria-valuemax="<%= maxCount %>"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Por tela: onde o cliente está e onde converte -->
+            <div class="card shadow-sm border-0 mb-4" style="border-radius: 12px;">
+                <div class="card-header bg-transparent border-0 pt-3">
+                    <h5 class="mb-0">Por tela (últimos <%= days %> dias)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tela</th>
+                                    <th class="text-end">Views</th>
+                                    <th class="text-end">QRs</th>
+                                    <th class="text-end">"Já paguei"</th>
+                                    <th class="text-end">View → paguei</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (screenStats && screenStats.length > 0) { %>
+                                    <% screenStats.forEach(function(s) { %>
+                                        <tr>
+                                            <td><code><%= s.screen %></code></td>
+                                            <td class="text-end"><%= s.views %></td>
+                                            <td class="text-end"><%= s.qr %></td>
+                                            <td class="text-end fw-bold"><%= s.verifies %></td>
+                                            <td class="text-end"><span class="badge <%= parseFloat(s.viewToVerify) >= 5 ? 'bg-success' : 'bg-secondary' %>"><%= s.viewToVerify %>%</span></td>
+                                        </tr>
+                                    <% }); %>
+                                <% } else { %>
+                                    <tr><td colspan="5" class="text-center text-muted py-4">Sem dados de tela no período.</td></tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Curva diária + top entidades -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-7">
+                    <div class="card shadow-sm border-0 h-100" style="border-radius: 12px;">
+                        <div class="card-header bg-transparent border-0 pt-3">
+                            <h5 class="mb-0">Curva diária — eventos e "já paguei"</h5>
+                        </div>
+                        <div class="card-body">
+                            <% const maxDay = Math.max(1, ...dailySeries.map(d => d.total)); %>
+                            <% dailySeries.forEach(function(d) { %>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="text-muted" style="width: 48px; font-size: 0.8rem;"><%= d.day %></span>
+                                    <div class="progress flex-grow-1" style="height: 10px; border-radius: 6px;" title="<%= d.total %> eventos, <%= d.verifies %> já-paguei">
+                                        <div class="progress-bar" role="progressbar" style="width: <%= Math.round((d.total / maxDay) * 100) %>%;"></div>
+                                    </div>
+                                    <strong style="width: 44px; text-align: right;"><%= d.total %></strong>
+                                    <span class="badge bg-success rounded-pill" title="Já paguei no dia"><%= d.verifies %></span>
+                                </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="card shadow-sm border-0 h-100" style="border-radius: 12px;">
+                        <div class="card-header bg-transparent border-0 pt-3">
+                            <h5 class="mb-0">Top entidades (onde o dinheiro mexe)</h5>
+                        </div>
+                        <div class="card-body">
+                            <% if (topEntities && topEntities.length > 0) { %>
+                                <% topEntities.forEach(function(t) { %>
+                                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                        <span><code style="font-size: 0.75rem;"><%= t.type %>:<%= String(t.id).slice(0, 8) %></code></span>
+                                        <span><span class="badge bg-primary rounded-pill" title="QRs"><%= t.qr %></span> <span class="badge bg-success rounded-pill" title="Já paguei"><%= t.verifies %></span></span>
+                                    </div>
+                                <% }); %>
+                            <% } else { %>
+                                <p class="text-muted mb-0">Sem movimento de entidades no período.</p>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent events -->
+            <div class="card shadow-sm border-0" style="border-radius: 12px;">
+                <div class="card-header bg-transparent border-0 pt-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Eventos recentes</h5>
+                    <form method="GET" action="/admin/tracking" class="d-flex gap-2">
+                        <input type="hidden" name="days" value="<%= days %>">
+                        <select name="screen" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">Todas as telas</option>
+                            <% knownScreens.forEach(function(s) { %>
+                                <option value="<%= s %>" <%= screenFilter === s ? 'selected' : '' %>><%= s %></option>
+                            <% }); %>
+                        </select>
+                        <select name="event" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">Todos os eventos</option>
+                            <% funnelOrder.forEach(function(e) { %>
+                                <option value="<%= e %>" <%= eventFilter === e ? 'selected' : '' %>><%= e %></option>
+                            <% }); %>
+                        </select>
+                    </form>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Quando</th>
+                                    <th>Evento</th>
+                                    <th>Tela</th>
+                                    <th>Entidade</th>
+                                    <th>Usuário</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (recent && recent.length > 0) { %>
+                                    <% recent.forEach(function(ev) { %>
+                                        <tr>
+                                            <td class="text-muted" style="white-space:nowrap;"><%= new Date(ev.createdAt).toLocaleString('pt-BR') %></td>
+                                            <td><code><%= ev.event %></code></td>
+                                            <td><%= ev.screen || '—' %></td>
+                                            <td><%= ev.entityType ? (ev.entityType + ':' + String(ev.entityId || '').slice(0, 8)) : '—' %></td>
+                                            <td class="text-muted" style="font-size:0.8rem;"><%= ev.userId ? String(ev.userId).slice(0, 8) : 'anônimo' %></td>
+                                        </tr>
+                                    <% }); %>
+                                <% } else { %>
+                                    <tr><td colspan="5" class="text-center text-muted py-4">Nenhum evento no período. O app passa a enviar após o deploy do front.</td></tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<%- include('../../partials/footer') %>

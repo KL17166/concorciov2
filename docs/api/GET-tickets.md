@@ -1,0 +1,15 @@
+# GET /api/tickets
+- **Ativado por:** tela Meus Atendimentos
+  - BFF espelho: `zuvio-web/server/api/tickets/index.get.ts`
+  - Handler: `listTickets` → `listUserTickets` (application)
+- **Auth / rate-limit:** `authenticate`
+  - App: `generalLimiter` + `securityMiddleware` (sem limiter específico)
+- **Request:** sem body nem params
+  - `userId` vem do JWT
+- **O que o servidor retorna:**
+  - 200 array de tickets do usuário (até 50, mais recentes primeiro)
+  - 401 → não autenticado
+- **Efeitos:**
+  - Somente leitura (`supportTicket` por `userId`)
+  - Sem escrita
+  - Base da tela de acompanhamento de atendimentos

@@ -1,0 +1,13 @@
+# getUserSubscriptions
+- **Arquivo:** server-consorcio/src/application/subscriptions/getUserSubscriptions.ts:6
+- **O que faz:** Lista os contratos do usuário no mesmo shape enriquecido do detalhe (progresso, parcelas, lances).
+- **O que ativa ela:** `listUserSubscriptions` (subscriptionsApiController) — GET /api/subscriptions/:userId (com `checkOwnership`)
+- **Entradas:**
+  - `userId: string` (de `params.userId`); sem validação própria — ownership no middleware
+- **Saídas:**
+  - Sucesso: array com o mesmo shape de `getSubscriptionDetails` por contrato (status minúsculo, `isAdesaoPaid`, `currentInstallment`, `nextPaymentAmount`, `dueDate`, `progressPercentage`, mapas de parcelas, `plan`, `product`, `installments[]`, `bids[]`)
+  - Contratos cujo `plan.product` está ausente são filtrados; `isAdesaoPaid` inclui PENDING_KYC como pago
+  - Erros: nenhum próprio (repasse do repositório)
+- **Regras/efeitos:**
+  - Leitura pura via `SubscriptionRepository.findUserSubscriptions`; sem transação, sem escrita
+  - Tabelas lidas: `subscription` + `installments` + `plan` + `product` + `bids`; side-effects: nenhum

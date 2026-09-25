@@ -1,0 +1,14 @@
+# parseBidExternalId
+- **Arquivo:** server-consorcio/src/application/bids/generateBidPix.ts:19
+- **O que faz:** Extrai o `bidId` de um `external_id` da gateway; retorna `null` se não for referência de lance.
+- **O que ativa ela:** Chamada interna de `processPaymentWebhook` (roteia `bid-*` para lance) e de `processBidPaymentWebhook` (resolve o lance)
+- **Entradas:**
+  - `externalId: string` — `external_id`/`reference` recebido da gateway (PixGo `data.external_id`, SigiloPay `reference`)
+  - Validação: precisa começar com `bid-` e ter ao menos 1 char após o prefixo
+- **Saídas:**
+  - Sucesso: `bidId` (string) quando há prefixo válido
+  - `null` quando não é referência de lance (webhook segue fluxo normal de parcela)
+- **Regras/efeitos:**
+  - Função pura: sem transação, sem tabelas, sem side-effects
+  - Distingue liquidação em `bid_payments` (lance) de liquidação em `installment` (parcela)
+  - Antes desse roteamento, o webhook procurava `installment.id = 'bid-<uuid>'` e retornava 404 com dinheiro órfão

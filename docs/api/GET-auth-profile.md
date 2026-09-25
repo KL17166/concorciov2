@@ -1,0 +1,16 @@
+# GET /api/auth/profile
+- **Ativado por:** AuthGuard do app (valida token e carrega perfil)
+  - BFF espelho: `zuvio-web/server/api/auth/profile.get.ts`
+  - Fluxo: abertura do app / sync de sessão
+- **Auth / rate-limit:** `authenticate` (Bearer JWT)
+  - App: `generalLimiter` + `securityMiddleware` (sem limiter específico)
+- **Request:** sem body nem params
+  - `userId` vem do JWT; select restrito (sem `passwordHash`)
+- **O que o servidor retorna:**
+  - 200 `{ user: { id, name, email, role, cpf, phone, documentFrontUrl, documentBackUrl, selfieUrl, kycStatus, kycRejectReason, ...address } }`
+  - `address` (JSON string no banco) é parseado e espalhado no objeto
+  - 401 → não autenticado
+  - 404 → usuário não encontrado
+- **Efeitos:**
+  - Somente leitura (`user.findUnique` por id)
+  - Sem escrita, sem auditoria, sem side-effect

@@ -1,0 +1,20 @@
+# POST /api/payments/:installmentId/pix
+- **Ativado por:** tela de pagamento da parcela (Gerar PIX)
+  - BFF espelho: `zuvio-web/server/api/payments/[installmentId]/pix.post.ts`
+  - Handler: `generatePixPayment` → `generatePayment` (method PIX)
+- **Auth / rate-limit:** `authenticate` + `transactionRateLimiter`
+  - App: `paymentGenerationLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** param `installmentId` + body zod `GeneratePaymentSchema`
+  - `idTokenPay`: obrigatório (sem ele → 400)
+  - `anticipate?`: default false
+- **O que o servidor retorna:**
+  - 200 `{ success: true, paymentId, qrCode, copyPaste, amount, requestedAmount, expirationDate (+30min fallback), message? }`
+  - `provider` incluído só fora de produção
+  - 400 → sem `idTokenPay`
+  - 401/403 → sem auth ou não dono
+  - 404 → parcela inexistente
+  - 503 GATEWAY_UNAVAILABLE → gateway fora (retryable)
+  - 429 → rate limit
+- **Efeitos:**
+  - Cria/atualiza cobrança PIX no gateway
+  - Grava referência de pagamento no banco

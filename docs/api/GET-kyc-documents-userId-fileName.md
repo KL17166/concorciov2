@@ -1,0 +1,20 @@
+# GET /api/kyc/documents/:userId/:fileName
+- **Ativado por:** visualização de documento pelo dono (URLs salvas no perfil)
+  - Sem BFF espelho
+  - Handler: `getKycDocument` (serve arquivo do disco)
+- **Auth / rate-limit:** `authenticate` + checagem inline no handler
+  - Dono (`userId` = JWT) ou role MASTER/MANAGER/SUPPORT
+  - App: `generalLimiter` + `securityMiddleware`
+- **Request:** params `userId` + `fileName`
+  - `fileName` deve ser basename exato (`..` ou path → 400)
+  - Sem body
+- **O que o servidor retorna:**
+  - 200 arquivo (sendFile; `nosniff`; `private, no-cache, no-store`)
+  - Procura no storage privado e cai para legado `public/uploads/documents/`
+  - 400 → nome de arquivo inválido
+  - 401 → não autenticado
+  - 403 → documento de outro usuário
+  - 404 → arquivo inexistente nos dois storages
+- **Efeitos:**
+  - Somente leitura de disco
+  - Acesso direto a `/uploads/documents` é 403 no app — só por aqui

@@ -1,0 +1,12 @@
+# listUserTickets
+- **Arquivo:** server-consorcio/src/application/support/tickets.ts:62
+- **O que faz:** Lista os atendimentos do usuário, mais recentes primeiro, limitados a 50.
+- **O que ativa ela:** `listTickets` (ticketsApiController) — GET /api/tickets
+- **Entradas:**
+  - `userId: string` (do JWT); sem validação própria
+- **Saídas:**
+  - Sucesso: array de tickets (`findMany where userId`, `orderBy createdAt desc`, `take 50`)
+  - Erros: nenhum próprio (repasse de erro do banco via `handleApiError`)
+- **Regras/efeitos:**
+  - Leitura pura em `supportTicket`; sem transação, sem escrita
+  - Tabelas: `supportTicket` (leitura); side-effects: nenhum

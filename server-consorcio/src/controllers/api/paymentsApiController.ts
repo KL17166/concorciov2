@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { AuthPayload } from '../../middlewares/authMiddleware';
 import { listSubscriptionPayments as listPaymentsUseCase } from '../../application/payments/listSubscriptionPayments';
 import { generatePayment } from '../../application/payments/generatePayment';
-import { GeneratePaymentSchema } from '../../schemas/paymentSchema';
+import { generateBatchPayment } from '../../application/payments/generateBatchPayment';
+import { GeneratePaymentSchema, GenerateBatchPaymentSchema } from '../../schemas/paymentSchema';
 import { handleApiError } from '../../utils/errors';
 
 export const listSubscriptionPayments = async (req: Request, res: Response): Promise<void> => {
@@ -97,4 +98,25 @@ export const directPayDisabled = (_req: Request, res: Response): void => {
         error: 'FORBIDDEN',
         message: 'Funcionalidade desativada para usuários. Pagamentos devem ser processados via gateway.'
     });
+};
+
+// POST /api/payments/batch/pix - 1 PIX combinado somando N parcelas
+export const generateBatchPixPayment = async (req: Request, res: Response): Promise<void> => {
+    const user = req.user as AuthPayload;
+    try {
+        const validation = GenerateBatchPaymentSchema.safeParse(req.body);
+        if (!validation.success) {
+            res.status(400).json({ success: false, error: 'BAD_REQUEST', message: 'Informe o contrato e ao menos 1 parcela com token' });
+            return;
+        }
+        const result = await generateBatchPayment({
+            subscriptionId: validation.data.subscriptionId,
+            items: validation.data.items,
+            requesterUserId: user.userId,
+            method: 'PIX'
+        });
+        res.json({ success: true, message: `${result.items.length} parcelas em 1 PIX`, ...result });
+    } catch (error: any) {
+        handleApiError(res, error, 'Erro ao gerar PIX combinado');
+    }
 };

@@ -1,0 +1,18 @@
+# POST /api/track
+- **Ativado por:** pixel próprio do app (telas/cliques de funil)
+  - BFF espelho: `zuvio-web/server/api/track.post.ts`
+  - Handler: `recordClientEvent` → `recordTrackingEvent` (best-effort)
+- **Auth / rate-limit:** `authenticate` + `trackingLimiter` (config/rateLimits)
+  - App: `generalLimiter` + `securityMiddleware`
+- **Request:** body zod `TrackEventSchema` (strict, `schemas/trackingSchema.ts`)
+  - `event`: SCREEN_VIEW | GENERATE_QR_CLICK | QR_SHOWN | COPY_PIX_CLICK | VERIFY_PAYMENT_CLICK | PAYMENT_CONFIRMED_VIEW | BID_CREATED
+  - `screen?`: home | welcome | auth | bids | payment | checkout | contract | adhesion | contracts | payments | statement | kyc | products | profile
+  - `entityType?`: bid | installment | subscription; `entityId?`: uuid
+  - `metadata?`: JSON ≤ 2KB; `userId` vem do JWT, nunca do body (anti-spoof)
+- **O que o servidor retorna:**
+  - Sempre 200 `{ success: true, recorded: boolean }`
+  - Body inválido → 200 com `recorded: false` (não é erro)
+  - Falha interna → `handleApiError`
+- **Efeitos:**
+  - Grava evento de tracking com IP + user-agent
+  - Nunca quebra o fluxo principal

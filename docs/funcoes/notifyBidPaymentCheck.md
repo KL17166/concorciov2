@@ -1,0 +1,15 @@
+# notifyBidPaymentCheck
+- **Arquivo:** server-consorcio/src/application/bids/notifyBidPaymentCheck.ts:18
+- **O que faz:** Registra que o cliente clicou em "Já paguei" no PIX do lance, criando alerta para conferência manual.
+- **O que ativa ela:** `notifyClientBidPaymentCheck` (bidsApiController) — POST /api/bids/:id/payment-check
+- **Entradas:**
+  - `bidId: string` (de `params.id`); `requesterUserId: string` (do JWT)
+  - Validações: 404 lance inexistente; 403 lance de outro usuário
+  - Anti-spam: se já existe `systemAlert` tipo `BID_PAYMENT_CHECK` com o `bidId` nos últimos 5 min → retorna sem criar
+- **Saídas:**
+  - Sucesso: `{ notified: true }` (criou alerta) ou `{ notified: false }` (deduplicado)
+  - Erros: 404 lance não encontrado; 403 acesso negado
+- **Regras/efeitos:**
+  - Sem transação; lê `bid` + `subscription/user` + `bidPayment` ACTIVE mais recente
+  - Escreve `systemAlert` (`status OPEN`, `entityKind=bidPayment`, título `Cliente verificou pagamento de lance — Lance Livre|Fixo|Embutido`; CPF mascarado no texto, completo só em `details` — LGPD; `details` com `bidType/bidTypeLabel/bidStatus/kind=LANCE`)
+  - Side-effects: `logger.warn [BidPaymentCheck]`; o controller ainda grava `trackingEvent VERIFY_PAYMENT_CLICK` (best-effort)

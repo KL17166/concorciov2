@@ -1,0 +1,15 @@
+# POST /api/payments/:installmentId/pay
+- **Ativado por:** nenhuma tela (rota propositalmente desativada)
+  - Sem BFF espelho
+  - Handler: `directPayDisabled` (responde 403 fixo)
+- **Auth / rate-limit:** `authenticate` + `transactionRateLimiter`
+  - App: `paymentGenerationLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** param `installmentId`
+  - Body ignorado (handler não lê nada)
+- **O que o servidor retorna:**
+  - Sempre 403 `{ success: false, error: 'FORBIDDEN', message: 'Funcionalidade desativada para usuários. Pagamentos devem ser processados via gateway.' }`
+  - 401 → sem token (barrado no `authenticate` antes do handler)
+- **Efeitos:**
+  - Nenhum (só responde)
+  - Use POST `/pix` ou `/boleto` para pagar
+  - Mantida para não quebrar clients antigos que ainda chamam `/pay`

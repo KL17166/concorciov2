@@ -1,0 +1,18 @@
+# cancelBid
+- **Arquivo:** server-consorcio/src/application/bids/cancelBid.ts:10
+- **O que faz:** Cancela um lance (PENDING/APPROVED) e invalida os vouchers PIX pendentes dele.
+- **O que ativa ela:** `cancelClientBid` (bidsApiController) — POST /api/bids/:id/cancel
+- **Entradas:**
+  - `bidId: string` (de `params.id`) — precisa existir em `bid`
+  - `requesterUserId: string` (do JWT) — deve ser o dono do contrato, salvo admin
+  - `isAdmin?: boolean` (controller cliente passa `false`)
+  - Validações: 404 se o lance não existe; 403 se não é dono e não é admin
+  - Validações: 400 se status `CONTEMPLATED`; 400 se já `CANCELLED`
+- **Saídas:**
+  - Sucesso: `{ id, status: 'CANCELLED', message: 'Lance cancelado com sucesso' }`
+  - Erros: 404 lance não encontrado; 403 acesso negado; 400 contemplado / já cancelado
+- **Regras/efeitos:**
+  - Transação `Serializable` (timeout 10s): `bid` → CANCELLED + `bidPayment.updateMany(ACTIVE,RESERVED → CANCELLED)`
+  - Sem a invalidação, o cliente pagaria um lance morto e o webhook marcaria PAID sem dono válido
+  - Tabelas: `bid`, `bidPayment`, `auditLog` (action `BID_CANCELLED`, fora da tx, best-effort)
+  - Side-effects: `logger.info` do cancelamento; `logger.warn` se a auditoria falhar (nunca quebra o cancelamento)

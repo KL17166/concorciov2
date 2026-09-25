@@ -1,0 +1,14 @@
+# listSubscriptionPayments
+- **Arquivo:** server-consorcio/src/application/payments/listSubscriptionPayments.ts:23
+- **O que faz:** Lista as parcelas de um contrato com `valueToPay` calculado pela posição da próxima parcela não-paga.
+- **O que ativa ela:** `listSubscriptionPayments` (paymentsApiController) — GET /api/payments/:subscriptionId
+- **Entradas:**
+  - `subscriptionId: string` (de `params.subscriptionId`); `requesterUserId?: string` (JWT); `isAdmin?: boolean` (cliente passa `false`)
+  - Validações: 404 contrato inexistente; 403 quando não-admin pede contrato de outro usuário (só se `requesterUserId` informado)
+- **Saídas:**
+  - Sucesso: array `InstallmentPaymentDTO` `{ id, idTokenPay, number, amount, valueToPay, dueDate, status, paymentDate, paymentMethod }`
+  - Erros: 404 contrato não encontrado; 403 acesso negado
+- **Regras/efeitos:**
+  - Leitura pura (`SubscriptionRepository` + `InstallmentRepository`); sem transação, sem escrita
+  - `nextIndex` = menor número não-pago; `valueToPay = calculateInstallmentValue(amount, number, nextIndex)`
+  - Tabelas lidas: `subscription`, `installment`; side-effects: nenhum

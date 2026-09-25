@@ -35,6 +35,10 @@ export class BidRepository {
                             }
                         }
                     }
+                },
+                payments: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1
                 }
             },
             orderBy: { createdAt: 'desc' }

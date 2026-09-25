@@ -1,0 +1,20 @@
+# POST /api/auth/login
+- **Ativado por:** tela de login do app
+  - BFF espelho: `zuvio-web/server/api/auth/login.post.ts`
+  - Fluxo: autenticação por CPF + senha
+- **Auth / rate-limit:** sem `authenticate`
+  - Rota: `authRateLimiter` (10 req / 15min por CPF ou IP)
+  - App: `apiAuthLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** body zod `loginSchema` (`authController.ts:47`)
+  - `cpf`: só dígitos, 11 chars
+  - `password`: string
+  - Header opcional: `x-device-binding` (vinculado à sessão no Redis)
+- **O que o servidor retorna:**
+  - 200 `{ token (JWT HS256: userId/role/jti), signingSecret, payloadSecret, user: { id, name, email, role, cpf, phone, kycStatus, kycRejectReason, ...address } }`
+  - 400 → CPF malformado
+  - 401 → usuário inexistente ou senha inválida (mensagem genérica)
+  - 429 → rate limit excedido
+- **Efeitos:**
+  - Cria `auditLog` LOGIN
+  - Redis (TTL do JWT): `signing:session:{jti}`, `payload:session:{jti}`, `device:binding:{jti}`
+  - Falha de Redis: cai para segredos estáticos (warn, não quebra)

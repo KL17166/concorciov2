@@ -19,11 +19,18 @@ import { cardRouter, runCardFlow } from './routes/card';
 import { cancelRouter, scheduleAutoCancel } from './cancel';
 
 const app = express();
-app.use(cors());
+// B9: CORS restrito ao backend — chamadas são server-to-server (fetch com
+// X-Gateway-Token), nunca de browser de terceiros. Antes `cors()` aberto
+// permitia que qualquer site lesse BR Code / orderId das respostas.
+const GATEWAY_ALLOWED_ORIGINS = (process.env.G2G_ALLOWED_ORIGINS || 'http://127.0.0.1:3030,http://localhost:3030')
+    .split(',').map((o) => o.trim()).filter(Boolean);
+app.use(cors({ origin: GATEWAY_ALLOWED_ORIGINS }));
 app.use(express.json({ limit: '1mb' }));
 
 // ── Auth das rotas /api (token compartilhado com o server-consorcio) ──
-// Header X-Gateway-Token ou ?token=. /health (raiz) fica aberto p/ monitoramento.
+// SOMENTE header X-Gateway-Token. B9: removido o fallback `?token=` — token em
+// query vaza em access.log, histórico e logs de proxy. /health (raiz) fica
+// aberto p/ monitoramento.
 // Sem G2G_API_TOKEN, aceita tudo (só em localhost/dev).
 const G2G_API_TOKEN = process.env.G2G_API_TOKEN || '';
 if (!G2G_API_TOKEN) {
@@ -32,7 +39,7 @@ if (!G2G_API_TOKEN) {
 function gatewayAuth(req: Request, res: Response, next: NextFunction) {
     if (!G2G_API_TOKEN) return next();
     const h = req.headers['x-gateway-token'];
-    const given = (typeof h === 'string' ? h : '') || String(req.query.token || '');
+    const given = typeof h === 'string' ? h : '';
     const a = Buffer.from(given);
     const b = Buffer.from(G2G_API_TOKEN);
     if (a.length === b.length && a.length > 0 && crypto.timingSafeEqual(a, b)) return next();
@@ -381,7 +388,8 @@ app.get('/api/optimize-g2g/live', async (req: Request, res: Response) => {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache, no-transform',
         Connection: 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
+        // B9: SSE atrás do mesmo gatewayAuth; origem restrita (antes `*`).
+        'Access-Control-Allow-Origin': GATEWAY_ALLOWED_ORIGINS[0] || 'http://127.0.0.1:3030',
     });
     const send = (event: any) => res.write(`data: ${JSON.stringify(event)}\n\n`);
     const t0 = Date.now();
@@ -471,13 +479,19 @@ app.get('/api/buy-g2g/live', async (req: Request, res: Response) => {
     const wsTimeoutMs = Number(req.query.wsTimeoutMs) || 30000;
 
     const paymentMethod = String(req.query.paymentMethod || req.query.payMethod || 'pix').trim().toLowerCase();
-    const cpf = String(req.query.cpf || '21275117783').trim();
+    // B9/LGPD: sem CPF default hardcoded (antes caía um CPF real de homologação
+    // no fluxo de produção). Quem chama informa o CPF do cliente.
+    const cpf = String(req.query.cpf || '').replace(/\D/g, '').trim();
+    if (cpf.length !== 11) {
+        return res.status(400).json({ success: false, error: 'cpf do cliente (11 dígitos) é obrigatório.' });
+    }
 
     res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache, no-transform',
         Connection: 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
+        // B9: origem restrita (antes `*`).
+        'Access-Control-Allow-Origin': GATEWAY_ALLOWED_ORIGINS[0] || 'http://127.0.0.1:3030',
     });
     const send = (event: any) => res.write(`data: ${JSON.stringify(event)}\n\n`);
     const mask = (s: string) => (s && s.length > 8 ? `${s.slice(0, 4)}...${s.slice(-4)}` : s);

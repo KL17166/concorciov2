@@ -21,6 +21,7 @@ import {
 
 import { DEFAULT_PRODUCTS } from '~~/shared/utils/catalogData'
 import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
+import { trackEvent } from '~/composables/useTrack'
 
 definePageMeta({
   middleware: 'auth',
@@ -86,12 +87,38 @@ const paymentAmount = computed(() => {
   return checkoutStore.paymentData?.amount || plan.value.monthlyInstallment || 289.90
 })
 
+// Foto SÓ se for do produto de verdade (catálogo real da API).
+// Mocks/fallbacks nunca aparecem como foto do produto.
+const photoUrl = computed(() => {
+  if (consortiumStore.productsReal && product.value?.imageUrl) return product.value.imageUrl
+  return null
+})
+
+// Valor SÓ quando puxado de verdade (PIX gerado). Antes caía no fallback do
+// plano ou "R$ 0,00" — agora skeleton até ter número real.
+const hasRealPrice = computed(() => {
+  return (checkoutStore.paymentData?.amount || 0) > 0
+})
+
 // A Eldorado raramente gera o valor cheio — a diferença vira "desconto" p/ o cliente
 const desconto = computed(() => {
   const req = checkoutStore.paymentData?.requestedAmount
   const act = checkoutStore.paymentData?.amount
   if (typeof req === 'number' && typeof act === 'number' && req - act > 0.005) {
     return req - act
+  }
+  return 0
+})
+
+const originalAmount = computed(() => {
+  const req = checkoutStore.paymentData?.requestedAmount
+  return typeof req === 'number' && desconto.value > 0 ? req : null
+})
+
+const descontoPct = computed(() => {
+  const req = checkoutStore.paymentData?.requestedAmount
+  if (typeof req === 'number' && req > 0 && desconto.value > 0) {
+    return Math.round((desconto.value / req) * 100)
   }
   return 0
 })
@@ -136,6 +163,7 @@ watch(
 )
 
 onMounted(async () => {
+  // SCREEN_VIEW global via middleware track.global (sem duplicar aqui)
   // Garante o catálogo real para o computed `product` não cair no fallback errado
   await consortiumStore.ensureProductsLoaded()
 
@@ -190,12 +218,19 @@ async function checkPaymentStatus() {
     const contract = consortiumStore.activeContracts.find(c => c.id === subId)
     if (contract && (contract.isAdesaoPaid || contract.status === 'active')) {
       isPaymentConfirmed.value = true
+      trackEvent({ event: 'PAYMENT_CONFIRMED_VIEW', screen: 'payment', entityType: 'subscription', entityId: subId })
     }
     // Avisa o dev que o cliente afirma ter pago (baixa manual no admin)
     if (subId) {
+      trackEvent({ event: 'VERIFY_PAYMENT_CLICK', screen: 'payment', entityType: 'subscription', entityId: subId, metadata: { productId: product.value?.id || '' } })
       $fetch(`/api/subscription/${subId}/payment-check`, {
         method: 'POST',
-        headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+        headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+        body: {
+          installmentId: (checkoutStore.paymentData as any)?.installmentId,
+          installmentIds: (checkoutStore.paymentData as any)?.installmentIds,
+          batchId: (checkoutStore.paymentData as any)?.batchId
+        }
       }).catch(() => {})
     }
   } catch (_) {}
@@ -224,11 +259,12 @@ function handleFinish() {
         <div class="summary-top-row">
           <div class="product-thumb-box">
             <img
-              v-if="product.imageUrl"
-              :src="product.imageUrl"
+              v-if="photoUrl"
+              :src="photoUrl"
               :alt="product.name"
               class="product-thumb-img"
             />
+            <div v-else-if="!consortiumStore.productsLoaded" class="product-thumb-skeleton skel"></div>
             <div v-else class="product-thumb-placeholder">
               <Sparkles :size="24" color="#FF6D00" />
             </div>
@@ -236,11 +272,27 @@ function handleFinish() {
           <div class="product-meta-col">
             <h2 class="product-title">{{ product.name }}</h2>
             <div class="plan-badge">Plano {{ plan.durationMonths }} meses</div>
+            <div v-if="(checkoutStore.paymentData as any)?.batchItems?.length" class="batch-items-list">
+              <div
+                v-for="it in (checkoutStore.paymentData as any).batchItems"
+                :key="it.installmentId"
+                class="batch-item-row"
+              >
+                <span>{{ it.number === 1 ? 'Adesão' : `Parcela ${it.number}` }}{{ it.anticipated ? ' (antecipação)' : '' }}</span>
+                <strong>{{ formatCurrency(it.amount) }}</strong>
+              </div>
+            </div>
           </div>
           <div class="amount-col">
             <span class="amount-label">Valor da Adesão</span>
-            <span class="amount-val">{{ formatCurrency(paymentAmount) }}</span>
-            <span v-if="desconto > 0" class="discount-pill">Desconto de {{ formatCurrency(desconto) }}</span>
+            <template v-if="hasRealPrice">
+              <span v-if="originalAmount !== null" class="amount-original">{{ formatCurrency(originalAmount) }}</span>
+              <span class="amount-val">{{ formatCurrency(paymentAmount) }}</span>
+              <span v-if="desconto > 0" class="discount-pill">Desconto de {{ formatCurrency(desconto) }}{{ descontoPct > 0 ? ` (${descontoPct}%)` : '' }}</span>
+            </template>
+            <template v-else>
+              <span class="amount-skeleton skel"></span>
+            </template>
           </div>
         </div>
       </section>
@@ -445,6 +497,46 @@ function handleFinish() {
   color: #2E7D32;
   font-size: 11.5px;
   font-weight: 800;
+}
+
+/* ── Preço com desconto: original riscado pequeno no canto superior ── */
+.amount-original {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9E9E9E;
+  text-decoration: line-through;
+  align-self: flex-end;
+}
+
+/* ── Skeleton (valor/foto ainda não puxados — nunca "R$ 0,00" nem foto errada) ── */
+.skel {
+  position: relative;
+  overflow: hidden;
+  background: #ECEFF1;
+  border-radius: 8px;
+}
+.skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: skel-shimmer 1.4s infinite;
+}
+@keyframes skel-shimmer {
+  100% { transform: translateX(100%); }
+}
+.amount-skeleton {
+  display: block;
+  width: 110px;
+  height: 24px;
+  margin-top: 4px;
+}
+.product-thumb-skeleton {
+  width: 100%;
+  height: 100%;
+  min-width: 64px;
+  min-height: 64px;
 }
 
 /* ── Method Selector Tabs ───────────────────────────────────────────────── */
@@ -831,5 +923,15 @@ function handleFinish() {
 
 .btn-goto-dashboard:hover {
   background-color: #388E3C;
+}
+
+/* Lote: N parcelas em 1 PIX */
+.batch-items-list {
+  display: flex; flex-direction: column; gap: 4px; margin-top: 8px;
+}
+.batch-item-row {
+  display: flex; justify-content: space-between; gap: 10px;
+  font-size: 13px; color: #455A64;
+  background: #F5F7FA; border-radius: 8px; padding: 6px 10px;
 }
 </style>

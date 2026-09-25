@@ -1,0 +1,14 @@
+# settlePayment
+- **Arquivo:** server-consorcio/src/application/payments/settlePayment.ts:11
+- **O que faz:** Dá baixa manual/automática em uma parcela delegando ao `markInstallmentAsPaid`.
+- **O que ativa ela:** Admin — POST /admin/payments/:id/approve (PIX `*_WAITING_APPROVAL`), POST /admin/payments/:id/mark-paid (paymentRoutes) e POST /admin/clients/:clientId/installments/:installmentId/mark-paid (clientRoutes); `markInstallmentPaid` do contractsController usa o service direto, não esta função
+- **Entradas:**
+  - `installmentId: string`; `paymentMethod?: string` (default: `WEBHOOK_AUTOMATIC` se channel WEBHOOK, senão `ADMIN_MANUAL`); `paymentDate?: Date` (default agora); `channel?: 'WEBHOOK'|'ADMIN'` (default ADMIN)
+  - Sem validação própria — validações (parcela inexistente, já paga, contrato cancelado) estão no service e voltam como `{ success: false, message }`
+- **Saídas:**
+  - Sucesso: `MarkPaidResult { success: true, message }` (parcela PAID, saldo atualizado, adesão ativa contrato, tudo pago → COMPLETED)
+  - Falha: `{ success: false, message }` (ex: "Parcela não encontrada", "já está paga", "contrato cancelado") — não lança statusCode
+- **Regras/efeitos:**
+  - Wrapper fino sem transação própria; a atomicidade (`Serializable`) está no `markInstallmentAsPaid`
+  - Tabelas (via service): `installment`, `subscription` (+ ativação/completion)
+  - Side-effects: `logger.info` de início/sucesso, `logger.warn` em falha

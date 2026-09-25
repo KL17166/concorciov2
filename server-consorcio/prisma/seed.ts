@@ -5,6 +5,23 @@ import { hashPassword } from '../src/security/password';
 
 const prisma = new PrismaClient();
 
+// mod-11 (mesma regra do registro) — seed nunca cria documento inválido
+function isValidCpf(cpf: string): boolean {
+    if (cpf.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
+    let remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cpf[9])) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cpf[10])) return false;
+    return true;
+}
+
 // Moto specs (kept from original seed, now stored as JSON)
 const motoSpecsMap: Record<string, any> = {
     "1": {
@@ -210,6 +227,14 @@ async function main() {
         throw new Error('❌ Missing Admin credentials in .env (ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_CPF)');
     }
 
+    // B9: CPF do seed precisa ser válido (mod-11, sem sequência repetida).
+    // Antes `00000000000` passava batido aqui enquanto o registro rejeitava —
+    // conta MASTER com documento inválido e senha fraca de 8 chars.
+    const digits = adminCpf.replace(/\D/g, '');
+    if (!/^\d{11}$/.test(digits) || /^(\d)\1{10}$/.test(digits) || !isValidCpf(digits)) {
+        throw new Error('❌ ADMIN_CPF inválido (mod-11). Defina um CPF válido no .env antes do seed.');
+    }
+
     const adminPassword = await hashPassword(adminPasswordPlain);
 
     await prisma.user.upsert({
@@ -218,7 +243,7 @@ async function main() {
         create: {
             name: 'Administrador',
             email: adminEmail,
-            cpf: adminCpf,
+            cpf: digits,
             passwordHash: adminPassword,
             role: 'MASTER',
             birthDate: new Date('2000-01-01'),
@@ -227,22 +252,29 @@ async function main() {
     console.log(`👨‍💼 Admin user ready: ${adminEmail} (MASTER)`);
 
     // ============ Test Client User ============
-    const testClientEmail = 'cliente@teste.com';
-    const testClientPassword = await hashPassword('cliente123');
-    await prisma.user.upsert({
-        where: { email: testClientEmail },
-        update: { passwordHash: testClientPassword },
-        create: {
-            name: 'Cliente Teste',
-            email: testClientEmail,
-            cpf: '11111111111',
-            phone: '11999999999',
-            passwordHash: testClientPassword,
-            role: 'CLIENT',
-            birthDate: new Date('1995-05-15'),
-        }
-    });
-    console.log(`👤 Test client user ready: ${testClientEmail}`);
+    // B9: conta de teste (`cliente123` + CPF 111...) SÓ fora de produção e sob
+    // flag explícita. Antes era criada sempre — inclusive em prod — e ainda tinha
+    // isenção de KYC hardcoded no upload (removida em authController).
+    if (process.env.NODE_ENV === 'production' || process.env.ALLOW_TEST_SEED !== 'true') {
+        console.log('⏭️  Test client seed skipped (set ALLOW_TEST_SEED=true + NODE_ENV!=production to enable).');
+    } else {
+        const testClientEmail = 'cliente@teste.com';
+        const testClientPassword = await hashPassword('cliente123');
+        await prisma.user.upsert({
+            where: { email: testClientEmail },
+            update: { passwordHash: testClientPassword },
+            create: {
+                name: 'Cliente Teste',
+                email: testClientEmail,
+                cpf: '11111111111',
+                phone: '11999999999',
+                passwordHash: testClientPassword,
+                role: 'CLIENT',
+                birthDate: new Date('1995-05-15'),
+            }
+        });
+        console.log(`👤 Test client user ready: ${testClientEmail}`);
+    }
 
     // ============ Motorcycles from data.json ============
     const jsonPath = path.resolve('..', 'App-android-web', 'assets', 'motorcycles', 'data.json');

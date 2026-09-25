@@ -1,0 +1,20 @@
+# POST /api/subscriptions
+- **Ativado por:** checkout/adesão a plano
+  - BFF espelho: `zuvio-web/server/api/subscriptions/index.post.ts`
+  - Handler: `createClientSubscription` → `createSubscription` (channel CLIENT_APP)
+- **Auth / rate-limit:** `authenticate` + `transactionRateLimiter`
+  - App: `subscriptionRouteRateLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** body zod `CreateClientSubscriptionSchema` (`schemas/subscriptionSchema.ts`)
+  - `userId`: deve ser igual ao JWT (checado no controller, 403 se divergir)
+  - `planId`, `productId?`, `token?`
+  - `termsAccepted`: deve ser `true`
+  - `documentFrontUrl?`, `documentBackUrl?`, `selfieUrl?`
+- **O que o servidor retorna:**
+  - 201 `{ success: true, v: 2, message, subscriptionId, status: 'PENDING', plan: { id, monthlyInstallment }, installments[] }`
+  - 400 → validação ou termos não aceitos
+  - 403 → `userId` diferente do JWT
+  - 404 → plano/produto inexistente
+  - 429 → rate limit
+- **Efeitos:**
+  - Cria `subscription` PENDING + `installments`
+  - Registra IP dos termos (`termsIpAddress`)

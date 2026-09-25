@@ -94,14 +94,19 @@ export class EldoradoAdapter implements PaymentGateway {
                 throw Object.assign(new Error('Eldorado devolveu um código PIX inválido.'), { statusCode: 502, code: 'GATEWAY_BAD_RESPONSE' });
             }
 
-            // Parcela aguarda baixa manual do admin (o valor cai na conta da operação)
-            try {
-                await prisma.installment.update({
-                    where: { id: request.installmentId },
-                    data: { paymentMethod: 'ELDORADO_WAITING_APPROVAL' }
-                });
-            } catch (err) {
-                logger.error('[Eldorado] Erro ao marcar parcela como aguardando aprovação:', err);
+            // Parcela aguarda baixa manual do admin (o valor cai na conta da operação).
+            // Referências `bid-<uuid>` (PIX de lance) NÃO tocam installments —
+            // o vínculo vive em `bid_payments` (B5). Sem o guard, o update falhava
+            // com erro engolido e o pagamento do lance ficava órfão.
+            if (!request.installmentId.startsWith('bid-') && !request.installmentId.startsWith('batch-')) {
+                try {
+                    await prisma.installment.update({
+                        where: { id: request.installmentId },
+                        data: { paymentMethod: 'ELDORADO_WAITING_APPROVAL' }
+                    });
+                } catch (err) {
+                    logger.error('[Eldorado] Erro ao marcar parcela como aguardando aprovação:', err);
+                }
             }
 
             recordSuccess(this.name, request.amount);

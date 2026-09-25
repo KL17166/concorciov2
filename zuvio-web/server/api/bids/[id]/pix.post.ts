@@ -12,6 +12,8 @@ export default defineEventHandler(async (event) => {
     amount: number
     percentage: number
     productName: string
+    provider?: string
+    isManualApproval?: boolean
     qrCode?: string
     qrCodeText?: string
     pixCopiaECola?: string

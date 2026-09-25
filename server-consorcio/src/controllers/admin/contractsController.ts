@@ -114,9 +114,25 @@ export const getContract = async (req: Request, res: Response) => {
             .reduce((acc, i) => acc + Number(i.amount), 0);
         const progress = (paidInstallments / contract.totalInstallments) * 100;
 
+        // Solicitações de verificação do cliente p/ este contrato (o que ele pediu p/ conferir:
+        // adesão, parcela do mês, antecipação, lance). Mais recentes primeiro.
+        let verifications: any[] = [];
+        try {
+            const alerts = await (prisma as any).systemAlert.findMany({
+                where: { details: { contains: id } },
+                orderBy: { createdAt: 'desc' },
+                take: 20
+            });
+            const { parseVerificationAlert } = await import('../../utils/adminLabels');
+            verifications = alerts
+                .map((a: any) => parseVerificationAlert(a))
+                .filter((v: any) => v && (v.subscriptionId === id || v.bidSubscriptionId === id));
+        } catch { /* fila indisponível não quebra o contrato */ }
+
         res.render('pages/contracts/show', {
             path: '/contracts',
             contract,
+            verifications,
             stats: {
                 paidInstallments,
                 totalPaid,

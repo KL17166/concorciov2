@@ -1,0 +1,14 @@
+# recordTrackingEvent
+- **Arquivo:** server-consorcio/src/application/tracking/recordEvent.ts:15
+- **O que faz:** Registra um evento de funil do pixel próprio (tela/clique); best-effort, nunca quebra o fluxo.
+- **O que ativa ela:** `recordClientEvent` — POST /api/track (userId do JWT, valida `TrackEventSchema`; inválido → 200 com `recorded: false`); uso interno em `notifyClientBidPaymentCheck` (evento `VERIFY_PAYMENT_CLICK`, entityType `bid`)
+- **Entradas:**
+  - `userId: string | null` (do JWT, nunca do body — anti-spoof); `event`, `screen?`, `entityType?`, `entityId?`, `metadata?` (allowlist no schema); `ipAddress?` (64 chars), `userAgent?` (512 chars)
+  - Sem validações próprias que lancem — falha de insert vira `{ recorded: false }`
+- **Saídas:**
+  - Sucesso: `{ recorded: true }`; falha interna: `{ recorded: false }` (controller sempre responde 200)
+  - Erros lançados: nenhum (catch-all com `logger.warn`)
+- **Regras/efeitos:**
+  - Sem transação; um `trackingEvent.create` (`metadata` como JSON truncado em 2048 chars)
+  - Tabelas: `trackingEvent` (insert)
+  - Side-effects: `logger.warn [Tracking]` só em falha; nenhum efeito no fluxo do cliente

@@ -1,0 +1,15 @@
+# GET /health
+- **Ativado por:** monitoramento público / uptime externo
+  - Sem BFF espelho; fora do prefixo `/api`
+  - Handler inline em `src/app.ts:190`
+- **Auth / rate-limit:** pública, sem middlewares
+  - Sem `authenticate`, sem limiter, sem `securityMiddleware`
+- **Request:** sem params, query ou body
+- **O que o servidor retorna:**
+  - 200 `{ status: 'OK', uptime, database: 'ok', timestamp }` (+ `memory` rss/heap fora de produção)
+  - 503 `{ status: 'DEGRADED', database: 'error', uptime, timestamp }` (banco inacessível)
+- **Efeitos:**
+  - Somente `prisma.$queryRaw SELECT 1` + leitura de `process`
+  - Sem escrita; query de URL com dados sensíveis é redatada no log
+  - Usado por monitores externos para decidir alertas de queda
+  - Não exige autenticação de propósito (monitor não tem token)

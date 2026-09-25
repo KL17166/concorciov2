@@ -1,0 +1,15 @@
+# GET /livez
+- **Ativado por:** sonda de liveness (K8s / uptime monitor)
+  - Sem BFF espelho; fora do prefixo `/api`
+  - Handler inline em `src/app.ts:174`
+- **Auth / rate-limit:** pública, sem middlewares
+  - Sem `authenticate`, sem limiter, sem `securityMiddleware`
+- **Request:** sem params, query ou body
+- **O que o servidor retorna:**
+  - 200 `{ status: 'OK' }`
+  - Nenhum erro previsto
+- **Efeitos:**
+  - Nenhum (não toca banco, Redis, disco ou fila)
+  - Resposta estática imediata; K8s reinicia o pod se falhar
+  - Não exige autenticação de propósito (kubelet não tem token)
+  - Caminho registrado antes do errorHandler; nunca retorna 503

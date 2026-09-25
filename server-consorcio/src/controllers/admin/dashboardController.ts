@@ -75,13 +75,86 @@ export const getDashboard = async (req: Request, res: Response) => {
                     orderBy: { createdAt: 'desc' }
                 }),
                 (prisma as any).systemAlert.count({
-                    where: { read: false }
+                    where: { status: { in: ['OPEN', 'ACK', 'IN_PROGRESS'] } }
                 })
             ]);
             systemAlerts = alerts;
             unreadAlertsCount = unread;
         } catch (alertErr) {
             logger.warn('Failed to query system alerts:', alertErr);
+        }
+
+        // === Aprendizado do algoritmo (pixel + pesos online) ===
+        let learning: any = null;
+        try {
+            const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+            const [funnelGroups, weights, recentEvents] = await Promise.all([
+                prisma.trackingEvent.groupBy({
+                    by: ['event'],
+                    where: { createdAt: { gte: since7d } },
+                    _count: { event: true }
+                }),
+                prisma.learningWeight.findMany({
+                    select: { scope: true, key: true, value: true, samples: true }
+                }),
+                prisma.trackingEvent.findMany({
+                    where: { createdAt: { gte: since30d }, metadata: { not: null } },
+                    select: { event: true, metadata: true },
+                    orderBy: { createdAt: 'desc' },
+                    take: 2000
+                })
+            ]);
+
+            const funnelOrder = ['SCREEN_VIEW', 'GENERATE_QR_CLICK', 'QR_SHOWN', 'COPY_PIX_CLICK', 'VERIFY_PAYMENT_CLICK', 'PAYMENT_CONFIRMED_VIEW'];
+            const countOf = (e: string) => funnelGroups.find((g) => g.event === e)?._count.event || 0;
+            const funnel = funnelOrder.map((e) => ({ event: e, count: countOf(e) }));
+            const views = countOf('SCREEN_VIEW');
+            const verifies = countOf('VERIFY_PAYMENT_CLICK');
+
+            // Top produtos por interesse (productId no metadata dos eventos de funil)
+            const productHits: Record<string, number> = {};
+            for (const ev of recentEvents) {
+                try {
+                    const meta = JSON.parse(ev.metadata || '{}');
+                    const pid = typeof meta.productId === 'string' && meta.productId ? meta.productId : null;
+                    if (pid && ['GENERATE_QR_CLICK', 'QR_SHOWN', 'BID_CREATED', 'COPY_PIX_CLICK'].includes(ev.event)) {
+                        productHits[pid] = (productHits[pid] || 0) + 1;
+                    }
+                } catch { /* metadata inválido ignora */ }
+            }
+            const topProductIds = Object.entries(productHits)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            const topProducts = topProductIds.length > 0
+                ? await prisma.product.findMany({
+                    where: { id: { in: topProductIds.map(([id]) => id) } },
+                    select: { id: true, name: true }
+                })
+                : [];
+            const topProductsNamed = topProductIds.map(([id, hits]) => ({
+                id,
+                name: topProducts.find((p) => p.id === id)?.name || id.slice(0, 8),
+                hits
+            }));
+
+            const w = (scope: string, key: string) =>
+                weights.find((x) => x.scope === scope && x.key === key);
+            const convQrVerify = w('global', 'conv:qr_verify');
+            const convVerifyPaid = w('global', 'conv:verify_paid');
+
+            learning = {
+                funnel,
+                totalEvents7d: funnelGroups.reduce((s, g) => s + g._count.event, 0),
+                conversion: views > 0 ? ((verifies / views) * 100).toFixed(1) : '0.0',
+                convQrVerify: convQrVerify ? (convQrVerify.value * 100).toFixed(1) : '—',
+                convVerifyPaid: convVerifyPaid ? (convVerifyPaid.value * 100).toFixed(1) : '—',
+                weightCount: weights.length,
+                topProducts: topProductsNamed
+            };
+        } catch (learnErr) {
+            logger.warn('Failed to query learning data:', learnErr);
         }
 
         res.render('pages/dashboard/index', {
@@ -100,7 +173,8 @@ export const getDashboard = async (req: Request, res: Response) => {
             contractsByMonth,
             contractsByStatus,
             systemAlerts,
-            unreadAlertsCount
+            unreadAlertsCount,
+            learning
         });
     } catch (error) {
         logger.error('Dashboard error:', error);
@@ -119,7 +193,9 @@ export const markAlertAsRead = async (req: Request, res: Response) => {
             data: {
                 read: true,
                 readAt: new Date(),
-                readBy: adminUser?.id || null
+                readBy: adminUser?.id || null,
+                status: 'RESOLVED',
+                resolvedAt: new Date()
             }
         });
 
@@ -135,12 +211,18 @@ export const markAllAlertsAsRead = async (req: Request, res: Response) => {
     try {
         const adminUser = (req as any).user;
 
+        // Fase 1: "marcar todas" dispensa só as minhas + as sem dono (nunca apaga dos outros)
         await (prisma as any).systemAlert.updateMany({
-            where: { read: false },
+            where: {
+                status: { in: ['OPEN', 'ACK', 'IN_PROGRESS'] },
+                OR: [{ assignedTo: null }, { assignedTo: adminUser?.id || '__none__' }]
+            },
             data: {
                 read: true,
                 readAt: new Date(),
-                readBy: adminUser?.id || null
+                readBy: adminUser?.id || null,
+                status: 'RESOLVED',
+                resolvedAt: new Date()
             }
         });
 

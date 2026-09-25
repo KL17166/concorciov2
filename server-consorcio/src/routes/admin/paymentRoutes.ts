@@ -100,4 +100,91 @@ router.post('/payments/:id/mark-paid', isAdmin, requireCapability('payments.mana
     }
 });
 
+// Baixa em lote: confirma N parcelas de uma vez (conferência do PIX combinado ou caixa)
+router.post('/payments/bulk-mark-paid', isAdmin, requireCapability('payments.manage'), async (req, res) => {
+    const adminUser = (req as any).session?.user;
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter((x: unknown) => typeof x === 'string') : [];
+    const { paymentMethod, paymentDate, motivo } = req.body;
+    try {
+        if (ids.length === 0 || ids.length > 12) {
+            req.flash('error_msg', 'Selecione de 1 a 12 parcelas.');
+            return res.redirect(req.get('Referer') || '/admin/payments');
+        }
+        const done: string[] = [];
+        const failed: string[] = [];
+        for (const id of ids) {
+            const r = await settlePayment({
+                installmentId: id,
+                paymentMethod: paymentMethod || 'ADMIN_MANUAL',
+                paymentDate: paymentDate ? new Date(paymentDate) : undefined,
+                channel: 'ADMIN'
+            });
+            (r.success ? done : failed).push(`${id.slice(0, 8)}${r.success ? '' : `: ${r.message}`}`);
+        }
+        await prisma.auditLog.create({
+            data: {
+                userId: adminUser?.id || null,
+                action: 'BULK_PAYMENT_CONFIRMED',
+                resource: 'installment',
+                details: JSON.stringify({ count: done.length, done, failed, adminName: adminUser?.name, motivo: motivo || null }),
+                ipAddress: req.ip || 'unknown'
+            }
+        }).catch(() => {});
+        req.flash(failed.length ? 'error_msg' : 'success_msg',
+            failed.length ? `Baixadas ${done.length}, falhas ${failed.length}: ${failed.join('; ')}` : `${done.length} parcela(s) baixada(s) com sucesso.`);
+        res.redirect(req.get('Referer') || '/admin/payments');
+    } catch (error) {
+        logger.error('Bulk mark paid error:', error);
+        req.flash('error_msg', 'Erro na baixa em lote.');
+        res.redirect(req.get('Referer') || '/admin/payments');
+    }
+});
+
+// Confirmar lote (PIX combinado conferido no extrato → baixa as N)
+router.post('/payments/batch/:batchId/confirm', isAdmin, requireCapability('payments.manage'), async (req, res) => {
+    const adminUser = (req as any).session?.user;
+    const batchId = req.params.batchId as string;
+    try {
+        const batch = await (prisma as any).paymentBatch.findUnique({ where: { id: batchId } });
+        if (!batch || batch.status !== 'ACTIVE') {
+            req.flash('error_msg', 'Lote não está aguardando confirmação.');
+            return res.redirect('/admin/payments');
+        }
+        const installmentIds: string[] = JSON.parse(batch.installmentIds || '[]');
+        const done: string[] = [];
+        const failed: string[] = [];
+        for (const instId of installmentIds) {
+            const r = await settlePayment({ installmentId: instId, paymentMethod: `${batch.provider}_MANUAL`, channel: 'ADMIN' });
+            (r.success ? done : failed).push(instId.slice(0, 8));
+            await (prisma as any).paymentAttempt.updateMany({
+                where: { batchId, installmentId: instId, status: 'ACTIVE' },
+                data: { status: r.success ? 'PAID' : 'EXPIRED' }
+            }).catch(() => {});
+        }
+        if (failed.length === 0) {
+            await (prisma as any).paymentBatch.update({ where: { id: batchId }, data: { status: 'PAID', paidAt: new Date() } });
+        }
+        await prisma.auditLog.create({
+            data: {
+                userId: adminUser?.id || null,
+                action: 'BATCH_PAYMENT_CONFIRMED_MANUAL',
+                resource: 'payment_batch',
+                details: JSON.stringify({ batchId, count: done.length, failed, adminName: adminUser?.name }),
+                ipAddress: req.ip || 'unknown'
+            }
+        }).catch(() => {});
+        await (prisma as any).systemAlert.updateMany({
+            where: { status: { in: ['OPEN', 'ACK', 'IN_PROGRESS'] }, details: { contains: batchId } },
+            data: { status: 'RESOLVED', read: true, readAt: new Date(), readBy: adminUser?.id || null, resolvedAt: new Date() }
+        }).catch(() => {});
+        req.flash(failed.length ? 'error_msg' : 'success_msg',
+            failed.length ? `Lote parcial: ${done.length} baixadas, ${failed.length} com falha.` : `Lote confirmado: ${done.length} parcela(s) liquidadas.`);
+        res.redirect('/admin/payments');
+    } catch (error) {
+        logger.error('Confirm batch error:', error);
+        req.flash('error_msg', 'Erro ao confirmar lote.');
+        res.redirect('/admin/payments');
+    }
+});
+
 export default router;

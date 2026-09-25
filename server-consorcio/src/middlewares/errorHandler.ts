@@ -34,6 +34,22 @@ export const errorHandler = (
         });
     }
 
+    // Erros com status conhecido (ex: 403 do CORS) não são 500: respeita o
+    // status sem vazar detalhes internos. Antes, "Bloqueado por CORS" caía no
+    // 500 genérico e assustava como erro interno.
+    if (errStatus === 403) {
+        if (req.path.startsWith('/admin') && req.accepts('html')) {
+            return res.status(403).render('pages/error/index', {
+                message: 'Acesso bloqueado (CORS)',
+                error: process.env.NODE_ENV === 'development' ? err : {}
+            });
+        }
+        return res.status(403).json({
+            error: 'FORBIDDEN',
+            message: err.message || 'Acesso bloqueado.'
+        });
+    }
+
     // Handle specific known errors here (e.g., AppError class if created)
 
     // Handle Admin UI errors

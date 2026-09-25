@@ -52,11 +52,15 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
         }
 
         if (month) {
-            const [year, monthNum] = month.split('-');
-            where.dueDate = {
-                gte: new Date(parseInt(year), parseInt(monthNum) - 1, 1),
-                lte: new Date(parseInt(year), parseInt(monthNum), 0)
-            };
+            // Mês inválido é ignorado (antes `split('-')` sem validação gerava
+            // `Invalid Date` → 500).
+            if (/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+                const [year, monthNum] = month.split('-');
+                where.dueDate = {
+                    gte: new Date(parseInt(year), parseInt(monthNum) - 1, 1),
+                    lte: new Date(parseInt(year), parseInt(monthNum), 0)
+                };
+            }
         }
 
         if (search) {
@@ -227,8 +231,8 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
             JOIN subscriptions s ON s.id = i."subscriptionId"
             WHERE i.status = 'PAID'
               AND s.status <> 'PENDING'
-              AND i."paymentDate" >= '${firstOfMonth.toISOString()}'
-        `);
+              AND i."paymentDate" >= $1
+        `, firstOfMonth);
 
         // ── Near-due (next 7 days, still PENDING) ────────────────────────
         const in7Days = new Date(now);
@@ -252,10 +256,31 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
 
         const pagination = paginationMeta(finalTotal, page, limit);
 
+        // Lotes (PIX combinado) aguardando conferência — com itens legíveis
+        let openBatches: any[] = [];
+        try {
+            const batches = await (prisma as any).paymentBatch.findMany({
+                where: { status: 'ACTIVE' },
+                orderBy: { createdAt: 'desc' },
+                take: 20,
+                include: { subscription: { include: { user: { select: { name: true, email: true } } } } }
+            });
+            openBatches = await Promise.all(batches.map(async (b: any) => {
+                const ids: string[] = JSON.parse(b.installmentIds || '[]');
+                const insts = ids.length ? await prisma.installment.findMany({
+                    where: { id: { in: ids } },
+                    select: { id: true, number: true, amount: true, status: true, dueDate: true },
+                    orderBy: { number: 'asc' }
+                }) : [];
+                return { ...b, items: insts, count: insts.length };
+            }));
+        } catch { /* sem lote não quebra o financeiro */ }
+
         res.render('pages/payments/index', {
             path: '/payments',
             installments: finalInstallments,
             currentMap,
+            openBatches,
             summary: {
                 totalPending:   Number(summaryResult?.totalPending   || 0),
                 totalOverdue:   Number(summaryResult?.totalOverdue   || 0),
@@ -332,8 +357,15 @@ export const getPaymentsCalendar = async (req: Request, res: Response, next: Nex
 
 const updatePaymentSchema = z.object({
     status:        z.enum(['PAID', 'PENDING', 'OVERDUE']),
-    paymentDate:   z.string().optional().nullable(),
-    paymentMethod: z.string().optional().nullable(),
+    // B7: método restrito a códigos conhecidos (antes string livre → XSS/log-injection
+    // persistidos no painel) e data validada (antes `Invalid Date` virava 500).
+    paymentDate:   z.string().optional().nullable().refine(
+        (v) => !v || !Number.isNaN(new Date(v).getTime()),
+        { message: 'Data de pagamento inválida' }
+    ),
+    paymentMethod: z.string().regex(/^[A-Z0-9_\-]{2,32}$/, 'Método de pagamento inválido').optional().nullable(),
+    // B7: reversão de baixa (PAID → não-PAID) exige motivo auditável.
+    motivo:        z.string().max(500).optional().nullable(),
     _csrf:         z.string().optional()
 });
 
@@ -348,15 +380,33 @@ export const updatePayment = async (req: Request, res: Response, next: NextFunct
             return res.redirect('/admin/payments');
         }
 
-        const { status, paymentDate, paymentMethod } = validation.data;
+        const { status, paymentDate, paymentMethod, motivo } = validation.data;
         const adminUser = (req as any).session?.user;
 
         await prisma.$transaction(async (tx) => {
             const inst = await tx.installment.findUnique({
                 where: { id },
-                include: { subscription: { include: { installments: true } } }
+                include: { subscription: { include: { installments: true, user: { select: { kycStatus: true } } } } }
             });
             if (!inst) throw new Error('Parcela não encontrada');
+
+            // B7: reversão de baixa (PAID → PENDING/OVERDUE) sem prova de estorno era
+            // silenciosa. Agora exige MASTER + motivo auditável (mín. 8 chars).
+            const isRegression = inst.status === 'PAID' && status !== 'PAID';
+            if (isRegression) {
+                if (adminUser?.role !== 'MASTER') {
+                    throw Object.assign(
+                        new Error('Reversão de baixa paga exige perfil MASTER.'),
+                        { isBusinessRule: true }
+                    );
+                }
+                if (!motivo || motivo.trim().length < 8) {
+                    throw Object.assign(
+                        new Error('Reversão de baixa exige motivo com ao menos 8 caracteres (ex: nº do comprovante de estorno).'),
+                        { isBusinessRule: true }
+                    );
+                }
+            }
 
             // Adesão (parcela 1 de contrato PENDING) nunca pode ir para Atrasado —
             // vale: pendente, pago ou PIX expirado (botão Expirar).
@@ -396,7 +446,8 @@ export const updatePayment = async (req: Request, res: Response, next: NextFunct
                         installmentId: id,
                         oldStatus: currentOldStatus,
                         newStatus: status,
-                        adminName: adminUser?.name || 'Unknown'
+                        adminName: adminUser?.name || 'Unknown',
+                        ...(isRegression ? { regressionReason: motivo?.trim() } : {})
                     }),
                     ipAddress: req.ip || req.socket.remoteAddress || 'unknown'
                 }
@@ -408,7 +459,16 @@ export const updatePayment = async (req: Request, res: Response, next: NextFunct
                     balanceDue:       { decrement: Number(inst.amount) }
                 };
                 if (inst.number === 1 && inst.subscription.status === 'PENDING') {
-                    subUpdate.status = 'ACTIVE';
+                    // B7: fim da ativação sem KYC. Antes, a baixa manual ativava o
+                    // contrato direto (ACTIVE) mesmo com KYC pendente — mesma regra
+                    // do fluxo automático (`markInstallmentAsPaid`): sem KYC aprovado,
+                    // o contrato vai para PENDING_KYC e aguarda revisão.
+                    const kycStatus = (inst.subscription as any).user?.kycStatus;
+                    if (kycStatus && kycStatus !== 'APPROVED') {
+                        subUpdate.status = 'PENDING_KYC';
+                    } else {
+                        subUpdate.status = 'ACTIVE';
+                    }
                 }
                 await tx.subscription.update({ where: { id: inst.subscriptionId }, data: subUpdate });
 

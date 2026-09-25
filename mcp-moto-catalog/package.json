@@ -1,0 +1,15 @@
+{
+  "name": "mcp-moto-catalog",
+  "version": "1.0.0",
+  "description": "MCP server: extrai lineups de motos (Honda, Yamaha, Kawasaki, BMW) via navegador real e sincroniza o catalogo de consorcio",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "playwright-core": "^1.49.0",
+    "zod": "^3.23.0"
+  }
+}

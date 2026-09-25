@@ -1,0 +1,19 @@
+# POST /api/tickets
+- **Ativado por:** botão Abrir Atendimento / solicitar cancelamento
+  - BFF espelho: `zuvio-web/server/api/tickets/index.post.ts`
+  - Handler: `openTicket` → `createTicket` (`application/support/tickets.ts`)
+- **Auth / rate-limit:** `authenticate`
+  - App: `generalLimiter` + `securityMiddleware` (sem limiter específico)
+- **Request:** body sem zod (validado em `createTicket`)
+  - `subscriptionId?`, `type?` (default CANCELLATION)
+  - `subject*` (obrigatório, trim, max 120)
+  - `message*` (obrigatório, trim, max 2000)
+- **O que o servidor retorna:**
+  - 201 `{ success: true, ticket }`
+  - 400 → subject/message vazios ou ticket OPEN/IN_PROGRESS duplicado <24h no contrato
+  - 401 → não autenticado
+  - 403 → contrato de outro usuário
+  - 404 → contrato inexistente
+- **Efeitos:**
+  - Cria `supportTicket` OPEN
+  - Log de alerta (`logger.warn`) para a equipe

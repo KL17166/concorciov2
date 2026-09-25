@@ -1,0 +1,16 @@
+# GET /api/bids/:userId
+- **Ativado por:** tela Meus Lances
+  - BFF espelho: `zuvio-web/server/api/bids/[userId].get.ts`
+  - Handler: `listClientBids` → `listUserBids` (application)
+- **Auth / rate-limit:** `authenticate` + `checkOwnership('user','userId')`
+  - App: `bidLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** param `userId` (deve ser igual ao do JWT)
+  - Sem body; sem validação zod (param repassado direto)
+- **O que o servidor retorna:**
+  - 200 array de lances do usuário (formato de `listUserBids`)
+  - 400 → param ausente (via `checkOwnership`)
+  - 401 → não autenticado
+  - 403 → `userId` de outro usuário
+- **Efeitos:**
+  - Somente leitura (lances do usuário)
+  - Sem escrita, sem auditoria

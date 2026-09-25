@@ -1,0 +1,22 @@
+# POST /api/auth/register
+- **Ativado por:** tela de cadastro do app
+  - BFF espelho: `zuvio-web/server/api/auth/register.post.ts`
+  - Fluxo: primeiro acesso, cria conta CLIENT
+- **Auth / rate-limit:** sem `authenticate`
+  - Rota: `authRateLimiter` (10 req / 15min por CPF ou IP)
+  - App: `apiRegisterLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** body zod `registerSchema` (`authController.ts:39`)
+  - `name`: string min 3
+  - `email`: email válido
+  - `cpf`: só dígitos, mod-11 válido (rejeita dígitos repetidos)
+  - `password`: min 8 (hash argon/bcrypt via `hashPassword`)
+  - `phone?`: nullable
+- **O que o servidor retorna:**
+  - 201 `{ message, user: { id, name, email, cpf, role, createdAt } }`
+  - 400 → campo inválido (zod, via errorHandler)
+  - 409 → email ou CPF já existe
+  - 429 → rate limit excedido
+- **Efeitos:**
+  - Cria `user` (role CLIENT, `passwordHash`)
+  - Cria `auditLog` REGISTER (só email, sem CPF em claro — LGPD)
+  - Log com CPF mascarado; não cria sessão nem token

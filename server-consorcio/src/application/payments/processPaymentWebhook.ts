@@ -1,6 +1,10 @@
 import { prisma } from '../../config/database';
 import { markInstallmentAsPaid } from '../../services/installmentService';
 import { logger } from '../../config/logger';
+import { parseBidExternalId } from '../bids/generateBidPix';
+import { processBidPaymentWebhook } from './processBidPaymentWebhook';
+import { parseBatchExternalId } from './generateBatchPayment';
+import { processBatchPaymentWebhook } from './processBatchPaymentWebhook';
 
 export interface ProcessWebhookInput {
     provider: 'pixgo' | 'sigilopay';
@@ -40,7 +44,33 @@ export async function processPaymentWebhook(input: ProcessWebhookInput): Promise
         };
     }
 
-    // 2. Validate installment existence & amount
+    // 2. Referência de lance (`bid-<uuid>`) → liquidação em bid_payments (B5).
+    // Antes caía no lookup de installment e retornava 404 — dinheiro órfão.
+    if (parseBidExternalId(installmentId)) {
+        return processBidPaymentWebhook({
+            provider,
+            bidExternalId: installmentId,
+            paidAmount,
+            eventSignature,
+            providerEventId,
+            rawPayload
+        });
+    }
+
+    // 2b. Referência de lote (`batch-<uuid>`) → liquidação das N parcelas.
+    if (parseBatchExternalId(installmentId)) {
+        return processBatchPaymentWebhook({
+            provider,
+            batchExternalId: installmentId,
+            paidAmount,
+            paymentMethod,
+            eventSignature,
+            providerEventId,
+            rawPayload
+        });
+    }
+
+    // 2c. Validate installment existence & amount
     const installment = await prisma.installment.findUnique({
         where: { id: installmentId },
         include: { subscription: true }
@@ -83,11 +113,12 @@ export async function processPaymentWebhook(input: ProcessWebhookInput): Promise
         };
     }
 
-    // Amount cross-validation (if provided by gateway)
+    // Amount cross-validation (if provided by gateway) — simétrica:
+    // rejeita pago a menor (calote parcial) e a maior (divergência/golpe).
     if (typeof paidAmount === 'number' && paidAmount > 0) {
         const expectedAmount = Number(installment.amount);
         // Allow up to 1 real / 1% tolerance for gateway discount/fee rounding
-        if (paidAmount < expectedAmount * 0.95) {
+        if (paidAmount < expectedAmount * 0.95 || paidAmount > expectedAmount * 1.05) {
             logger.error(`[Webhook] Paid amount (R$ ${paidAmount}) is significantly lower than installment amount (R$ ${expectedAmount})`);
             return {
                 success: false,

@@ -1,0 +1,99 @@
+# Plano de Implementação: Tela de Boas-vindas / Onboarding (Pré-Login)
+
+Criar a tela de apresentação/onboarding com carrossel interativo inspirada no fluxo móvel de referência (telas de consórcio Honda), adaptada 100% à identidade visual, cores e tipografia da plataforma **Katari** (`#FF6D00` laranja vibrante, `#263238` ardósia escuro, fontes Outfit, acabamento premium mobile-first).
+
+A tela será exibida **antes** da tela de login/cadastro.
+
+---
+
+## 1. Regras de Negócio e Comportamento Solicitado
+
+1. **Substituição do Botão**:
+   - Onde na referência diz *"Ver serviços Honda"*, o botão principal será **"Cadastre-se"** (redirecionando para `/auth/register`).
+   - O botão secundário será **"Já sou cliente"** (redirecionando para `/auth/login`).
+2. **Slides Interativos (4 Telas no Carrossel)**:
+   - **Slide 1 - Mobilidade & Tecnologia**:
+     - Título: *"Consórcio de Motos e Carros. Tudo no seu celular!"*
+     - Ilustração/Composição: Cards dinâmicos com o sedan (Honda City) e moto (Honda CG Fan/Titan), ícone de celular com moto e badges visuais.
+   - **Slide 2 - Conquista & Facilidade**:
+     - Título: *"Sua conquista tá fácil de realizar. Planeje com a Katari!"*
+     - Link de apoio: *"Saiba mais"* (com modal/detalhes dos benefícios: taxa de administração justa, lance embutido e zero juros).
+     - Composição: SUV (Honda HR-V) em destaque com grafismos de fundo.
+   - **Slide 3 - Credibilidade & Realização**:
+     - Título: *"Junte-se a milhares de brasileiros que já realizaram o sonho do veículo próprio!"*
+     - Link: *"Simular consórcio"* (direciona para cadastro ou modal de simulação).
+     - Composição: Card de vídeo/apresentação institucional com botão de Play estilizado ("Conheça como funciona a Katari").
+   - **Slide 4 - Tranquilidade & Proteção**:
+     - Título: *"A tranquilidade de conquistar seu veículo sem pagar juros abusivos!"*
+     - Link de apoio: *"Saiba mais"*.
+     - Composição: Moto esportiva (Honda CB 300F Twister amarela/dourada) com elementos gráficos flutuantes.
+3. **Controles e Gestos**:
+   - Indicador de 4 pontos (dots) no topo, sincronizado com o slide ativo.
+   - Toque em qualquer dot para ir diretamente ao slide.
+   - Suporte completo a gestos de arrastar/deslizar (**Swipe touch**) no celular (usando `@vueuse/core`).
+   - Botões de avançar/voltar opcionais sutis e transições suaves com aceleração nativa.
+4. **Fluxo de Navegação**:
+   - Usuário não autenticado que acessa o app é direcionado para a tela de boas-vindas (`/welcome`).
+   - Em `/welcome`:
+     - Clicar em **"Cadastre-se"** leva para `/auth/register`.
+     - Clicar em **"Já sou cliente"** leva para `/auth/login`.
+   - Nas telas `/auth/login` e `/auth/register`:
+     - Botão de voltar (seta) permite retornar facilmente à tela de apresentação `/welcome`.
+   - Se o usuário já estiver logado, o middleware `guest` o redireciona automaticamente para a Home (`/`).
+
+---
+
+## 2. Paleta de Cores e Identidade Katari
+
+Seguindo as diretrizes do `main.css` e da identidade já estabelecida:
+- **Cor Primária**: `#FF6D00` (Katari Orange)
+- **Cor Primária Hover / Active**: `#E65100` / `#F4511E`
+- **Cor Secundária / Textos Escuros**: `#263238`
+- **Superfícies**: Fundo claro limpo `#FAFAFA` com cards `#FFFFFF` e contornos sutis `#E0E0E0`.
+- **Botão Primário ("Cadastre-se")**: Laranja vibrante `#FF6D00`, texto branco em negrito, cantos arredondados (`border-radius: 12px`), sombra suave de elevação.
+- **Botão Secundário ("Já sou cliente")**: Fundo branco com borda sutil e texto em destaque `#263238` / `#FF6D00`.
+
+---
+
+## 3. Imagens e Ativos Utilizados
+
+Copiaremos e organizaremos os arquivos locais para `zuvio-web/public/img/onboarding/`:
+- `honda_city_sedan_2026_01.webp` (Sedan moderno)
+- `honda_hr_v_2026_01.webp` (SUV Vermelho HR-V)
+- `honda_cg_160_titan_2026_01.jpg` / Fan (Moto utilitária líder de vendas)
+- `cb300f_twister.webp` / `yamaha_fazer_fz25_connected_01.png` (Moto esportiva/amarela)
+- `logo.png` (Logo oficial da Katari)
+
+---
+
+## 4. Alterações Propostas
+
+### Frontend (`zuvio-web`)
+
+#### [NEW] [welcome.vue](file:///c:/Users/kl/Documents/concorciov2/zuvio-web/app/pages/welcome.vue)
+- Nova página com carrossel dos 4 slides.
+- Suporte a swipe touch via `@vueuse/core`.
+- Top bar com dots e logotipo Katari.
+- Bottom actions fixas com os botões "Cadastre-se" e "Já sou cliente".
+- Modais informativos para os links "Saiba mais" e "Simular consórcio".
+
+#### [MODIFY] [auth.ts (middleware)](file:///c:/Users/kl/Documents/concorciov2/zuvio-web/app/middleware/auth.ts)
+- Ao invés de enviar diretamente para `/auth/login`, direcionar usuários deslogados para `/welcome`.
+
+#### [MODIFY] [login.vue](file:///c:/Users/kl/Documents/concorciov2/zuvio-web/app/pages/auth/login.vue)
+- Adicionar botão de voltar no topo para retornar ao `/welcome`.
+
+#### [MODIFY] [register.vue](file:///c:/Users/kl/Documents/concorciov2/zuvio-web/app/pages/auth/register.vue)
+- Ajustar botão de voltar para retornar ao `/welcome`.
+
+---
+
+## 5. Plano de Verificação
+
+### Testes Manuais no Navegador
+1. Acessar a raiz sem estar autenticado e validar se a tela `/welcome` abre automaticamente.
+2. Navegar entre os 4 slides (clique nos dots, arrasto de touch e botões).
+3. Verificar a fidelidade visual com os prints fornecidos (posicionamento dos cards, fotos dos veículos, proporções, tipografia).
+4. Clicar em "Cadastre-se" e verificar se direciona para `/auth/register`.
+5. Clicar em "Já sou cliente" e verificar se direciona para `/auth/login`.
+6. Clicar no botão voltar do login/cadastro e verificar retorno à tela de onboarding.

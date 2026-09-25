@@ -1,0 +1,18 @@
+# PUT /api/auth/password
+- **Ativado por:** tela Alterar Senha do app
+  - BFF espelho: `zuvio-web/server/api/auth/password.put.ts`
+  - Fluxo: troca de senha com confirmação da atual
+- **Auth / rate-limit:** `authenticate` (Bearer JWT)
+  - App: `generalLimiter` + `securityMiddleware` (sem limiter específico)
+- **Request:** body zod `changePasswordSchema` (`authController.ts:457`)
+  - `currentPassword`: min 1 (obrigatória)
+  - `newPassword`: min 8
+- **O que o servidor retorna:**
+  - 200 `{ success: true, message: 'Senha alterada com sucesso.' }`
+  - 400 → validação (zod)
+  - 401 → não autenticado ou senha atual incorreta
+  - 404 → usuário não encontrado
+- **Efeitos:**
+  - `user.update` com novo `passwordHash` (via `hashPassword`)
+  - Cria `auditLog` CHANGE_PASSWORD (sem a senha no detalhe)
+  - Tokens antigos NÃO são revogados aqui

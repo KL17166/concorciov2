@@ -1,0 +1,14 @@
+# contemplateSubscription
+- **Arquivo:** server-consorcio/src/application/subscriptions/contemplateSubscription.ts:9
+- **O que faz:** Marca um contrato ativo como contemplado (liberação do crédito).
+- **O que ativa ela:** `contemplateContract` (contractsController, admin) — POST /admin/contracts/:id/contemplate
+- **Entradas:**
+  - `subscriptionId: string` (de `params.id`); `contemplationType?: string` (default `'DIRECT'`, vindo do body)
+  - Validações: 400 se contrato inexistente ou status ≠ ACTIVE; 400 se `contemplated` já true
+- **Saídas:**
+  - Sucesso: o `subscription` atualizado (`contemplated: true`, `contemplationDate: agora`, `contemplationType`, `status: 'CONTEMPLATED'`)
+  - Erros: 400 deve estar ativo para ser contemplado / já contemplado anteriormente
+- **Regras/efeitos:**
+  - Sem transação: `findUnique` + um `subscription.update`; sem trava anti-concorrência própria
+  - Tabelas: `subscription` (leitura + update)
+  - Side-effects: `logger.info` com tipo de contemplação; sem notificação ou efeito financeiro direto

@@ -37,23 +37,23 @@ SCRIPT = os.environ.get("ELD_COMPRA_SCRIPT", os.path.join(_BASE_DIR, "eldorado_p
 STATE_PATH = os.environ.get("ELD_STATE_PATH", os.path.join(_DATA_DIR, "eldorado-state.json"))
 META_PATH = os.environ.get("ELD_META_PATH", os.path.join(_DATA_DIR, "eldorado-meta.json"))
 
-# Token compartilhado com o server-consorcio (header X-Gateway-Token ou ?token=).
-# /health e / ficam abertos (monitoramento); /pix e /sellers exigem token quando configurado.
+# Token compartilhado com o server-consorcio (SOMENTE header X-Gateway-Token).
+# B9: removido o fallback `?token=` — token em query vaza em access.log,
+# histórico do navegador, `tunnel.log` e logs de proxy.
 _API_TOKEN = os.environ.get("ELD_API_TOKEN", "")
 if not _API_TOKEN:
     sys.stderr.write("[api] AVISO: ELD_API_TOKEN vazio — /pix sem autenticação (só use em localhost).\n")
+
+# B9: CORS restrito — chamadas são server-to-server (fetch do backend), nunca
+# de browser de terceiros. Antes `Access-Control-Allow-Origin: *` permitia que
+# qualquer site lesse BR Code + payment_id. Mesma origem não precisa de CORS.
+_ALLOWED_ORIGIN = os.environ.get("ELD_ALLOWED_ORIGIN", "http://127.0.0.1:3030")
 
 
 def is_authorized(handler: BaseHTTPRequestHandler) -> bool:
     if not _API_TOKEN:
         return True
     given = handler.headers.get("X-Gateway-Token", "")
-    if not given:
-        try:
-            q = parse_qs(urlparse(handler.path).query)
-            given = (q.get("token") or [""])[0]
-        except Exception:
-            given = ""
     return bool(given) and hmac.compare_digest(given, _API_TOKEN)
 
 
@@ -212,8 +212,9 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(obj).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Origin", _ALLOWED_ORIGIN)
+        self.send_header("Vary", "Origin")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Gateway-Token")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
@@ -221,8 +222,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Origin", _ALLOWED_ORIGIN)
+        self.send_header("Vary", "Origin")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Gateway-Token")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Content-Length", "0")
         self.end_headers()
@@ -236,7 +238,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(502, {"ok": False, "error": f"html ausente: {e}"})
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)

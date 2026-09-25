@@ -1,0 +1,20 @@
+# POST /api/payments/:installmentId/boleto
+- **Ativado por:** tela de pagamento da parcela (Gerar Boleto)
+  - BFF espelho: `zuvio-web/server/api/payments/[installmentId]/boleto.post.ts`
+  - Handler: `generateBoletoPayment` → `generatePayment` (method BOLETO)
+- **Auth / rate-limit:** `authenticate` + `transactionRateLimiter`
+  - App: `paymentGenerationLimiter` + `generalLimiter` + `securityMiddleware`
+- **Request:** param `installmentId` + body zod `GeneratePaymentSchema`
+  - `idTokenPay`: obrigatório (sem ele → 400)
+  - `anticipate?`: default false
+- **O que o servidor retorna:**
+  - 200 `{ success: true, paymentId, qrCode, copyPaste, amount, requestedAmount, expirationDate, message? }`
+  - `provider` incluído só fora de produção
+  - 400 → sem `idTokenPay`
+  - 401/403 → sem auth ou não dono
+  - 404 → parcela inexistente
+  - 503 GATEWAY_UNAVAILABLE → gateway fora (retryable)
+  - 429 → rate limit
+- **Efeitos:**
+  - Cria/atualiza cobrança boleto no gateway
+  - Grava referência de pagamento no banco

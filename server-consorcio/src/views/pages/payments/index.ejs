@@ -207,6 +207,29 @@
             </div>
 
             <!-- TABLE VIEW -->
+            <% if (typeof openBatches !== 'undefined' && openBatches.length > 0) { %>
+                <div class="premium-table-container mb-4">
+                    <div class="px-4 py-3" style="border-bottom: 1px solid var(--border-color);">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-collection me-2"></i>PIX combinado aguardando conferência (<%= openBatches.length %>)</h5>
+                        <small class="text-muted">1 cobrança somando N parcelas — confira no extrato e confirme o lote.</small>
+                    </div>
+                    <% openBatches.forEach(function(b) { %>
+                        <div class="px-4 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-bottom: 1px solid var(--border-color);">
+                            <div>
+                                <div class="fw-bold"><%= b.subscription?.user?.name || 'Cliente' %> <small class="text-muted"><%= b.subscription?.user?.email || '' %></small></div>
+                                <div class="text-muted" style="font-size:.82rem;">
+                                    <% (b.items || []).forEach(function(it, idx) { %><%= it.number === 1 ? 'Adesão' : 'Parcela ' + it.number %> (R$ <%= Number(it.amount).toLocaleString('pt-BR',{minimumFractionDigits:2}) %>)<%= idx < b.items.length - 1 ? ' · ' : '' %><% }); %>
+                                    — total <strong>R$ <%= Number(b.totalAmount).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></strong> · <span class="mono-code"><%= b.provider %></span>
+                                </div>
+                            </div>
+                            <form method="POST" action="/admin/payments/batch/<%= b.id %>/confirm" style="display:inline;" onsubmit="return confirm('Confirma que R$ <%= Number(b.totalAmount).toLocaleString('pt-BR',{minimumFractionDigits:2}) %> caiu na conta? Baixa as <%= b.count %> parcelas.');">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <button type="submit" class="btn btn-sm btn-success">Confirmar lote (<%= b.count %>)</button>
+                            </form>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } %>
             <div class="payments-view" id="tableView">
                 <div class="premium-table-container mb-4">
                     <div class="px-4 py-3 d-flex justify-content-between align-items-center" style="border-bottom: 1px solid var(--border-color);">
@@ -222,6 +245,7 @@
                             <table class="table table-custom align-middle w-100 mb-0" id="paymentsTable">
                                 <thead>
                                     <tr>
+                                        <th style="width:36px;"><input type="checkbox" id="bulkCheckAll" title="Selecionar todas" onclick="toggleBulkAll(this)"></th>
                                         <th>Cliente</th>
                                         <th>Produto</th>
                                         <th>Parcela</th>
@@ -239,6 +263,7 @@
                                         const isNearDue    = daysUntilDue <= 3 && daysUntilDue >= 0 && inst.status === 'PENDING';
                                         %>
                                         <tr>
+                                            <td><% if (inst.status === 'PENDING' || inst.status === 'OVERDUE') { %><input type="checkbox" class="bulk-check" value="<%= inst.id %>" title="Selecionar parcela <%= inst.number %>"><% } %></td>
                                             <td>
                                                 <div class="d-flex align-items-center">
                                                     <div class="text-white fw-bold d-flex align-items-center justify-content-center me-3 shadow-sm"
@@ -349,7 +374,7 @@
                         </div>
                     <% } else { %>
                         <div class="text-center py-5">
-                            <div class="mb-3 d-inline-block p-4 rounded-circle" style="background:rgba(99,102,241,0.1);">
+                            <div class="mb-4 empty-icon">
                                 <i class="bi bi-cash-coin text-primary" style="font-size:3rem;"></i>
                             </div>
                             <h5 class="fw-bold">Nenhuma parcela encontrada</h5>
@@ -357,6 +382,20 @@
                         </div>
                     <% } %>
                 </div>
+
+                <!-- Baixa em lote (parcelas marcadas) -->
+                <form method="POST" action="/admin/payments/bulk-mark-paid" id="bulkForm" class="d-flex gap-2 align-items-center flex-wrap px-1 py-3" onsubmit="return submitBulk(this)">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <strong style="font-size:.85rem;"><span id="bulkCount">0</span> selecionada(s)</strong>
+                    <select name="paymentMethod" class="form-select form-select-sm" style="max-width:180px;border-radius:8px;">
+                        <option value="ADMIN_MANUAL">Manual (caixa)</option>
+                        <option value="PIX">PIX conferido</option>
+                        <option value="BOLETO">Boleto</option>
+                        <option value="DINHEIRO">Dinheiro</option>
+                    </select>
+                    <input type="date" name="paymentDate" class="form-control form-control-sm" style="max-width:170px;border-radius:8px;">
+                    <button type="submit" class="btn btn-sm btn-success">Baixar selecionadas</button>
+                </form>
 
                 <!-- Pagination -->
                 <% if (pagination && pagination.totalPages > 1) { %>
@@ -488,7 +527,7 @@
                     </div>
                 <% } else { %>
                     <div class="text-center py-5">
-                        <div class="mb-3 d-inline-block p-4 rounded-circle" style="background:rgba(99,102,241,0.1);">
+                        <div class="mb-4 empty-icon">
                             <i class="bi bi-cash-coin text-primary" style="font-size:3rem;"></i>
                         </div>
                         <h5 class="fw-bold">Nenhuma parcela encontrada</h5>
@@ -558,6 +597,31 @@
             }
             const savedView = localStorage.getItem('payments_view');
             if (savedView) setView(savedView);
+
+            function toggleBulkAll(master) {
+                document.querySelectorAll('.bulk-check').forEach(function(c) { c.checked = master.checked; });
+                updateBulkCount();
+            }
+            function updateBulkCount() {
+                var n = document.querySelectorAll('.bulk-check:checked').length;
+                var el = document.getElementById('bulkCount');
+                if (el) el.textContent = n;
+            }
+            document.addEventListener('change', function(e) {
+                if (e.target && e.target.classList && e.target.classList.contains('bulk-check')) updateBulkCount();
+            });
+            function submitBulk(form) {
+                var ids = Array.prototype.map.call(document.querySelectorAll('.bulk-check:checked'), function(c) { return c.value; });
+                if (ids.length === 0) { alert('Selecione ao menos 1 parcela.'); return false; }
+                if (ids.length > 12) { alert('Máximo de 12 parcelas por vez.'); return false; }
+                if (!confirm('Baixar ' + ids.length + ' parcela(s) como pagas?')) return false;
+                ids.forEach(function(id) {
+                    var h = document.createElement('input');
+                    h.type = 'hidden'; h.name = 'ids'; h.value = id;
+                    form.appendChild(h);
+                });
+                return true;
+            }
 
             function openUpdateModal(btn) {
                 document.getElementById('updatePaymentForm').action = '/admin/payments/' + btn.dataset.id + '/update';

@@ -1,0 +1,14 @@
+# bidExternalId
+- **Arquivo:** server-consorcio/src/application/bids/generateBidPix.ts:15
+- **O que faz:** Monta o `external_id` do gateway para cobrança de lance: prefixo `bid-` + `bidId`.
+- **O que ativa ela:** Chamada interna de `generateBidPix` (mesmo arquivo) ao pedir PIX à gateway via `PaymentFailoverService`
+- **Entradas:**
+  - `bidId: string` — id do lance (uuid); sem validação, só concatena `bid-<bidId>`
+  - Constante: `BID_REF_PREFIX = 'bid-'`
+- **Saídas:**
+  - Sucesso: string `bid-<bidId>` (usada como `installmentId` no `executePaymentWithFailover`)
+  - Erros: nenhum (função pura, não lança)
+- **Regras/efeitos:**
+  - O prefixo `bid-` é o que permite ao webhook rotear a liquidação para `processBidPaymentWebhook`
+  - Sem transação, sem tabelas, sem side-effects
+  - Par: `parseBidExternalId` faz a operação inversa no webhook

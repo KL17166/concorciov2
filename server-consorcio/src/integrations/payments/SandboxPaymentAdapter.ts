@@ -9,13 +9,18 @@ export class SandboxPaymentAdapter implements PaymentGateway {
     }
 
     async createPayment(request: PaymentRequest): Promise<PaymentResult> {
-        // Update installment to waiting approval
-        await prisma.installment.update({
-            where: { id: request.installmentId },
-            data: {
-                paymentMethod: 'SANDBOX_WAITING_APPROVAL'
-            }
-        });
+        // Referências `bid-<uuid>` (PIX de lance) NÃO tocam installments —
+        // o vínculo vive em `bid_payments` (B5). Antes este update estourava
+        // sem try/catch e o PIX de lance falhava sempre no modo sandbox.
+        if (!request.installmentId.startsWith('bid-') && !request.installmentId.startsWith('batch-')) {
+            // Update installment to waiting approval
+            await prisma.installment.update({
+                where: { id: request.installmentId },
+                data: {
+                    paymentMethod: 'SANDBOX_WAITING_APPROVAL'
+                }
+            });
+        }
 
         if (request.method === 'PIX') {
             return {

@@ -31,6 +31,8 @@ import webhookRoutes from './routes/webhookRoutes';
 
 const app = express();
 
+const isProduction = env.NODE_ENV === 'production';
+
 export { redisClient };
 
 // Trust proxy for rate limiting behind reverse proxy / Cloudflare
@@ -55,17 +57,38 @@ if (env.CLOUDFLARE_TUNNEL_URL) {
 
 app.use(cors({
     origin: (origin, callback) => {
-        // No origin or "null" (same-origin form submissions, privacy redirects, mobile webviews)
-        if (!origin || origin === 'null' || allowedOrigins.includes(origin)) {
+        // Sem Origin = cliente não-browser (curl, app nativa, server-to-server).
+        if (!origin) {
+            callback(null, true);
+            return;
+        }        // `Origin: null` (file://, webview sandboxada, Capacitor): permitido
+        // SOMENTE fora de produção e com flag explícita. Em prod, sempre 403 —
+        // com credentials, `null` permitiria que página local lesse respostas
+        // autenticadas (B9).
+        if (origin === 'null') {
+            if (!isProduction && env.ALLOW_NULL_ORIGIN) {
+                logger.warn('[CORS] Allowing null origin (dev only, ALLOW_NULL_ORIGIN=true)');
+                callback(null, true);
+                return;
+            }
+            logger.warn(`[CORS] Blocked null origin | Allowed: ${allowedOrigins.join(', ')}`);
+            callback(Object.assign(new Error('Bloqueado por CORS'), { statusCode: 403 }));
+            return;
+        }
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else if (!isProduction && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+            // Dev: o próprio painel (:3030) e front (:3001) fazem fetch same-origin
+            // com header Origin — sem isso todo POST do admin caía em 403.
             callback(null, true);
         } else {
             logger.warn(`[CORS] Blocked origin: "${origin}" | Allowed: ${allowedOrigins.join(', ')}`);
-            callback(new Error('Bloqueado por CORS'));
+            callback(Object.assign(new Error('Bloqueado por CORS'), { statusCode: 403 }));
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-pixgo-signature', 'x-pixgo-timestamp', 'x-client-device-id']
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-pixgo-signature', 'x-pixgo-timestamp', 'x-client-device-id', 'csrf-token', 'X-Admin-Token']
 }));
 
 // ========================================
@@ -163,6 +186,8 @@ app.use(['/public/uploads/documents', '/uploads/documents'], (_req, res) => {
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/public', express.static(path.join(__dirname, '../public')));
+// Catálogo: imagens vivem em zuvio-web/public/img (o admin EJS referencia /img/... do banco)
+app.use('/img', express.static(path.join(__dirname, '../../zuvio-web/public/img')));
 
 // ========================================
 // HEALTH CHECKS & OBSERVABILITY

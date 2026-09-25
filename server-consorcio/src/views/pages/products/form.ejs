@@ -92,7 +92,7 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="row g-3">
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <label class="form-label fw-semibold">Tipo de Produto *</label>
                                             <select name="type" class="form-select" id="typeSelect">
                                                 <option value="MOTO" <%=product.type==='MOTO' ? 'selected' : '' %>>Moto</option>
@@ -110,17 +110,22 @@
                                                 <!-- Populated by JS -->
                                             </select>
                                         </div>
-                                        <div class="col-md-4 d-flex flex-column justify-content-center">
+                                        <div class="col-md-2">
+                                            <label class="form-label fw-semibold" title="Menor número aparece primeiro no app">Ordem *</label>
+                                            <input type="number" name="displayOrder" id="displayOrderInput" class="form-control fw-bold" min="0" step="10" value="<%= (typeof product.displayOrder !== 'undefined' && product.displayOrder !== null) ? product.displayOrder : (typeof nextDisplayOrder !== 'undefined' ? nextDisplayOrder : 0) %>" required>
+                                            <div class="form-text">Menor = primeiro</div>
+                                        </div>
+                                        <div class="col-md-3 d-flex flex-column justify-content-center">
                                             <div class="form-check form-switch mb-2">
                                                 <input class="form-check-input" type="checkbox" name="isFeatured" id="isFeaturedCheck" <%=product.isFeatured ? 'checked' : '' %>>
                                                 <label class="form-check-label ms-2" for="isFeaturedCheck">
-                                                    <strong>Produto em Destaque</strong>
+                                                    <strong>Destaque</strong> <small class="text-muted">(Melhores Ofertas)</small>
                                                 </label>
                                             </div>
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" name="isPopular" id="isPopularCheck" <%=product.isPopular ? 'checked' : '' %>>
                                                 <label class="form-check-label ms-2" for="isPopularCheck">
-                                                    <strong>Mais Popular</strong>
+                                                    <strong>Popular</strong> <small class="text-muted">(Mais Populares)</small>
                                                 </label>
                                             </div>
                                         </div>
@@ -147,6 +152,13 @@
                                     <div id="imageUrlsContainer">
                                         <!-- Inputs populated by JS based on product.imageUrls -->
                                     </div>
+                                    <style>
+                                        .gallery-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-color); flex-shrink: 0; background: #eee; }
+                                        .gallery-grip { cursor: grab; color: var(--text-secondary); padding: 0 4px; flex-shrink: 0; }
+                                        .gallery-grip:active { cursor: grabbing; }
+                                        .gallery-row.dragging { opacity: 0.4; }
+                                        .gallery-row.drag-over { outline: 2px dashed var(--primary-color); outline-offset: -2px; border-radius: 10px; }
+                                    </style>
                                     <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>A primeira imagem adicionada será usada como miniatura principal (thumbnail).</div>
                                 </div>
                             </div>
@@ -198,6 +210,79 @@
                                 </div>
                             </div>
 
+                            <!-- Pré-visualização no catálogo (ao vivo) -->
+                            <div class="card mb-4 shadow-sm">
+                                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 fw-bold">
+                                        <i class="bi bi-phone text-primary me-2"></i>
+                                        Pré-visualização no catálogo <small class="text-muted fw-normal">— atualiza enquanto você digita</small>
+                                    </h5>
+                                    <span class="badge rounded-pill" id="pvPositionBadge" style="background: rgba(99,102,241,.12); color: var(--primary-color); font-size: .8rem;">#0 no catálogo</span>
+                                </div>
+                                <div class="card-body">
+                                    <style>
+                                        /* Espelho fiel de .offer-card do app (zuvio-web/app/pages/index.vue) */
+                                        .pv-phone { width: 300px; max-width: 100%; margin: 0 auto; background: #FAFAFA; border-radius: 24px; border: 8px solid #263238; overflow: hidden; }
+                                        .pv-screen { padding: 12px; font-family: 'Inter', sans-serif; }
+                                        .pv-offer-card { width: 100%; background: #FFFFFF; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,.08); overflow: hidden; margin-bottom: 10px; }
+                                        .pv-offer-image-box { position: relative; height: 135px; background: #EEEEEE; }
+                                        .pv-offer-image-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+                                        .pv-offer-featured-tag { position: absolute; top: 10px; right: 10px; background: #FF6D00; color: #FFFFFF; padding: 5px 9px; border-radius: 6px; font-size: 10px; font-weight: 800; }
+                                        .pv-offer-card-body { padding: 14px; }
+                                        .pv-offer-name { font-size: 15px; font-weight: 800; color: #263238; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
+                                        .pv-offer-price-row { display: flex; align-items: center; justify-content: space-between; }
+                                        .pv-price-label { font-size: 11px; color: #757575; display: block; }
+                                        .pv-price-val { font-size: 18px; font-weight: 800; color: #FF6D00; }
+                                        .pv-btn-arrow { width: 34px; height: 34px; border-radius: 8px; background: rgba(255,109,0,.12); color: #FF6D00; display: flex; align-items: center; justify-content: center; }
+                                        .pv-value-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.08); padding: 12px; }
+                                    </style>
+                                    <div class="row g-4">
+                                        <div class="col-md-5">
+                                            <div class="info-label text-muted small mb-2 text-center">CARD NO APP</div>
+                                            <div class="pv-phone">
+                                                <div class="pv-screen">
+                                                    <div class="pv-offer-card">
+                                                        <div class="pv-offer-image-box">
+                                                            <img id="pvImg" src="" alt="prévia do produto">
+                                                            <span id="pvTag" class="pv-offer-featured-tag">DESTAQUE</span>
+                                                        </div>
+                                                        <div class="pv-offer-card-body">
+                                                            <div id="pvName" class="pv-offer-name">—</div>
+                                                            <div class="pv-offer-price-row">
+                                                                <div>
+                                                                    <span class="pv-price-label">Parcelas a partir de</span>
+                                                                    <span id="pvMonthly" class="pv-price-val">—</span>
+                                                                </div>
+                                                                <div class="pv-btn-arrow"><i class="bi bi-arrow-right"></i></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="pv-value-card">
+                                                        <div style="font-size: 11px; color: #757575;">VALOR DO CONSÓRCIO</div>
+                                                        <div id="pvPrice" class="fw-bold" style="font-size: 24px; color: #263238;">—</div>
+                                                        <div id="pvPlansLine" style="font-size: 12px; color: #616161;"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-7">
+                                            <div class="info-label text-muted small mb-2">COMO VAI APARECER</div>
+                                            <ul class="list-group list-group-flush" id="pvChecklist">
+                                                <li class="list-group-item px-0 d-flex gap-2 align-items-start"><i class="bi mt-1" data-ck="img"></i><span data-ck-text="img"></span></li>
+                                                <li class="list-group-item px-0 d-flex gap-2 align-items-start"><i class="bi mt-1" data-ck="price"></i><span data-ck-text="price"></span></li>
+                                                <li class="list-group-item px-0 d-flex gap-2 align-items-start"><i class="bi mt-1" data-ck="section"></i><span data-ck-text="section"></span></li>
+                                                <li class="list-group-item px-0 d-flex gap-2 align-items-start"><i class="bi mt-1" data-ck="active"></i><span data-ck-text="active"></span></li>
+                                            </ul>
+                                            <div class="alert alert-info border-0 small mt-3 mb-0" style="border-radius: 10px;">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                A parcela é uma estimativa (preço + taxa adm. + 2% fundo ÷ prazo máximo).
+                                                O valor exato é calculado pelos planos gerados ao salvar.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Status & Save -->
                             <div class="card shadow-sm border-0 bg-light">
                                 <div class="card-body d-flex justify-content-between align-items-center py-3">
@@ -231,9 +316,11 @@
                 const specsContainer = document.getElementById('dynamicSpecsContainer');
                 const imageContainer = document.getElementById('imageUrlsContainer');
                 const imageUrlsHidden = document.getElementById('imageUrlsArrayHidden');
+                const FALLBACK_THUMB = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="100%" height="100%" fill="#ECEFF1"/><text x="50%" y="54%" font-size="13" fill="#90A4AE" text-anchor="middle" font-family="sans-serif">sem foto</text></svg>');
                 const mainImageHidden = document.getElementById('mainImageUrlHidden');
                 const addImageButton = document.getElementById('addImageBtn');
                 const form = document.getElementById('productForm');
+                const csrfToken = (form.querySelector('input[name="_csrf"]') || {}).value || '';
 
                 const categoryOptions = {
                     MOTO: [
@@ -269,6 +356,10 @@
                 let specsState = parseJson(<%- JSON.stringify(product.specs || '{}') %>, {});
                 let imageUrls = parseJson(<%- JSON.stringify(product.imageUrls || '[]') %>, []);
                 if (!Array.isArray(imageUrls)) imageUrls = [];
+                const DEV_REVIEW = <%= (typeof isDev !== 'undefined' && isDev && editing) ? 'true' : 'false' %> && <%- product.id ? 'true' : 'false' %>;
+                const PRODUCT_ID = <%- JSON.stringify(product.id || null) %>;
+                let verifiedUrls = parseJson(<%- JSON.stringify(product.verifiedImageUrls || '[]') %>, []);
+                if (!Array.isArray(verifiedUrls)) verifiedUrls = [];
                 <% if (product.imageUrl) { %>
                     if (imageUrls.length === 0) imageUrls.push(<%- JSON.stringify(product.imageUrl) %>);
                 <% } %>
@@ -314,16 +405,53 @@
 
                 const renderImages = () => {
                     if (imageUrls.length === 0) {
-                        imageContainer.innerHTML = '<div class="text-muted small mb-2"><i class="bi bi-images me-1"></i>Nenhuma imagem adicionada.</div>';
+                        imageContainer.innerHTML = '<div class="text-muted small mb-2"><i class="bi bi-images me-1"></i>Nenhuma imagem adicionada. Cole uma URL ou envie uma foto.</div>';
                     } else {
                         imageContainer.innerHTML = imageUrls.map((url, index) => `
-                            <div class="input-group mb-2" data-image-row="${index}">
-                                <span class="input-group-text"><i class="bi bi-image"></i></span>
-                                <input type="url" class="form-control image-url-input" value="${String(url).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" placeholder="https://...">
+                            <div class="input-group mb-2 align-items-center gallery-row" data-image-row="${index}" draggable="${url ? 'true' : 'false'}">
+                                <span class="gallery-grip" title="Arrastar para reordenar"><i class="bi bi-grip-vertical"></i></span>
+                                <img src="${String(url).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" alt="miniatura ${index + 1}" class="gallery-thumb" onerror="this.src='${FALLBACK_THUMB}'">
+                                ${index === 0 ? '<span class="badge bg-primary ms-1">capa</span>' : ''}
+                                ${DEV_REVIEW && verifiedUrls.includes(url) ? '<span class="badge bg-success ms-1"><i class="bi bi-check-lg me-1"></i>verificada</span>' : ''}
+                                <input type="url" class="form-control image-url-input" value="${String(url).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" placeholder="https://... ou /img/...">
+                                ${DEV_REVIEW && url && !verifiedUrls.includes(url) ? `<button type="button" class="btn btn-outline-success verify-image" title="Marcar foto como conferida e ir para a próxima"><i class="bi bi-patch-check"></i></button>` : ''}
+                                <label class="btn btn-outline-secondary mb-0" title="Enviar foto do computador">
+                                    <i class="bi bi-upload"></i><input type="file" class="d-none gallery-file" accept=".jpg,.jpeg,.png,.webp" data-row="${index}">
+                                </label>
                                 <button type="button" class="btn btn-outline-danger remove-image" title="Remover imagem"><i class="bi bi-trash"></i></button>
                             </div>
                         `).join('');
                     }
+                    imageContainer.querySelectorAll('.verify-image').forEach((button) => {
+                        button.addEventListener('click', () => verifyGalleryPhoto(button));
+                    });
+                    // Arrastar p/ ordenar (tipo Canva): a ordem da lista vira a ordem da galeria
+                    let dragFrom = null;
+                    imageContainer.querySelectorAll('.gallery-row[draggable="true"]').forEach((row) => {
+                        row.addEventListener('dragstart', (e) => {
+                            dragFrom = Number(row.dataset.imageRow);
+                            row.classList.add('dragging');
+                            e.dataTransfer.effectAllowed = 'move';
+                        });
+                        row.addEventListener('dragend', () => {
+                            row.classList.remove('dragging');
+                            imageContainer.querySelectorAll('.gallery-row').forEach(r => r.classList.remove('drag-over'));
+                        });
+                        row.addEventListener('dragover', (e) => {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'move';
+                            row.classList.add('drag-over');
+                        });
+                        row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+                        row.addEventListener('drop', (e) => {
+                            e.preventDefault();
+                            const dragTo = Number(row.dataset.imageRow);
+                            if (dragFrom === null || dragFrom === dragTo) return;
+                            const [moved] = imageUrls.splice(dragFrom, 1);
+                            imageUrls.splice(dragTo, 0, moved);
+                            renderImages();
+                        });
+                    });
                     imageContainer.querySelectorAll('.remove-image').forEach((button) => {
                         button.addEventListener('click', () => {
                             const row = button.closest('[data-image-row]');
@@ -331,7 +459,66 @@
                             renderImages();
                         });
                     });
+                    imageContainer.querySelectorAll('.gallery-file').forEach((input) => {
+                        input.addEventListener('change', () => uploadGalleryPhoto(input));
+                    });
                 };
+
+                async function verifyGalleryPhoto(button) {
+                    const row = button.closest('[data-image-row]');
+                    const input = row.querySelector('.image-url-input');
+                    const url = (input.value || '').trim();
+                    if (!url) return;
+                    button.disabled = true;
+                    try {
+                        const res = await fetch('/admin/products/' + PRODUCT_ID + '/verify-image', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'csrf-token': csrfToken },
+                            body: JSON.stringify({ path: url, _csrf: csrfToken })
+                        });
+                        if (res.status === 401 || res.status === 403) {
+                            alert('Sessão expirada — faça login novamente.');
+                            location.href = '/admin/login';
+                            return;
+                        }
+                        const data = await res.json();
+                        if (!res.ok || !data.ok) throw new Error(data.message || 'Falha ao marcar');
+                        verifiedUrls = data.verified;
+                        renderImages();
+                        // avança para a próxima ainda não verificada
+                        const current = imageUrls.map(u => u.trim()).filter(Boolean);
+                        const nextIdx = current.findIndex(u => !verifiedUrls.includes(u));
+                        const nextInput = imageContainer.querySelector(`[data-image-row="${nextIdx >= 0 ? nextIdx : 0}"] .image-url-input`);
+                        if (nextInput) { nextInput.focus(); nextInput.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+                    } catch (e) {
+                        alert('Não foi possível marcar: ' + (e.message || e));
+                    } finally {
+                        button.disabled = false;
+                    }
+                }
+
+                async function uploadGalleryPhoto(input) {
+                    const file = input.files && input.files[0];
+                    if (!file) return;
+                    const row = Number(input.dataset.row);
+                    const fd = new FormData();
+                    fd.append('photo', file);
+                    fd.append('tipo', typeSelect.value || 'MOTO');
+                    fd.append('slug', (form.querySelector('[name="name"]')?.value || 'produto'));
+                    fd.append('_csrf', csrfToken);
+                    input.disabled = true;
+                    try {
+                        const res = await fetch('/admin/products/upload', { method: 'POST', headers: { 'csrf-token': csrfToken }, body: fd });
+                        const data = await res.json();
+                        if (!res.ok || !data.ok) throw new Error(data.message || 'Falha no envio');
+                        imageUrls[row] = data.path;
+                        renderImages();
+                    } catch (e) {
+                        alert('Não foi possível enviar: ' + (e.message || e));
+                    } finally {
+                        input.disabled = false;
+                    }
+                }
 
                 typeSelect.addEventListener('change', () => {
                     specsState = { ...specsState, ...readRenderedSpecs() };
@@ -356,6 +543,78 @@
                 renderCategories();
                 renderSpecs();
                 renderImages();
+                initLivePreview();
+
+                // ── Pré-visualização ao vivo (espelha o catálogo do app) ──
+                function initLivePreview() {
+                    const nameInput = form.querySelector('[name="name"]');
+                    const priceInput = form.querySelector('[name="price"]');
+                    const brandInput = form.querySelector('[name="brand"]');
+                    const orderInput = document.getElementById('displayOrderInput');
+                    const featuredInput = document.getElementById('isFeaturedCheck');
+                    const popularInput = document.getElementById('isPopularCheck');
+                    const activeInput = document.getElementById('activeCheck');
+                    const minInput = form.querySelector('[name="minDuration"]');
+                    const maxInput = form.querySelector('[name="maxDuration"]');
+                    const feeInput = form.querySelector('[name="adminFeeRate"]');
+
+                    const pvImg = document.getElementById('pvImg');
+                    const pvName = document.getElementById('pvName');
+                    const pvPrice = document.getElementById('pvPrice');
+                    const pvMonthly = document.getElementById('pvMonthly');
+                    const pvPlansLine = document.getElementById('pvPlansLine');
+                    const pvTag = document.getElementById('pvTag');
+                    const pvBadge = document.getElementById('pvPositionBadge');
+                    const FALLBACK_IMG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="280"><rect width="100%" height="100%" fill="#ECEFF1"/><text x="50%" y="52%" font-size="28" fill="#90A4AE" text-anchor="middle" font-family="sans-serif">sem imagem</text></svg>');
+
+                    const money = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+                    function setCheck(key, ok, okText, badText) {
+                        const icon = document.querySelector('[data-ck="' + key + '"]');
+                        const text = document.querySelector('[data-ck-text="' + key + '"]');
+                        if (!icon || !text) return;
+                        icon.className = 'bi mt-1 ' + (ok ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle text-warning');
+                        text.textContent = ok ? okText : badText;
+                    }
+
+                    function update() {
+                        const name = (nameInput.value || '').trim();
+                        const price = parseFloat(priceInput.value) || 0;
+                        const brand = (brandInput.value || '').trim();
+                        const order = parseInt(orderInput.value, 10);
+                        const max = parseInt(maxInput.value, 10) || 60;
+                        const fee = parseFloat(feeInput.value) || 15;
+                        const firstImg = [...imageContainer.querySelectorAll('.image-url-input')].map(i => i.value.trim()).filter(Boolean)[0] || '';
+
+                        pvName.textContent = name || 'Nome do produto';
+                        pvPrice.textContent = price > 0 ? money(price) : 'R$ 0,00';
+                        const monthly = price > 0 ? (price * (1 + (fee + 2) / 100) / max) : 0;
+                        pvMonthly.textContent = monthly > 0 ? money(monthly) : '—';
+                        pvPlansLine.textContent = 'ou ' + max + 'x de ' + money(monthly) + (brand ? ' • ' + brand : '');
+                        pvImg.src = firstImg || FALLBACK_IMG;
+                        pvTag.style.display = featuredInput.checked ? '' : 'none';
+                        pvBadge.textContent = '#' + (Number.isFinite(order) ? order : 0) + ' no catálogo';
+
+                        setCheck('img', !!firstImg, 'Imagem principal definida — o card usa a 1ª foto da galeria.', 'Sem imagem: adicione ao menos 1 URL na Galeria de Imagens.');
+                        setCheck('price', price > 0, 'Preço válido: ' + money(price) + ' → ~' + money(monthly) + '/mês no prazo máximo.', 'Informe o preço para calcular a parcela exibida no app.');
+                        const sections = [];
+                        if (featuredInput.checked) sections.push('Melhores Ofertas');
+                        if (popularInput.checked) sections.push('Mais Populares');
+                        setCheck('section', sections.length > 0, 'Aparece em: ' + sections.join(' + ') + ' (além da busca).', 'Aparece só na busca — marque Destaque e/ou Popular para ganhar seção na tela inicial.');
+                        const isActive = activeInput.checked;
+                        setCheck('active', isActive, 'Produto ativo: visível no catálogo do app.', 'Produto inativo: fica OCULTO no app (só visível aqui no admin).');
+                    }
+
+                    ['input', 'change'].forEach(evt => {
+                        [nameInput, priceInput, brandInput, orderInput, minInput, maxInput, feeInput].forEach(el => el && el.addEventListener(evt, update));
+                        [featuredInput, popularInput, activeInput, typeSelect, categorySelect].forEach(el => el && el.addEventListener('change', update));
+                    });
+                    // Galeria é re-renderizada via JS — observa mudanças nos inputs de imagem
+                    imageContainer.addEventListener('input', update);
+                    addImageButton.addEventListener('click', () => setTimeout(update, 0));
+                    pvImg.onerror = () => { if (pvImg.src !== FALLBACK_IMG) pvImg.src = FALLBACK_IMG; };
+                    update();
+                }
             });
         </script>
 <%- include('../../partials/footer') %>

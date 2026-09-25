@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useKycStore } from '~/stores/kyc'
+import { useNotificationsStore } from '~/stores/notifications'
 import {
   ArrowLeft,
   ShieldCheck,
@@ -25,6 +26,7 @@ definePageMeta({
 const router = useRouter()
 const authStore = useAuthStore()
 const kycStore = useKycStore()
+const notificationsStore = useNotificationsStore()
 
 const docFront = ref<string | null>(null)
 const docBack = ref<string | null>(null)
@@ -37,7 +39,16 @@ const submitError = ref<string | null>(null)
 const kycStatus = computed(() => authStore.user?.kycStatus || kycStore.status || 'NOT_SUBMITTED')
 const rejectReason = computed(() => kycStore.rejectReason || 'Seus documentos anteriores estavam ilegíveis ou com reflexo. Por favor, envie novas fotos nítidas.')
 
+// Em análise = travado: não pode trocar foto nem reenviar (evita fila duplicada
+// e o warn de hidratação — ver isMounted abaixo)
+const isLocked = computed(() => kycStatus.value === 'SUBMITTED')
+// SSR/hidratação: o servidor nunca sabe as fotos locais; o botão e os inputs
+// nascem desabilitados nos dois lados e só liberam após o mount no cliente.
+const isMounted = ref(false)
+
 onMounted(async () => {
+  isMounted.value = true
+  // SCREEN_VIEW global via middleware track.global (sem duplicar aqui)
   await kycStore.fetchStatus()
   // O status da sessão (login) pode estar defasado (ex: rejeitado depois) —
   // o servidor é a fonte da verdade
@@ -50,6 +61,7 @@ onMounted(async () => {
 })
 
 function handleFileUpload(event: Event, type: 'document' | 'document_back' | 'selfie') {
+  if (isLocked.value) return
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (!file) return
@@ -67,6 +79,7 @@ function handleFileUpload(event: Event, type: 'document' | 'document_back' | 'se
 }
 
 async function handleSubmit() {
+  if (isLocked.value) return
   submitError.value = null
   submitSuccess.value = false
 
@@ -84,6 +97,8 @@ async function handleSubmit() {
       if (authStore.user) {
         authStore.user.kycStatus = 'SUBMITTED'
       }
+      // Reenviou após recusa: limpa a notificação correspondente
+      await notificationsStore.markKycRejectedRead()
     } else {
       submitError.value = res.message || 'Erro ao enviar documentos. Tente novamente.'
     }
@@ -167,10 +182,11 @@ async function handleSubmit() {
               id="kyc-front"
               type="file"
               accept="image/*"
+              :disabled="!isMounted || isLocked"
               class="hidden-file-input"
               @change="handleFileUpload($event, 'document')"
             />
-            <label for="kyc-front" class="doc-upload-label">
+            <label for="kyc-front" class="doc-upload-label" :class="{ locked: isLocked }">
               <div class="doc-preview-box">
                 <img v-if="docFront" :src="docFront" alt="Frente do Documento" class="preview-img" />
                 <CreditCard v-else :size="28" color="#9E9E9E" />
@@ -192,10 +208,11 @@ async function handleSubmit() {
               id="kyc-back"
               type="file"
               accept="image/*"
+              :disabled="!isMounted || isLocked"
               class="hidden-file-input"
               @change="handleFileUpload($event, 'document_back')"
             />
-            <label for="kyc-back" class="doc-upload-label">
+            <label for="kyc-back" class="doc-upload-label" :class="{ locked: isLocked }">
               <div class="doc-preview-box">
                 <img v-if="docBack" :src="docBack" alt="Verso do Documento" class="preview-img" />
                 <CreditCard v-else :size="28" color="#9E9E9E" />
@@ -217,10 +234,11 @@ async function handleSubmit() {
               id="kyc-selfie"
               type="file"
               accept="image/*"
+              :disabled="!isMounted || isLocked"
               class="hidden-file-input"
               @change="handleFileUpload($event, 'selfie')"
             />
-            <label for="kyc-selfie" class="doc-upload-label">
+            <label for="kyc-selfie" class="doc-upload-label" :class="{ locked: isLocked }">
               <div class="doc-preview-box">
                 <img v-if="selfie" :src="selfie" alt="Selfie com Documento" class="preview-img" />
                 <Camera v-else :size="28" color="#9E9E9E" />
@@ -239,13 +257,22 @@ async function handleSubmit() {
 
         <!-- Submit Button -->
         <button
+          v-if="!isLocked"
           class="btn-kyc-submit"
-          :disabled="isSubmitting || !docFront || !docBack || !selfie"
+          :disabled="!isMounted || isSubmitting || !docFront || !docBack || !selfie"
           @click="handleSubmit"
         >
           <ShieldCheck :size="20" />
           <span v-if="!isSubmitting">ENVIAR PARA VALIDAÇÃO</span>
           <span v-else>ENVIANDO DOCUMENTOS...</span>
+        </button>
+        <button
+          v-else
+          class="btn-kyc-submit locked"
+          disabled
+        >
+          <Clock :size="20" />
+          <span>DOCUMENTOS EM ANÁLISE — AGUARDE</span>
         </button>
       </section>
     </main>
@@ -471,5 +498,15 @@ async function handleSubmit() {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* ── Travado em análise: sem reenvio/seleção + sem warn de hidratação ── */
+.btn-kyc-submit.locked {
+  background-color: #90A4AE;
+  box-shadow: none;
+}
+.doc-upload-label.locked {
+  pointer-events: none;
+  opacity: 0.65;
 }
 </style>

@@ -35,6 +35,7 @@ model User {
   subscriptions Subscription[]
   auditLogs     AuditLog[]
   supportTickets SupportTicket[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -47,6 +48,8 @@ model Product {
   category      String    // Sub-category: sport, sedan, gaming, reforma, etc.
   imageUrl      String
   imageUrls     String    // JSON stringified array of URLs
+  // Fotos conferidas por humano (extração por IA precisa de revisão) — JSON array de paths
+  verifiedImageUrls String? // (dev) fotos marcadas como verificadas
   price         Decimal
   active        Boolean   @default(true)
   isFeatured    Boolean   @default(false)
@@ -126,6 +129,7 @@ model Subscription {
   installments      Installment[]
   bids              Bid[]
   supportTickets    SupportTicket[]
+  batches           PaymentBatch[]
 
   @@index([groupNumber, quotaNumber])
   @@index([userId, status])
@@ -170,7 +174,84 @@ model Bid {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  payments        BidPayment[]
+
   @@map("bids")
+}
+
+// Cobranças PIX geradas para lances (B5 — antes eram órfãs: `installmentId='bid-<uuid>'`
+// sem registro, sem idempotência e sem liquidação no webhook).
+// status: RESERVED (emissão em andamento) → ACTIVE (voucher válido) → PAID (liquidado)
+//         | EXPIRED (substituído/vencido) | CANCELLED (lance cancelado — voucher invalidado)
+model BidPayment {
+  id            String    @id @default(uuid())
+  bidId         String
+  bid           Bid       @relation(fields: [bidId], references: [id], onDelete: Cascade)
+
+  provider      String    // eldorado, g2g, pixgo, sigilopay, sandbox
+  externalId    String?   // paymentId no provedor
+  amount        Decimal
+  status        String    @default("ACTIVE")
+  copyPaste     String?   // PIX copia-e-cola (permite reexibir sem gerar nova cobrança)
+  expiresAt     DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([bidId, status])
+  @@map("bid_payments")
+}
+
+// Pixel próprio — funil produto/ads (SCREEN_VIEW, GENERATE_QR_CLICK,
+// COPY_PIX_CLICK, VERIFY_PAYMENT_CLICK etc.). Tabela leve, sem PII além do
+// userId; userAgent/IP truncados. Base p/ melhorar algoritmo e campanhas.
+model TrackingEvent {
+  id          String   @id @default(uuid())
+  userId      String?  // dono (do JWT); null = anônimo/opt-out futuro
+  event       String   // SCREEN_VIEW | GENERATE_QR_CLICK | QR_SHOWN | COPY_PIX_CLICK | VERIFY_PAYMENT_CLICK | PAYMENT_CONFIRMED_VIEW
+  screen      String?  // welcome | bids | payment | checkout | contracts | payments | kyc | products
+  entityType  String?  // bid | installment | subscription
+  entityId    String?  // uuid da entidade (quando houver)
+  metadata    String?  // JSON pequeno (≤2KB, validado no zod)
+  ipAddress   String?
+  userAgent   String?  // truncado em 512
+  createdAt   DateTime @default(now())
+
+  @@index([event, createdAt])
+  @@index([userId, createdAt])
+  @@map("tracking_events")
+}
+
+// Pesos do algoritmo de aprendizado (loop estilo TikTok, versão consórcio).
+// Atualizados ONLINE a cada evento do pixel (EMA/contadores) e lidos pelo
+// GET /api/recommendations e pelo dashboard. scope: 'global' ou userId.
+model LearningWeight {
+  id        String   @id @default(uuid())
+  scope     String   // 'global' | userId
+  key       String   // aff:PROD:<id> | pop:PROD:<id> | prop:verify | conv:qr_verify ...
+  value     Float    @default(0)
+  samples   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([scope, key])
+  @@map("learning_weights")
+}
+
+// Notificações in-app do cliente (ex: KYC recusado → reenviar documentos).
+// Criadas pelo servidor (admin/sistema); o app lista e marca como lidas.
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String    // KYC_REJECTED (extensível)
+  title     String
+  message   String
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, read, createdAt])
+  @@map("notifications")
 }
 
 model AuditLog {
@@ -248,6 +329,10 @@ model GatewayConfig {
   supportsPix     Boolean @default(true)
   supportsBoleto  Boolean @default(false)
   supportsCard    Boolean @default(false)
+
+  // Baixa manual: valor cai na conta da operação e gerente confirma na Central.
+  // Configurado na tela /admin/gateways; exibido no app só quando a gateway usada for manual.
+  requiresManualReview Boolean @default(false)
   
   // Definir como gateway padrão para cada método
   isDefaultPix    Boolean @default(false)
@@ -285,8 +370,19 @@ model SystemAlert {
   read            Boolean   @default(false)
   readAt          DateTime?
   readBy          String?   // Admin userId
+  // Fila operacional (Central de Notificações — fase 1)
+  status          String    @default("OPEN") // OPEN, ACK, IN_PROGRESS, RESOLVED, DISMISSED
+  assignedTo      String?   // Admin userId dono do atendimento
+  assignedAt      DateTime?
+  resolvedAt      DateTime?
+  entityKind      String?   // subscription, bid, bidPayment, installment, user
+  entityId        String?
+  claimToken      String?
   createdAt       DateTime  @default(now())
 
+  @@index([status, createdAt])
+  @@index([assignedTo, status])
+  @@index([entityKind, entityId])
   @@map("system_alerts")
 }
 
@@ -313,8 +409,10 @@ model SupportTicket {
 
 model PaymentAttempt {
   id            String    @id @default(uuid())
-  installmentId String
-  installment   Installment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+  installmentId String?
+  installment   Installment? @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+  batchId       String?
+  batch         PaymentBatch? @relation(fields: [batchId], references: [id], onDelete: Cascade)
   provider      String    // eldorado, g2g, pixgo, sigilopay, sandbox
   externalId    String?   // paymentId no provedor
   amount        Decimal
@@ -323,5 +421,26 @@ model PaymentAttempt {
   createdAt     DateTime  @default(now())
 
   @@index([installmentId, status])
+  @@index([batchId, status])
   @@map("payment_attempts")
+}
+
+// Cobrança combinada: 1 PIX somando N parcelas (adesão, do mês, antecipações).
+model PaymentBatch {
+  id             String    @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  installmentIds String    // JSON: ["uuid", ...] ordenados
+  totalAmount    Decimal
+  provider       String    @default("pending")
+  externalId     String?
+  copyPaste      String?
+  status         String    @default("RESERVED") // RESERVED, ACTIVE, PAID, EXPIRED, CANCELLED
+  expiresAt      DateTime?
+  paidAt         DateTime?
+  attempts       PaymentAttempt[]
+  createdAt      DateTime  @default(now())
+
+  @@index([subscriptionId, status])
+  @@map("payment_batches")
 }

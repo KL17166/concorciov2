@@ -1,0 +1,594 @@
+{
+  "produtos": [
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": "Chevrolet",
+      "category": "hatch",
+      "description": "O hatch mais vendido do Brasil com motor 1.0 Turbo de 116 cv e câmbio automático de 6 marchas. Econômico com até 15,1 km/l na estrada e central MyLink com Android Auto e Apple CarPlay. Ideal para o dia a dia com segurança 6 airbags e controle de estabilidade.",
+      "imageUrl": "https://www.chevrolet.com.br/content/dam/chevrolet/mercosur/brazil/portuguese/index/cars/onix/2024/ltz-turbo-at/branco-summit/onix-ltz-lateral-fundo-branco.png",
+      "imageUrls": [
+        "https://www.chevrolet.com.br/content/dam/chevrolet/mercosur/brazil/portuguese/index/cars/onix/2024/ltz-turbo-at/branco-summit/onix-ltz-lateral-fundo-branco.png",
+        "https://www.chevrolet.com.br/content/dam/chevrolet/mercosur/brazil/portuguese/index/cars/onix/2024/ltz-turbo-at/branco-summit/onix-ltz-frontal-fundo-branco.png",
+        "https://www.chevrolet.com.br/content/dam/chevrolet/mercosur/brazil/portuguese/index/cars/onix/2024/ltz-turbo-at/branco-summit/onix-ltz-traseira-fundo-branco.png"
+      ],
+      "isFeatured": false,
+      "isPopular": true,
+      "maxDuration": 60,
+      "minDuration": 36,
+      "model": "Onix LTZ 1.0 Turbo AT",
+      "name": "Chevrolet Onix LTZ 1.0 Turbo AT 2024",
+      "price": 107190,
+      "specs": {
+        "cambio": "Automático 6 velocidades",
+        "combustivel": "Flex",
+        "lugares": "5",
+        "motor": "1.0 Turbo Flex",
+        "portaMalas": "275 L",
+        "portas": "4",
+        "potencia": "116 cv @ 5.500 rpm",
+        "tracao": "Dianteira"
+      },
+      "type": "CARRO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": "Hyundai",
+      "category": "sedan",
+      "description": "Sedã compacto com motor 1.0 TGDI de 120 cv e o maior porta-malas da categoria com 475 litros. Câmbio automático de 6 marchas, painel digital Supervision Cluster e pacote SmartSense com frenagem autônoma. Conforto de sedã grande com economia de compacto.",
+      "imageUrl": "https://www.hyundai.com.br/content/dam/hyundai/brasil/hb20s/2024/platinum-tgdi/branco-atlas/hb20s-platinum-lateral-fundo-branco.png",
+      "imageUrls": [
+        "https://www.hyundai.com.br/content/dam/hyundai/brasil/hb20s/2024/platinum-tgdi/branco-atlas/hb20s-platinum-lateral-fundo-branco.png",
+        "https://www.hyundai.com.br/content/dam/hyundai/brasil/hb20s/2024/platinum-tgdi/branco-atlas/hb20s-platinum-frontal-fundo-branco.png",
+        "https://www.hyundai.com.br/content/dam/hyundai/brasil/hb20s/2024/platinum-tgdi/branco-atlas/hb20s-platinum-interior-fundo-neutro.png"
+      ],
+      "isFeatured": false,
+      "isPopular": true,
+      "maxDuration": 60,
+      "minDuration": 36,
+      "model": "HB20S Platinum 1.0 TGDI AT",
+      "name": "Hyundai HB20S Platinum 1.0 TGDI AT 2024",
+      "price": 109990,
+      "specs": {
+        "cambio": "Automático 6 velocidades",
+        "combustivel": "Flex",
+        "lugares": "5",
+        "motor": "1.0 TGDI Turbo Flex",
+        "portaMalas": "475 L",
+        "portas": "4",
+        "potencia": "120 cv @ 6.000 rpm",
+        "tracao": "Dianteira"
+      },
+      "type": "CARRO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": "Volkswagen",
+      "category": "suv",
+      "description": "SUV compacto mais vendido com motor 1.4 TSI de 150 cv e câmbio Tiptronic de 6 marchas. Teto solar panorâmico, VW Play 10 polegadas e ACC com frenagem de emergência. Porta-malas de 373 L e 5 estrelas Latin NCAP para a família viajar tranquila.",
+      "imageUrl": "https://www.vw.com.br/content/dam/vw-ngw/vw_pkw/importers/br/modelos/t-cross/2024/highline-tsi/branco-puro/t-cross-highline-lateral-fundo-branco.png",
+      "imageUrls": [
+        "https://www.vw.com.br/content/dam/vw-ngw/vw_pkw/importers/br/modelos/t-cross/2024/highline-tsi/branco-puro/t-cross-highline-lateral-fundo-branco.png",
+        "https://www.vw.com.br/content/dam/vw-ngw/vw_pkw/importers/br/modelos/t-cross/2024/highline-tsi/branco-puro/t-cross-highline-frontal-fundo-branco.png",
+        "https://www.vw.com.br/content/dam/vw-ngw/vw_pkw/importers/br/modelos/t-cross/2024/highline-tsi/branco-puro/t-cross-highline-traseira-fundo-branco.png"
+      ],
+      "isFeatured": true,
+      "isPopular": false,
+      "maxDuration": 60,
+      "minDuration": 36,
+      "model": "T-Cross Highline 1.4 TSI",
+      "name": "Volkswagen T-Cross Highline 1.4 TSI 2024",
+      "price": 159990,
+      "specs": {
+        "cambio": "Automático 6 velocidades Tiptronic",
+        "combustivel": "Flex",
+        "lugares": "5",
+        "motor": "1.4 TSI Turbo Flex",
+        "portaMalas": "373 L",
+        "portas": "4",
+        "potencia": "150 cv @ 4.500 rpm",
+        "tracao": "Dianteira"
+      },
+      "type": "CARRO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": "Fiat",
+      "category": "picape",
+      "description": "Picape monobloco com motor 1.3 Turbo 270 de 185 cv e caçamba de 937 litros com capota marítima. Central Uconnect 8,4 polegadas wireless, faróis Full LED e 6 airbags. A força de uma picape com o conforto de um SUV para trabalho e lazer.",
+      "imageUrl": "https://www.fiat.com.br/content/dam/fiat/brasil/pickups/toro/2024/freedom-t270/branco-ambiente/toro-freedom-lateral-fundo-branco.png",
+      "imageUrls": [
+        "https://www.fiat.com.br/content/dam/fiat/brasil/pickups/toro/2024/freedom-t270/branco-ambiente/toro-freedom-lateral-fundo-branco.png",
+        "https://www.fiat.com.br/content/dam/fiat/brasil/pickups/toro/2024/freedom-t270/branco-ambiente/toro-freedom-frontal-fundo-branco.png",
+        "https://www.fiat.com.br/content/dam/fiat/brasil/pickups/toro/2024/freedom-t270/branco-ambiente/toro-freedom-traseira-fundo-branco.png"
+      ],
+      "isFeatured": true,
+      "isPopular": false,
+      "maxDuration": 60,
+      "minDuration": 36,
+      "model": "Toro Freedom 1.3 Turbo 270 AT6",
+      "name": "Fiat Toro Freedom 1.3 Turbo 270 AT6 2024",
+      "price": 154990,
+      "specs": {
+        "cambio": "Automático 6 velocidades",
+        "combustivel": "Flex",
+        "lugares": "5",
+        "motor": "1.3 Turbo 270 Flex",
+        "portaMalas": "937 L (caçamba)",
+        "portas": "4",
+        "potencia": "185 cv @ 5.750 rpm (etanol)",
+        "tracao": "4x2 Dianteira"
+      },
+      "type": "CARRO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": "BYD",
+      "category": "eletrico",
+      "description": "Elétrico mais vendido do Brasil com 75 cv, autonomia INMETRO de 280 km e bateria Blade de 38,8 kWh. Custo de R$ 0,09 por km, 6 airbags, freios a disco nas 4 rodas e tela giratória de 10,1 polegadas. Perfeito para a cidade com recarga rápida 30% a 80% em 30 minutos.",
+      "imageUrl": "https://www.byd.com/material/byd-site/america-public/header-product-image/small-pic.png",
+      "imageUrls": [
+        "https://www.byd.com/material/byd-site/america-public/header-product-image/small-pic.png",
+        "https://www.byd.com/material/byd-site/br/home/home-2025/2025-seo/thumbs/thumb-byd-dolphin-mini.jpg",
+        "https://www.byd.com/content/dam/byd-site/br/dolphin-mini/2024/gs/branco/dolphin-mini-interior-fundo-neutro.png"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 60,
+      "minDuration": 36,
+      "model": "Dolphin Mini GS 38,8 kWh",
+      "name": "BYD Dolphin Mini GS Elétrico 2024",
+      "price": 119800,
+      "specs": {
+        "cambio": "Automático Single-Speed",
+        "combustivel": "Elétrico",
+        "lugares": "5",
+        "motor": "Elétrico Síncrono Permanente",
+        "portaMalas": "230 L",
+        "portas": "4",
+        "potencia": "75 cv / 135 Nm",
+        "tracao": "Dianteira"
+      },
+      "type": "CARRO",
+      "year": 2024
+    },
+    {
+      "name": "Volkswagen Polo Highline 1.0 TSI AT 2024",
+      "description": "Hatch premium com motor 1.0 TSI de 116 cv e câmbio automático de 6 marchas. Painel digital Active Info Display, faróis Full LED e ACC com frenagem de emergência. O hatch mais tecnológico da categoria com porta-malas de 300 L e nota máxima em segurança.",
+      "type": "CARRO",
+      "category": "hatch",
+      "price": 114990,
+      "imageUrl": "https://www.vw.com.br/content/dam/vw-ngw/vw_pkw/importers/br/modelos/polo/2024/highline-tsi/branco-cristal/polo-highline-lateral-fundo-branco.png",
+      "imageUrls": [
+        "https://www.vw.com.br/content/dam/vw-ngw/vw_pkw/importers/br/modelos/polo/2024/highline-tsi/branco-cristal/polo-highline-lateral-fundo-branco.png",
+        "https://www.vw.com.br/content/dam/vw-ngw/vw_pkw/importers/br/modelos/polo/2024/highline-tsi/branco-cristal/polo-highline-frontal-fundo-branco.png",
+        "https://www.vw.com.br/content/dam/vw-ngw/vw_pkw/importers/br/modelos/polo/2024/highline-tsi/branco-cristal/polo-highline-traseira-fundo-branco.png"
+      ],
+      "brand": "Volkswagen",
+      "model": "Polo Highline 1.0 TSI AT",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "motor": "1.0 TSI Turbo Flex",
+        "potencia": "116 cv @ 5.500 rpm",
+        "cambio": "Automático 6 velocidades",
+        "combustivel": "Flex",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "300 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Toyota Corolla XEi 2.0 Dynamic Force CVT 2024",
+      "description": "Sedã médio líder com motor 2.0 Dynamic Force de 169 cv e câmbio CVT de 10 marchas. Pacote Toyota Safety Sense, 7 airbags e central de 8 polegadas com wireless. Consumo de até 14,9 km/l na estrada e garantia de 10 anos do sistema híbrido Toyota.",
+      "type": "CARRO",
+      "category": "sedan",
+      "price": 154990,
+      "imageUrl": "https://www.toyota.com.br/content/dam/toyota/brasil/modelos/corolla/2024/xei/branco-polar/corolla-xei-lateral-fundo-branco.png",
+      "imageUrls": [
+        "https://www.toyota.com.br/content/dam/toyota/brasil/modelos/corolla/2024/xei/branco-polar/corolla-xei-lateral-fundo-branco.png",
+        "https://www.toyota.com.br/content/dam/toyota/brasil/modelos/corolla/2024/xei/branco-polar/corolla-xei-frontal-fundo-branco.png",
+        "https://www.toyota.com.br/content/dam/toyota/brasil/modelos/corolla/2024/xei/branco-polar/corolla-xei-interior-fundo-neutro.png"
+      ],
+      "brand": "Toyota",
+      "model": "Corolla XEi 2.0 Dynamic Force",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "motor": "2.0 Dynamic Force Flex",
+        "potencia": "169 cv @ 6.600 rpm",
+        "cambio": "CVT 10 marchas",
+        "combustivel": "Flex",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "470 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Chevrolet Tracker Premier 1.2 Turbo AT 2024",
+      "description": "SUV compacto com motor 1.2 Turbo de 133 cv, teto solar panorâmico e bancos em couro. MyLink 8 polegadas, alerta de ponto cego e estacionamento automático. Porta-malas de 393 L e 6 airbags para a família com o melhor custo-benefício do segmento.",
+      "type": "CARRO",
+      "category": "suv",
+      "price": 149990,
+      "imageUrl": "https://www.chevrolet.com.br/content/dam/chevrolet/mercosur/brazil/portuguese/index/suvs/tracker/2024/premier/branco-summit/tracker-premier-lateral-fundo-branco.png",
+      "imageUrls": [
+        "https://www.chevrolet.com.br/content/dam/chevrolet/mercosur/brazil/portuguese/index/suvs/tracker/2024/premier/branco-summit/tracker-premier-lateral-fundo-branco.png",
+        "https://www.chevrolet.com.br/content/dam/chevrolet/mercosur/brazil/portuguese/index/suvs/tracker/2024/premier/branco-summit/tracker-premier-frontal-fundo-branco.png",
+        "https://www.chevrolet.com.br/content/dam/chevrolet/mercosur/brazil/portuguese/index/suvs/tracker/2024/premier/branco-summit/tracker-premier-traseira-fundo-branco.png"
+      ],
+      "brand": "Chevrolet",
+      "model": "Tracker Premier 1.2 Turbo AT",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "motor": "1.2 Turbo Flex",
+        "potencia": "133 cv @ 5.500 rpm",
+        "cambio": "Automático 6 velocidades",
+        "combustivel": "Flex",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "393 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Hyundai HB20 Platinum 1.0 TGDI AT 2024",
+      "description": "Hatch com motor 1.0 TGDI de 120 cv e câmbio automático de 6 marchas, o mais potente da categoria. Painel digital, chave presencial e partida por botão com bluelink. Ideal para cidade com direção elétrica progressiva e consumo de até 14,6 km/l.",
+      "type": "CARRO",
+      "category": "hatch",
+      "price": 109990,
+      "imageUrl": "https://www.hyundai.com.br/content/dam/hyundai/brasil/hb20/2024/platinum-tgdi/branco-atlas/hb20-platinum-lateral-fundo-branco.png",
+      "imageUrls": [
+        "https://www.hyundai.com.br/content/dam/hyundai/brasil/hb20/2024/platinum-tgdi/branco-atlas/hb20-platinum-lateral-fundo-branco.png",
+        "https://www.hyundai.com.br/content/dam/hyundai/brasil/hb20/2024/platinum-tgdi/branco-atlas/hb20-platinum-frontal-fundo-branco.png",
+        "https://www.hyundai.com.br/content/dam/hyundai/brasil/hb20/2024/platinum-tgdi/branco-atlas/hb20-platinum-interior-fundo-neutro.png"
+      ],
+      "brand": "Hyundai",
+      "model": "HB20 Platinum 1.0 TGDI AT",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "motor": "1.0 TGDI Turbo Flex",
+        "potencia": "120 cv @ 6.000 rpm",
+        "cambio": "Automático 6 velocidades",
+        "combustivel": "Flex",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "300 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Jeep Compass Longitude T270 1.3 Turbo AT6 2024",
+      "description": "SUV médio com motor 1.3 T270 Turbo de 185 cv e câmbio automático de 6 marchas. Central 10,1 polegadas Adventure Intelligence, teto panorâmico e 6 airbags. Tração 4x2 com seletor de terrenos e porta-malas de 476 L para aventuras em família.",
+      "type": "CARRO",
+      "category": "suv",
+      "price": 179990,
+      "imageUrl": "https://www.jeep.com.br/content/dam/jeep/brasil/compass/2024/longitude/branco-polar/compass-longitude-lateral-fundo-branco.png",
+      "imageUrls": [
+        "https://www.jeep.com.br/content/dam/jeep/brasil/compass/2024/longitude/branco-polar/compass-longitude-lateral-fundo-branco.png",
+        "https://www.jeep.com.br/content/dam/jeep/brasil/compass/2024/longitude/branco-polar/compass-longitude-frontal-fundo-branco.png",
+        "https://www.jeep.com.br/content/dam/jeep/brasil/compass/2024/longitude/branco-polar/compass-longitude-traseira-fundo-branco.png"
+      ],
+      "brand": "Jeep",
+      "model": "Compass Longitude T270 1.3 Turbo",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "motor": "1.3 T270 Turbo Flex",
+        "potencia": "185 cv @ 5.750 rpm",
+        "cambio": "Automático 6 velocidades",
+        "combustivel": "Flex",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "476 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Honda WR-V EX 1.5 CVT 2024",
+      "description": "O SUV compacto novo da Honda com motor 1.5 Flex de 126 cv e câmbio CVT. Honda Sensing de série, multimídia 10 polegadas e 6 anos de garantia. Ideal para família com espaço, segurança e revenda forte.",
+      "type": "CARRO",
+      "category": "suv",
+      "price": 147100,
+      "imageUrl": "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/wrv.webp",
+      "imageUrls": [
+        "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/wrv.webp"
+      ],
+      "brand": "Honda",
+      "model": "WR-V EX 1.5 CVT",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "motor": "1.5 Flex",
+        "potencia": "126 cv @ 6.600 rpm",
+        "cambio": "Automático CVT",
+        "combustivel": "Flex",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "326 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Honda HR-V EX 1.5 CVT 2024",
+      "description": "Líder de vendas Honda com motor 1.5 Flex de 126 cv e pacote Sensing completo. Espaço interno de categoria superior com Magic Seat e acabamento premium. O SUV mais desejado para consórcio com liquidez garantida.",
+      "type": "CARRO",
+      "category": "suv",
+      "price": 166400,
+      "imageUrl": "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/hrv.webp",
+      "imageUrls": [
+        "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/hrv.webp"
+      ],
+      "brand": "Honda",
+      "model": "HR-V EX 1.5 CVT",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "motor": "1.5 Flex",
+        "potencia": "126 cv @ 6.600 rpm",
+        "cambio": "Automático CVT",
+        "combustivel": "Flex",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "354 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Honda City Hatchback EX 1.5 CVT 2024",
+      "description": "Hatch premium com motor 1.5 Flex de 126 cv e câmbio CVT de 7 marchas simuladas. Mais espaçoso da categoria com 268 litros e Honda Sensing. Escolha inteligente para cidade com economia e tecnologia.",
+      "type": "CARRO",
+      "category": "hatch",
+      "price": 135800,
+      "imageUrl": "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/hatchback.webp",
+      "imageUrls": [
+        "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/hatchback.webp"
+      ],
+      "brand": "Honda",
+      "model": "City Hatchback EX 1.5 CVT",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "motor": "1.5 Flex",
+        "potencia": "126 cv @ 6.600 rpm",
+        "cambio": "Automático CVT",
+        "combustivel": "Flex",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "268 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Honda City Sedan EX 1.5 CVT 2024",
+      "description": "Sedã compacto mais vendido com porta-malas gigante de 519 litros e motor 1.5 Flex econômico. Conforto de sedã médio com custo de compacto. Perfeito para família, aplicativo e viagens.",
+      "type": "CARRO",
+      "category": "sedan",
+      "price": 136800,
+      "imageUrl": "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/sedan.webp",
+      "imageUrls": [
+        "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/sedan.webp"
+      ],
+      "brand": "Honda",
+      "model": "City Sedan EX 1.5 CVT",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "motor": "1.5 Flex",
+        "potencia": "126 cv @ 6.600 rpm",
+        "cambio": "Automático CVT",
+        "combustivel": "Flex",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "519 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Honda Civic Advanced Hybrid 2024",
+      "description": "Sedã médio híbrido e:HEV com 184 cv combinados e consumo de 18 km/l na cidade. Interior premium, Bose com 12 alto-falantes e Sensing completo. Tecnologia híbrida sem precisar carregar na tomada.",
+      "type": "CARRO",
+      "category": "sedan",
+      "price": 266500,
+      "imageUrl": "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/civic.webp",
+      "imageUrls": [
+        "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/civic.webp"
+      ],
+      "brand": "Honda",
+      "model": "Civic Advanced Hybrid",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "motor": "2.0 Híbrido e:HEV",
+        "potencia": "184 cv combinados",
+        "cambio": "Automático e-CVT",
+        "combustivel": "Híbrido Gasolina",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "419 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Honda Civic Type R 2024",
+      "description": "O hot hatch mais rápido da categoria com 2.0 Turbo de 297 cv e câmbio manual de 6 marchas. Recorde em Nürburgring, bancos concha e modo +R. Máquina de pista com placa para colecionadores.",
+      "type": "CARRO",
+      "category": "hatch",
+      "price": 430500,
+      "imageUrl": "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/typer.webp",
+      "imageUrls": [
+        "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/typer.webp"
+      ],
+      "brand": "Honda",
+      "model": "Civic Type R",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "motor": "2.0 Turbo VTEC",
+        "potencia": "297 cv @ 6.500 rpm",
+        "cambio": "Manual 6 velocidades",
+        "combustivel": "Gasolina",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "283 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Honda ZR-V Touring 2.0 CVT 2024",
+      "description": "SUV médio importado com motor 2.0 de 157 cv e acabamento de premium. Teto solar, Bose e Sensing completo. Posicionado entre HR-V e CR-V para quem quer sofisticação sem ir ao híbrido.",
+      "type": "CARRO",
+      "category": "suv",
+      "price": 214500,
+      "imageUrl": "https://www.honda.com.br/automoveis/sites/hab/files/2025-10/zrv.webp",
+      "imageUrls": [
+        "https://www.honda.com.br/automoveis/sites/hab/files/2025-10/zrv.webp"
+      ],
+      "brand": "Honda",
+      "model": "ZR-V Touring 2.0 CVT",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "motor": "2.0 Gasolina",
+        "potencia": "157 cv @ 6.500 rpm",
+        "cambio": "Automático CVT",
+        "combustivel": "Gasolina",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "389 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Honda Accord Advanced Hybrid 2024",
+      "description": "Sedã grande híbrido com 204 cv, interior de primeira classe e 570 litros de porta-malas. O flagship da Honda com Google nativo e 8 airbags. Luxo silencioso com consumo de compacto.",
+      "type": "CARRO",
+      "category": "sedan",
+      "price": 333000,
+      "imageUrl": "https://www.honda.com.br/automoveis/sites/hab/files/2025-10/accord.webp",
+      "imageUrls": [
+        "https://www.honda.com.br/automoveis/sites/hab/files/2025-10/accord.webp"
+      ],
+      "brand": "Honda",
+      "model": "Accord Advanced Hybrid",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "motor": "2.0 Híbrido e:HEV",
+        "potencia": "204 cv combinados",
+        "cambio": "Automático e-CVT",
+        "combustivel": "Híbrido Gasolina",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "570 L",
+        "tracao": "Dianteira"
+      }
+    },
+    {
+      "name": "Honda CR-V Advanced Hybrid AWD 2024",
+      "description": "SUV grande híbrido AWD com 204 cv e tração integral inteligente. Sete modos de condução, teto panorâmico e o maior espaço interno da categoria. Topo da linha Honda para família exigente.",
+      "type": "CARRO",
+      "category": "suv",
+      "price": 353500,
+      "imageUrl": "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/crv.webp",
+      "imageUrls": [
+        "https://www.honda.com.br/automoveis/sites/hab/files/2026-05/crv.webp"
+      ],
+      "brand": "Honda",
+      "model": "CR-V Advanced Hybrid AWD",
+      "year": 2024,
+      "minDuration": 36,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "motor": "2.0 Híbrido e:HEV AWD",
+        "potencia": "204 cv combinados",
+        "cambio": "Automático e-CVT",
+        "combustivel": "Híbrido Gasolina",
+        "portas": "4",
+        "lugares": "5",
+        "portaMalas": "581 L",
+        "tracao": "Integral AWD"
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+# PATCH /api/profile
+- **Ativado por:** tela de perfil (e-mail/telefone)
+  - BFF espelho: `zuvio-web/server/api/profile/index.patch.ts`
+  - Handler: `updateProfile` (`profileApiController.ts`, distinto do PUT `/auth/profile`)
+- **Auth / rate-limit:** `authenticate`
+  - App: `generalLimiter` + `securityMiddleware` (sem limiter específico)
+- **Request:** body zod `UpdateProfileSchema`
+  - `email?`: email válido
+  - `phone?`: dígitos, 10–11 chars (normalizado)
+  - Exige ao menos um; `name`/`cpf` não editáveis (vínculo KYC/contratos)
+- **O que o servidor retorna:**
+  - 200 `{ success: true, user: { id, name, email, cpf, phone, role, kycStatus } }`
+  - 400 → nada para atualizar ou formato inválido
+  - 401 → não autenticado
+  - 409 CONFLICT → e-mail já em uso por outro usuário
+- **Efeitos:**
+  - `user.update` (só `email`/`phone` do dono)
+  - Sem auditLog neste handler

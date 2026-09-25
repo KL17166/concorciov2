@@ -1,0 +1,14 @@
+# generateBatchPayment
+- **Arquivo:** `server-consorcio/src/application/payments/generateBatchPayment.ts`
+- **O que faz:** Gera 1 PIX combinado somando N parcelas (adesão, do mês, antecipações), com rateio na liquidação.
+- **O que ativa ela:** `generateBatchPixPayment` (paymentsApiController) — POST /api/payments/batch/pix
+- **Entradas:**
+  - `subscriptionId, items[{number, idTokenPay}], requesterUserId, method=PIX`
+  - Validações: 400 sem itens ou >12; 404 contrato/parcela; 403 dono ou token inválido; 400 adesão fora do lote com adesão em aberto; 400 parcela já paga/cancelada; 400 contrato cancelado
+  - Idempotência: batch ACTIVE com mesmo conjunto → reutiliza (reexibe)
+- **Saídas:**
+  - Sucesso: `{ batchId, subscriptionId, items[{installmentId, number, amount, anticipated, dueDate, status}], totalAmount, provider, isManualApproval, copyPaste, qrCode, expiresAt, reused }`
+- **Regras/efeitos:**
+  - Valores por parcela via `calculateInstallmentValue` simulando ordem; `number > 1ª em aberto` = antecipação (só carimbo)
+  - Tx `Serializable`: expira batches ACTIVE + cria RESERVED; cobra total via failover (`batch-<uuid>`); cria batch ACTIVE + 1 attempt por parcela
+  - Tabelas: `subscription/user/installments` (leitura), `payment_batches`, `payment_attempts`

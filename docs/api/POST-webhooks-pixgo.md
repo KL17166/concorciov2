@@ -1,0 +1,19 @@
+# POST /api/webhooks/pixgo (server-to-server)
+- **Ativado por:** gateway PixGo (callback de pagamento)
+  - NÃO é chamado pelo app; sem BFF espelho
+  - Rota montada antes do `securityMiddleware` (app.ts:144)
+- **Auth / rate-limit:** sem `authenticate`/JWT e sem rate limiter
+  - HMAC SHA256 do `rawBody` com segredo de `gatewayConfig(pixgo)` ou `PIXGO_WEBHOOK_SECRET`
+  - Fail-closed: sem segredo → 500, nada é aceito
+  - `timingSafeEqual` na assinatura hex; `x-pixgo-timestamp` tolerância 300s
+- **Request:** headers `x-pixgo-signature*`, `x-pixgo-timestamp?`
+  - Body `{ event, data: { external_id* (= installmentId), amount?, id/payment_id? } }`
+- **O que o servidor retorna:**
+  - Evento `payment.completed` → status de `processPaymentWebhook` `{ success, message }`
+  - Outro evento → 200 `'Event received'` (texto puro)
+  - 500 WEBHOOK_NOT_CONFIGURED → sem segredo configurado
+  - 401 → assinatura ausente/inválida ou timestamp expirado
+  - 400 → `external_id` ausente
+- **Efeitos:**
+  - Liquida parcela/lance via `processPaymentWebhook` (provider pixgo)
+  - Idempotente por `providerEventId`; log do evento

@@ -158,6 +158,46 @@
         const pendingCount = contract.installments.filter(i => i.status === 'PENDING').length;
         const overdueCount = contract.installments.filter(i => i.status === 'OVERDUE').length;
     %>
+    <section class="admin-card mt-3" id="card-contract-verifications">
+        <div class="admin-card__header">
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h2>O que o cliente pediu para verificar</h2>
+                    <span class="admin-pill admin-pill--muted"><i class="bi bi-hand-index me-1"></i><%= (typeof verifications !== 'undefined' ? verifications.length : 0) %> pedido(s)</span>
+                </div>
+                <div class="admin-muted mt-1">Cada clique em “Verificar pagamento” no app vira um pedido aqui — adesão, parcela do mês ou antecipação.</div>
+            </div>
+            <a href="/admin/notifications?q=<%= contract.id %>" class="btn btn-outline-secondary admin-btn"><i class="bi bi-bell"></i> Ver na Central</a>
+        </div>
+        <% const _verifs = (typeof verifications !== 'undefined' ? verifications : []); %>
+        <% if (_verifs.length) { %>
+            <div class="admin-table-wrap">
+                <table class="table admin-table mb-0">
+                    <thead><tr><th>Pedido em</th><th>O quê</th><th class="text-end">Valor</th><th>Gateway</th><th>Atendimento</th></tr></thead>
+                    <tbody>
+                        <% _verifs.forEach(function(v) { %>
+                            <tr>
+                                <td class="text-muted" style="white-space:nowrap;"><%= new Date(v.createdAt).toLocaleString('pt-BR') %></td>
+                                <td>
+                                    <div class="fw-semibold"><%= v.kindLabel %></div>
+                                    <div class="admin-muted" style="font-size:.8rem;"><%= v.typeLabel %><%= v.dueDate ? ' · vence ' + new Date(v.dueDate).toLocaleDateString('pt-BR') : '' %></div>
+                                    <% if (Array.isArray(v.items) && v.items.length > 1) { %>
+                                        <div class="admin-muted" style="font-size:.78rem;"><% v.items.forEach(function(it, idx) { %><%= it.number === 1 ? 'Adesão' : 'Parcela '+it.number %> (R$ <%= (Math.round(Number(it.amount)*100)/100).toLocaleString('pt-BR',{minimumFractionDigits:2}) %>)<%= idx < v.items.length - 1 ? ' · ' : '' %><% }); %></div>
+                                    <% } %>
+                                </td>
+                                <td class="text-end fw-bold"><%= v.amount != null ? formatCurrency(Math.round(Number(v.amount)*100)/100) : '—' %></td>
+                                <td><% if (v.provider) { %><span class="mono-code"><%= v.provider %></span><% } else { %>—<% } %></td>
+                                <td><span class="admin-pill admin-pill--muted"><%= v.statusLabel %></span><% if (v.assignedTo) { %><div class="admin-muted" style="font-size:.75rem;">com <%= String(v.assignedTo).slice(0,8) %></div><% } %></td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <div class="admin-empty"><i class="bi bi-bell-slash"></i><br>Nenhum pedido de verificação para este contrato.</div>
+        <% } %>
+    </section>
+
     <section class="admin-card mt-3" id="card-contract-installments">
         <div class="admin-card__header">
             <div>

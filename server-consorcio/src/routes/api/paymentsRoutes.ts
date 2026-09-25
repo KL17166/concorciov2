@@ -5,7 +5,8 @@ import {
     directPayDisabled,
     listSubscriptionPayments,
     generatePixPayment,
-    generateBoletoPayment
+    generateBoletoPayment,
+    generateBatchPixPayment
 } from '../../controllers/api/paymentsApiController';
 
 const router = Router();
@@ -15,6 +16,9 @@ router.post('/payments/:installmentId/pay', authenticate, transactionRateLimiter
 
 // GET /api/payments/:subscriptionId - Listar parcelas de um contrato
 router.get('/payments/:subscriptionId', authenticate, listSubscriptionPayments);
+
+// POST /api/payments/batch/pix - 1 PIX combinado (N parcelas)
+router.post('/payments/batch/pix', authenticate, transactionRateLimiter, generateBatchPixPayment);
 
 // POST /api/payments/:installmentId/pix - Gerar Pix
 router.post('/payments/:installmentId/pix', authenticate, transactionRateLimiter, generatePixPayment);

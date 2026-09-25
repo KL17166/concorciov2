@@ -12,7 +12,7 @@ export interface Installment {
 
 export interface PixPaymentResponse {
   success: boolean
-  provider: string
+  provider?: string
   paymentId: string
   qrCode: string | null // base64 string or null
   copyPaste: string // PIX EMV code
@@ -24,7 +24,7 @@ export interface PixPaymentResponse {
 
 export interface BoletoPaymentResponse {
   success: boolean
-  provider: string
+  provider?: string
   paymentId: string
   copyPaste: string // Linha digitável
   amount: number

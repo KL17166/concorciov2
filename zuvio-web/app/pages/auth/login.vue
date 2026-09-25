@@ -3,7 +3,7 @@ import { ref, reactive } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useToast } from '~/composables/useToast'
 import { formatCpf, unmaskCpf, isValidCpf } from '~~/shared/utils/cpf'
-import { IdCard, Lock, Eye, EyeOff } from 'lucide-vue-next'
+import { IdCard, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next'
 
 definePageMeta({
   layout: false,
@@ -96,6 +96,14 @@ async function handleLogin() {
     <!-- SafeArea + SingleChildScrollView -->
     <div class="safe-area">
       <div class="scroll-content animate-fade-in">
+        <!-- Top Navigation Bar -->
+        <div class="top-nav-bar">
+          <NuxtLink to="/welcome" class="btn-back-link">
+            <ArrowLeft :size="18" />
+            <span>Voltar</span>
+          </NuxtLink>
+        </div>
+
         <!-- Logo Container with glow and ClipOval -->
         <div class="logo-container">
           <div class="logo-clip-oval">
@@ -225,10 +233,9 @@ async function handleLogin() {
 .bg-pattern-overlay {
   position: fixed;
   inset: 0;
-  background-image: url('https://images.unsplash.com/photo-1558981852-426c6c22a060?w=800');
-  background-size: cover;
-  background-position: center;
-  opacity: 0.05;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 1;
   pointer-events: none;
   z-index: 2;
 }
@@ -348,6 +355,33 @@ async function handleLogin() {
   color: #FFFFFF;
   font-weight: 700;
   text-decoration: underline;
+}
+
+.top-nav-bar {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.btn-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
+}
+
+.btn-back-link:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateX(-2px);
 }
 
 @media (max-width: 480px) {

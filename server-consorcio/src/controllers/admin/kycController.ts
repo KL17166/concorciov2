@@ -52,6 +52,11 @@ export const getAdminKycDocument = async (req: Request, res: Response) => {
         return res.status(400).send('Nome de arquivo inválido.');
     }
 
+    // userId nunca entra cru no path (traversal via `..`): ids são uuid/slug.
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(userId)) {
+        return res.status(400).send('Usuário inválido.');
+    }
+
     const primaryPath = path.join(process.cwd(), 'storage', 'kyc', userId, safeFileName);
     const legacyPath = path.join(process.cwd(), 'public', 'uploads', 'documents', userId, safeFileName);
 
@@ -204,30 +209,46 @@ export const approveKyc = async (req: Request, res: Response) => {
         const userId = param(req.params.userId);
         const adminId = (req as any).session?.user?.id || 'unknown';
 
-        await prisma.user.update({
-            where: { id: userId },
-            data: {
-                kycStatus: 'APPROVED',
-                kycReviewedAt: new Date(),
-                kycReviewedBy: adminId,
-                kycRejectReason: null,
-            },
-        });
-
-        const pendingSubscriptions = await prisma.subscription.findMany({
-            where: { userId, status: 'PENDING_KYC' },
-        });
-
-        for (const sub of pendingSubscriptions) {
-            await prisma.subscription.update({
-                where: { id: sub.id },
-                data: { status: 'ACTIVE' },
+        // B7: ativação atômica — antes eram N updates fora de transação
+        // (queda no meio deixava usuário aprovado com contratos pendentes).
+        const activated = await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id: userId },
+                data: {
+                    kycStatus: 'APPROVED',
+                    kycReviewedAt: new Date(),
+                    kycReviewedBy: adminId,
+                    kycRejectReason: null,
+                },
             });
-        }
 
-        logger.info(`KYC APPROVED: user ${userId} by admin ${adminId}. Activated ${pendingSubscriptions.length} subscriptions.`);
+            const pendingSubscriptions = await tx.subscription.findMany({
+                where: { userId, status: 'PENDING_KYC' },
+                select: { id: true },
+            });
 
-        (req as any).flash?.('success', `KYC aprovado! ${pendingSubscriptions.length} contrato(s) ativado(s).`);
+            for (const sub of pendingSubscriptions) {
+                await tx.subscription.update({
+                    where: { id: sub.id },
+                    data: { status: 'ACTIVE' },
+                });
+            }
+            return pendingSubscriptions.length;
+        }, { isolationLevel: 'Serializable', timeout: 10000 });
+
+        logger.info(`KYC APPROVED: user ${userId} by admin ${adminId}. Activated ${activated} subscriptions.`);
+
+        try {
+            await prisma.auditLog.create({
+                data: { userId: adminId, action: 'KYC_APPROVED', resource: 'user', details: JSON.stringify({ targetUserId: userId, activated, adminName: (req as any).session?.user?.name || null }), ipAddress: req.ip || 'unknown' }
+            });
+            await (prisma as any).systemAlert.updateMany({
+                where: { status: { in: ['OPEN', 'ACK', 'IN_PROGRESS'] }, details: { contains: userId } },
+                data: { status: 'RESOLVED', read: true, readAt: new Date(), readBy: adminId, resolvedAt: new Date() }
+            });
+        } catch { /* audit best-effort */ }
+
+        (req as any).flash?.('success', `KYC aprovado! ${activated} contrato(s) ativado(s).`);
         res.redirect('/admin/kyc');
     } catch (error) {
         logger.error('KYC approve error:', error);
@@ -243,44 +264,42 @@ export const rejectKyc = async (req: Request, res: Response) => {
         const userId = param(req.params.userId);
         const adminId = (req as any).session?.user?.id || 'unknown';
         const { reason } = req.body;
+        const rejectReason = reason || 'Documentos inválidos ou ilegíveis';
 
-        await prisma.user.update({
-            where: { id: userId },
-            data: {
-                kycStatus: 'REJECTED',
-                kycReviewedAt: new Date(),
-                kycReviewedBy: adminId,
-                kycRejectReason: reason || 'Documentos inválidos ou ilegíveis',
-            },
-        });
-
-        const pendingSubscriptions = await prisma.subscription.findMany({
-            where: { userId, status: 'PENDING_KYC' },
-            include: { installments: { where: { status: 'PAID' } } },
-        });
-
-        let refundTotal = 0;
-        for (const sub of pendingSubscriptions) {
-            await prisma.subscription.update({
-                where: { id: sub.id },
-                data: { status: 'CANCELLED' },
+        // Reprovar NÃO emite reembolso nem cancela nada (reembolso é manual e
+        // aqui não há o que devolver: o contrato continua PENDING_KYC e o
+        // cliente reenvia os documentos). O que precisa acontecer é a
+        // notificação chegar no app pedindo o reenvio — via `notifications`.
+        await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id: userId },
+                data: {
+                    kycStatus: 'REJECTED',
+                    kycReviewedAt: new Date(),
+                    kycReviewedBy: adminId,
+                    kycRejectReason: rejectReason,
+                },
             });
 
-            for (const inst of sub.installments) {
-                await prisma.installment.update({
-                    where: { id: inst.id },
-                    data: {
-                        status: 'REFUNDED',
-                        paymentMethod: `REFUND_${inst.paymentMethod || 'MANUAL'}`,
-                    },
-                });
-                refundTotal += Number(inst.amount);
-            }
-        }
+            await tx.notification.create({
+                data: {
+                    userId,
+                    type: 'KYC_REJECTED',
+                    title: 'Documentos recusados',
+                    message: `${rejectReason} Reenvie novas fotos nítidas em Validação de Documentos para liberar sua conta.`
+                }
+            });
+        }, { isolationLevel: 'Serializable', timeout: 10000 });
 
-        logger.info(`KYC REJECTED: user ${userId} by admin ${adminId}. Reason: ${reason}. Cancelled ${pendingSubscriptions.length} subscriptions. Refund total: R$${refundTotal.toFixed(2)}`);
+        logger.info(`KYC REJECTED: user ${userId} by admin ${adminId}. Reason: ${rejectReason}. Contracts kept PENDING_KYC; client notified to resubmit.`);
 
-        (req as any).flash?.('success', `KYC rejeitado. ${pendingSubscriptions.length} contrato(s) cancelado(s). Reembolso total: R$${refundTotal.toFixed(2)}`);
+        try {
+            await prisma.auditLog.create({
+                data: { userId: adminId, action: 'KYC_REJECTED', resource: 'user', details: JSON.stringify({ targetUserId: userId, reason: rejectReason, adminName: (req as any).session?.user?.name || null }), ipAddress: req.ip || 'unknown' }
+            });
+        } catch { /* audit best-effort */ }
+
+        (req as any).flash?.('success', 'KYC rejeitado. O cliente foi avisado no app para reenviar os documentos.');
         res.redirect('/admin/kyc');
     } catch (error) {
         logger.error('KYC reject error:', error);
@@ -323,6 +342,56 @@ export const reopenKyc = async (req: Request, res: Response) => {
         logger.error('KYC reopen error:', error);
         (req as any).flash?.('error', 'Erro ao reabrir KYC');
         res.redirect('/admin/kyc?filter=rejected');
+    }
+};
+
+// ── POST /admin/kyc/:userId/propose — Atendente (SUPPORT) propõe aprovação p/ gerente ──
+export const proposeKyc = async (req: Request, res: Response) => {
+    try {
+        const userId = param(req.params.userId);
+        const admin = (req as any).session?.user;
+        const note = ((req.body?.note as string) || '').trim();
+        const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, kycStatus: true } });
+        if (!user) {
+            (req as any).flash?.('error', 'Usuário não encontrado');
+            return res.redirect('/admin/kyc');
+        }
+        if (user.kycStatus !== 'SUBMITTED') {
+            (req as any).flash?.('error', 'Só é possível propor aprovação de KYC enviado (SUBMITTED).');
+            return res.redirect('/admin/kyc');
+        }
+        const since = new Date(Date.now() - 30 * 60 * 1000);
+        const dup = await (prisma as any).systemAlert.findFirst({
+            where: { type: 'KYC_PROPOSAL', entityId: userId, createdAt: { gte: since }, status: { in: ['OPEN', 'ACK', 'IN_PROGRESS'] } },
+            select: { id: true }
+        });
+        if (dup) {
+            (req as any).flash?.('error', 'Já existe proposta aberta para este cliente na Central.');
+            return res.redirect('/admin/kyc');
+        }
+        await (prisma as any).systemAlert.create({
+            data: {
+                type: 'KYC_PROPOSAL',
+                severity: 'INFO',
+                title: 'Atendente propôs aprovação de KYC',
+                message: `${admin?.name || 'Atendente'} propôs aprovar o KYC de ${user.name}.${note ? ` Nota: ${note}` : ''} Aguardando gerente.`,
+                status: 'OPEN',
+                assignedTo: admin?.id || null,
+                assignedAt: new Date(),
+                entityKind: 'user',
+                entityId: userId,
+                details: JSON.stringify({ userId, proposedBy: admin?.id, note: note || null })
+            }
+        });
+        await prisma.auditLog.create({
+            data: { userId: admin?.id || null, action: 'KYC_PROPOSED', resource: 'user', details: JSON.stringify({ targetUserId: userId, note: note || null, adminName: admin?.name }), ipAddress: req.ip || 'unknown' }
+        });
+        (req as any).flash?.('success', 'Proposta enviada ao gerente na Central de Notificações.');
+        res.redirect('/admin/kyc');
+    } catch (error) {
+        logger.error('KYC propose error:', error);
+        (req as any).flash?.('error', 'Erro ao propor aprovação');
+        res.redirect('/admin/kyc');
     }
 };
 
@@ -372,16 +441,27 @@ export const overrideKyc = async (req: Request, res: Response) => {
             return res.json({ ok: true, kycStatus: 'APPROVED', activatedSubscriptions: pendingSubscriptions.length });
         }
 
-        // action === 'reject'
-        await prisma.user.update({
-            where: { id: userId },
-            data: {
-                kycStatus: 'REJECTED',
-                kycReviewedAt: new Date(),
-                kycReviewedBy: adminId,
-                kycRejectReason: overrideNote,
-            },
-        });
+        // action === 'reject' (sem cancelamento/reembolso — igual ao rejectKyc:
+        // o contrato continua e o cliente reenvia; a notificação chega no app).
+        await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id: userId },
+                data: {
+                    kycStatus: 'REJECTED',
+                    kycReviewedAt: new Date(),
+                    kycReviewedBy: adminId,
+                    kycRejectReason: overrideNote,
+                },
+            });
+            await tx.notification.create({
+                data: {
+                    userId,
+                    type: 'KYC_REJECTED',
+                    title: 'Documentos recusados',
+                    message: `${overrideNote} Reenvie novas fotos nítidas em Validação de Documentos para liberar sua conta.`
+                }
+            });
+        }, { isolationLevel: 'Serializable', timeout: 10000 });
 
         logger.info(`KYC OVERRIDE REJECTED: user ${userId}. ${overrideNote}.`);
         return res.json({ ok: true, kycStatus: 'REJECTED' });

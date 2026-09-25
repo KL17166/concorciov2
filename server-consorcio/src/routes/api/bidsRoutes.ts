@@ -6,7 +6,8 @@ import {
     createClientBid,
     listClientBids,
     cancelClientBid,
-    generateClientBidPix
+    generateClientBidPix,
+    notifyClientBidPaymentCheck
 } from '../../controllers/api/bidsApiController';
 
 const router = Router();
@@ -22,6 +23,9 @@ router.post('/bids/:id/cancel', authenticate, transactionRateLimiter, cancelClie
 
 // POST /api/bids/:id/pix - Gerar PIX para pagamento de lance aprovado
 router.post('/bids/:id/pix', authenticate, transactionRateLimiter, generateClientBidPix);
+
+// POST /api/bids/:id/payment-check - Cliente clicou em "Já paguei" no PIX do lance
+router.post('/bids/:id/payment-check', authenticate, transactionRateLimiter, notifyClientBidPaymentCheck);
 
 export default router;
 

@@ -1,0 +1,17 @@
+# PUT /api/auth/profile
+- **Ativado por:** tela de dados/endereço do app
+  - BFF espelho: `zuvio-web/server/api/auth/profile.put.ts`
+  - Fluxo: atualizar telefone e endereço do cadastro
+- **Auth / rate-limit:** `authenticate` (Bearer JWT)
+  - App: `generalLimiter` + `securityMiddleware` (sem limiter específico)
+- **Request:** body zod `updateProfileSchema` (`authController.ts:345`)
+  - `phone?`, `cep?`, `street?`, `number?`, `neighborhood?`, `city?`, `state?`
+  - `name`/`cpf` enviados são IGNORADOS (imutáveis; só admin altera)
+  - URLs de documento não aceitas (só via POST `/auth/upload`)
+- **O que o servidor retorna:**
+  - 200 `{ message, user: { id, name, email, role, cpf, phone, documentFrontUrl, documentBackUrl, selfieUrl, ...address } }`
+  - 400 → body vazio/inválido (zod)
+  - 401 → não autenticado
+- **Efeitos:**
+  - `user.update` (só `phone` + `address` como JSON)
+  - Cria `auditLog` UPDATE_PROFILE com o delta aplicado

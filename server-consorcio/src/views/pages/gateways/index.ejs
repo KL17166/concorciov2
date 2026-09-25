@@ -50,11 +50,13 @@
                     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
                     display: flex; align-items: center; justify-content: center; gap: 0.5rem;
                 }
-                .gw-tab-btn:hover { background: rgba(99, 102, 241, 0.06); color: var(--text-primary); }
+                .gw-tab-btn:hover { background: rgba(15, 23, 42, 0.04); color: var(--text-primary); }
                 .gw-tab-btn.active {
-                    background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
-                    color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+                    background: #1e293b;
+                    background-image: none;
+                    color: white; box-shadow: none;
                 }
+                [data-theme='dark'] .gw-tab-btn.active { background: #e2e8f0; color: #0f172a; }
                 .gw-panel { display: none; animation: fadeSlide 0.35s ease; }
                 .gw-panel.active { display: block; }
                 @keyframes fadeSlide { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -72,9 +74,9 @@
                 .gw-bal-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
                 .gw-bal-card .bal-bg { position: absolute; inset: 0; opacity: 0.95; z-index: 0; border-radius: 16px; }
                 .gw-bal-card .bal-content { position: relative; z-index: 1; }
-                .gw-bal-card.available .bal-bg { background: linear-gradient(135deg, #059669, #10b981, #34d399); }
-                .gw-bal-card.pending .bal-bg  { background: linear-gradient(135deg, #d97706, #f59e0b, #fbbf24); }
-                .gw-bal-card.locked .bal-bg   { background: linear-gradient(135deg, #7c3aed, #8b5cf6, #a78bfa); }
+                .gw-bal-card.available .bal-bg { background: #1e293b; background-image: none; }
+                .gw-bal-card.pending .bal-bg  { background: #334155; background-image: none; }
+                .gw-bal-card.locked .bal-bg   { background: #475569; background-image: none; }
                 .gw-bal-card .bal-icon {
                     width: 48px; height: 48px; border-radius: 14px;
                     background: rgba(255,255,255,0.2); display: flex;
@@ -130,10 +132,7 @@
                     display: inline-flex; align-items: center; justify-content: center;
                     font-size: 1rem; color: white; flex-shrink: 0;
                 }
-                .gw-icon-sm.pixgo { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
-                .gw-icon-sm.sigilopay { background: linear-gradient(135deg, #059669, #10b981); }
-                .gw-icon-sm.eldorado { background: linear-gradient(135deg, #f59e0b, #ef4444); }
-                .gw-icon-sm.g2g { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
+                .gw-icon-sm.pixgo, .gw-icon-sm.sigilopay, .gw-icon-sm.eldorado, .gw-icon-sm.g2g { background: #475569; background-image: none; }
                 .gw-pill {
                     display: inline-flex; align-items: center; gap: 0.3rem;
                     padding: 0.25rem 0.65rem; border-radius: 20px;
@@ -152,20 +151,17 @@
                     border: 2px solid var(--border-color); text-align: center;
                     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
                 }
-                .gw-pick:hover { border-color: rgba(99, 102, 241, 0.3); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+                .gw-pick:hover { border-color: #94a3b8; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
                 .gw-pick.sel {
-                    border-color: var(--primary-color); background: rgba(99, 102, 241, 0.04);
-                    box-shadow: 0 6px 25px rgba(99, 102, 241, 0.15); transform: translateY(-2px);
+                    border-color: #475569; background: rgba(15, 23, 42, 0.03);
+                    box-shadow: none; transform: translateY(-2px);
                 }
                 .gw-pick .pick-icon {
                     width: 52px; height: 52px; border-radius: 14px;
                     display: inline-flex; align-items: center; justify-content: center;
                     font-size: 1.4rem; margin-bottom: 0.5rem; color: white;
                 }
-                .gw-pick .pick-icon.pixgo { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
-                .gw-pick .pick-icon.sigilopay { background: linear-gradient(135deg, #059669, #10b981); }
-                .gw-pick .pick-icon.eldorado { background: linear-gradient(135deg, #f59e0b, #ef4444); }
-                .gw-pick .pick-icon.g2g { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
+                .gw-pick .pick-icon.pixgo, .gw-pick .pick-icon.sigilopay, .gw-pick .pick-icon.eldorado, .gw-pick .pick-icon.g2g { background: #475569; background-image: none; }
                 .gw-form-wrap {
                     border-radius: 16px; border: 1px solid var(--border-color);
                     overflow: hidden; box-shadow: 0 2px 15px rgba(0,0,0,0.04);
@@ -192,9 +188,7 @@
                 }
                 .wd-big-value {
                     font-size: 2.8rem; font-weight: 800; line-height: 1;
-                    background: linear-gradient(135deg, #059669, #10b981);
-                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                    background-clip: text;
+                    color: var(--text-primary);
                 }
                 .wd-form-card {
                     border-radius: 16px; border: 1px solid var(--border-color);
@@ -361,6 +355,7 @@
                                         <% if (gw.supportsPix) { %><span class="gw-pill tag">PIX</span><% } %>
                                         <% if (gw.supportsBoleto) { %><span class="gw-pill tag">Boleto</span><% } %>
                                         <% if (gw.supportsCard) { %><span class="gw-pill tag">Cartão</span><% } %>
+                                        <% if (gw.requiresManualReview) { %><span class="gw-pill tag" title="O app mostra aviso de conferência manual quando esta gateway gera o PIX"><i class="bi bi-hand-index"></i> Manual</span><% } %>
                                     </div>
                                 </td>
                                 <td>
@@ -496,6 +491,14 @@
                             </div>
 
                             <!-- Default toggles -->
+                            <div class="mt-4 p-3" style="background: rgba(245, 158, 11, 0.05); border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                                <div class="form-check form-switch">
+                                    <input type="hidden" name="requiresManualReview" value="false">
+                                    <input class="form-check-input" type="checkbox" name="requiresManualReview" value="true" id="manual-<%= gw.id %>" <%= gw.requiresManualReview ? 'checked' : '' %>>
+                                    <label class="form-check-label fw-bold" for="manual-<%= gw.id %>" style="font-size: 0.85rem;"><i class="bi bi-hand-index me-1"></i>Exige conferência manual (aprovação na Central)</label>
+                                </div>
+                                <small class="text-muted d-block mt-1">Quando ligado, o app avisa “confirmação manual” e o botão “Já paguei” só aparece para esta gateway. Eldorado/G2G (sem webhook) ficam ligados; PixGo/Sigilopay (webhook automático) ficam desligados.</small>
+                            </div>
                             <div class="mt-4 p-3" style="background: rgba(99, 102, 241, 0.04); border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.1);">
                                 <div class="fw-bold mb-2" style="font-size: 0.82rem;">
                                     <i class="bi bi-star-fill text-warning me-1"></i>Definir como gateway padrão para:
@@ -602,7 +605,7 @@
                                 </div>
 
                                 <!-- Submit -->
-                                <button class="btn btn-lg w-100" id="wdBtn" onclick="doWithdraw()" disabled aria-disabled="true" title="Aguardando conexão com o gateway" style="border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, var(--primary-color), #8b5cf6); color: white; border: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); transition: all 0.3s;">
+                                <button class="btn btn-lg w-100" id="wdBtn" onclick="doWithdraw()" disabled aria-disabled="true" title="Aguardando conexão com o gateway" style="border-radius: 12px; font-weight: 700;">
                                     <i class="bi bi-send-fill me-2"></i>Solicitar Saque
                                 </button>
 

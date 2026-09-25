@@ -169,8 +169,13 @@
                                                 <small class="text-muted">CPF: <%= pUser.cpf %> | Email: <%= pUser.email %> | Tel: <%= pUser.phone || 'N/A' %></small>
                                             </div>
                                         </div>
-                                        <span class="badge-premium" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
-                                            <i class="bi bi-clock"></i> <%= ({ PENDING: 'Pendente', SUBMITTED: 'Enviado', APPROVED: 'Aprovado', REJECTED: 'Rejeitado' }[pUser.kycStatus] || pUser.kycStatus) %>
+                                        <span class="d-flex gap-2">
+                                            <span class="badge-premium" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
+                                                <i class="bi bi-clock"></i> <%= ({ PENDING: 'Pendente', SUBMITTED: 'Enviado', APPROVED: 'Aprovado', REJECTED: 'Rejeitado' }[pUser.kycStatus] || pUser.kycStatus) %>
+                                            </span>
+                                            <span class="badge-premium" style="background: rgba(107, 114, 128, 0.1); color: #6b7280;" title="Último envio/atualização dos documentos">
+                                                <i class="bi bi-send"></i> Enviado em <%= new Date(pUser.updatedAt).toLocaleString('pt-BR') %>
+                                            </span>
                                         </span>
                                     </div>
 
@@ -180,7 +185,7 @@
                                         <div class="col-md-4 text-center">
                                             <p class="fw-bold mb-1" style="font-size: 0.85rem;">Documento (Frente)</p>
                                             <% if (pUser.documentFrontUrl) { %>
-                                                <img src="<%= pUser.documentFrontUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');" alt="Doc Frente">
+                                                <img src="<%= String(pUser.documentFrontUrl).startsWith('/api/kyc/documents/') ? ('/admin/kyc/' + pUser.id + '/documents/' + String(pUser.documentFrontUrl).split('/').pop()) : pUser.documentFrontUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');" alt="Doc Frente">
                                                 <div class="text-muted d-none" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;"><i class="bi bi-file-earmark-x" style="font-size: 1.5rem;"></i><p class="mb-0 mt-1" style="font-size: 0.85rem;">Imagem indisponível</p></div>
                                             <% } else { %>
                                                 <div style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;" class="text-muted">
@@ -192,7 +197,7 @@
                                         <div class="col-md-4 text-center">
                                             <p class="fw-bold mb-1" style="font-size: 0.85rem;">Documento (Verso)</p>
                                             <% if (pUser.documentBackUrl) { %>
-                                                <img src="<%= pUser.documentBackUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');" alt="Doc Verso">
+                                                <img src="<%= String(pUser.documentBackUrl).startsWith('/api/kyc/documents/') ? ('/admin/kyc/' + pUser.id + '/documents/' + String(pUser.documentBackUrl).split('/').pop()) : pUser.documentBackUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');" alt="Doc Verso">
                                                 <div class="text-muted d-none" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;"><i class="bi bi-file-earmark-x" style="font-size: 1.5rem;"></i><p class="mb-0 mt-1" style="font-size: 0.85rem;">Imagem indisponível</p></div>
                                             <% } else { %>
                                                 <div style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;" class="text-muted">
@@ -204,7 +209,7 @@
                                         <div class="col-md-4 text-center">
                                             <p class="fw-bold mb-1" style="font-size: 0.85rem;">Selfie</p>
                                             <% if (pUser.selfieUrl) { %>
-                                                <img src="<%= pUser.selfieUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');" alt="Selfie">
+                                                <img src="<%= String(pUser.selfieUrl).startsWith('/api/kyc/documents/') ? ('/admin/kyc/' + pUser.id + '/documents/' + String(pUser.selfieUrl).split('/').pop()) : pUser.selfieUrl %>" class="img-fluid rounded" style="max-height: 200px; cursor: pointer; border: 2px solid var(--border-color); border-radius: 12px !important;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');" alt="Selfie">
                                                 <div class="text-muted d-none" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;"><i class="bi bi-person-bounding-box" style="font-size: 1.5rem;"></i><p class="mb-0 mt-1" style="font-size: 0.85rem;">Imagem indisponível</p></div>
                                             <% } else { %>
                                                 <div style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem;" class="text-muted">
@@ -252,10 +257,11 @@
 
                                     <!-- Actions -->
                                     <% if (filter === 'pending') { %>
-                                    <div class="d-flex gap-2 mt-3">
+                                    <div class="d-flex gap-2 mt-3 flex-wrap align-items-start">
+                                        <% if (typeof hasCapability !== 'undefined' ? hasCapability('compliance.review') : true) { %>
                                         <form action="/admin/kyc/<%= pUser.id %>/approve" method="POST" class="d-inline">
                                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                            <button type="submit" class="btn btn-success" onclick="return confirm('Aprovar KYC de <%= pUser.name %>? Os contratos serão ativados.')">
+                                            <button type="submit" class="btn btn-success" onclick="return confirm('Aprovar KYC de <%= pUser.name %>? Os contratos PENDING_KYC serão ativados.')">
                                                 <i class="bi bi-check-lg me-1"></i> Aprovar
                                             </button>
                                         </form>
@@ -263,11 +269,23 @@
                                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                             <div class="input-group">
                                                 <input type="text" name="reason" class="form-control" placeholder="Motivo da rejeição..." style="min-width: 250px;">
-                                                <button type="submit" class="btn btn-danger" onclick="return confirm('Rejeitar KYC de <%= pUser.name %>? Os contratos serão cancelados e parcelas reembolsadas.')">
+                                                <button type="submit" class="btn btn-danger" onclick="return confirm('Rejeitar KYC de <%= pUser.name %>? O contrato continua PENDING_KYC e o cliente será avisado no app para reenviar.')">
                                                     <i class="bi bi-x-lg me-1"></i> Rejeitar
                                                 </button>
                                             </div>
                                         </form>
+                                        <% } else { %>
+                                        <form action="/admin/kyc/<%= pUser.id %>/propose" method="POST" class="d-inline">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <div class="input-group">
+                                                <input type="text" name="note" class="form-control" placeholder="Nota p/ o gerente (opcional)..." style="min-width: 250px;">
+                                                <button type="submit" class="btn btn-warning" onclick="return confirm('Propor aprovação de <%= pUser.name %> ao gerente?')">
+                                                    <i class="bi bi-send me-1"></i> Propor aprovação
+                                                </button>
+                                            </div>
+                                        </form>
+                                        <small class="text-muted w-100">Como atendente, você propõe — o gerente aprova na Central.</small>
+                                        <% } %>
                                     </div>
                                     <% } else if (filter === 'rejected') { %>
                                     <div class="alert alert-danger border-0 mt-3" style="border-radius: 10px; font-size: 0.88rem;">

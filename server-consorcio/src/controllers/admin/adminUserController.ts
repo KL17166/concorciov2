@@ -5,6 +5,29 @@ import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 import { paginate, paginationMeta, buildPageUrl } from '../../utils/pagination';
 import { ALL_VALID_ROLES } from '../../config/roles';
+import { canManageRole } from '../../security/adminCapabilities';
+
+/**
+ * LEGADO — as rotas ativas convergem para `peopleController` (ver
+ * `routes/admin/userRoutes.ts` e `peopleRoutes.ts`). Mantido por compatibilidade
+ * e agora com a MESMA trava anti-escalação: só MASTER define papel privilegiado.
+ * B6: sem isso, um MANAGER criava/elevava usuários a MASTER.
+ */
+function resolveRoleOrDeny(req: Request, res: Response, requestedRole: unknown): string | null {
+    const actorRole = (req as any).session?.user?.role;
+    const actorId = (req as any).session?.user?.id;
+    const safeRequested = typeof requestedRole === 'string' && ALL_VALID_ROLES.includes(requestedRole)
+        ? requestedRole
+        : 'CLIENT';
+    if (safeRequested !== 'CLIENT' && !canManageRole(actorRole, safeRequested)) {
+        logger.warn(`[RBAC] Role escalation blocked: actor ${actorId} (${actorRole}) tried to assign ${safeRequested}`);
+        req.flash('error_msg', 'Seu perfil não pode atribuir esse nível de acesso. Apenas MASTER gerencia papéis.');
+        const back = req.get('Referer') || '/admin/users';
+        res.redirect(back);
+        return null;
+    }
+    return safeRequested;
+}
 
 // GET /admin/users
 export const listUsers = async (req: Request, res: Response) => {
@@ -47,7 +70,7 @@ export const newUserForm = (req: Request, res: Response) => {
 // POST /admin/users/new
 export const createUser = async (req: Request, res: Response) => {
     try {
-        const { name, email, cpf, phone, password, role, address_cep, address_street, address_number, address_complement, address_neighborhood, address_city, address_state } = req.body;
+        const { name, email, cpf, phone, password, role: requestedRole, address_cep, address_street, address_number, address_complement, address_neighborhood, address_city, address_state } = req.body;
 
         // Check if email already exists
         const existingUser = await prisma.user.findFirst({
@@ -61,6 +84,8 @@ export const createUser = async (req: Request, res: Response) => {
 
         const hashedPassword = await hashPassword(password);
         
+        const role = resolveRoleOrDeny(req, res, requestedRole);
+        if (!role) return;
         let formattedAddress = null;
         if (address_street) {
              formattedAddress = JSON.stringify({
@@ -81,7 +106,7 @@ export const createUser = async (req: Request, res: Response) => {
                 cpf: cpf.replace(/\D/g, ''),
                 phone: phone || null,
                 passwordHash: hashedPassword,
-                role: ALL_VALID_ROLES.includes(role) ? role : 'CLIENT',
+                role,
                 address: formattedAddress
             }
         });
@@ -134,7 +159,16 @@ export const editUserForm = async (req: Request, res: Response) => {
 export const updateUser = async (req: Request, res: Response) => {
     try {
         const id = req.params.id as string;
-        const { name, email, phone, role, password, address_cep, address_street, address_number, address_complement, address_neighborhood, address_city, address_state } = req.body;
+        const actorId = (req as any).session?.user?.id;
+        const { name, email, phone, role: requestedRole, password, address_cep, address_street, address_number, address_complement, address_neighborhood, address_city, address_state } = req.body;
+
+        // B6: trava anti-escalação + anti auto-rebaixamento (antes aceitava qualquer role)
+        const role = resolveRoleOrDeny(req, res, requestedRole);
+        if (!role) return;
+        if (id === actorId && role !== 'MASTER' && (req as any).session?.user?.role === 'MASTER') {
+            req.flash('error_msg', 'Você não pode remover seu próprio acesso de mestre.');
+            return res.redirect('/admin/users');
+        }
         
         let formattedAddress = null;
         if (address_street) {
@@ -153,7 +187,7 @@ export const updateUser = async (req: Request, res: Response) => {
             name,
             email,
             phone: phone || null,
-            role: ALL_VALID_ROLES.includes(role) ? role : 'CLIENT',
+            role,
             address: formattedAddress
         };
 

@@ -4,6 +4,7 @@ import { calculateInstallmentValue } from '../../domain/calculations/installment
 import { parseAddress } from '../../mappers/addressMapper';
 import { PaymentFailoverService } from '../../services/paymentFailoverService';
 import { PaymentMethod, PaymentResult } from '../../integrations/payments/PaymentGateway';
+import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 
 export interface GeneratePaymentInput {
@@ -11,10 +12,12 @@ export interface GeneratePaymentInput {
     idTokenPay: string;
     requesterUserId: string;
     method: PaymentMethod;
+    /** Antecipação explícita: permite pagar fora de ordem (exige adesão paga). */
+    anticipate?: boolean;
 }
 
 export async function generatePayment(input: GeneratePaymentInput): Promise<PaymentResult> {
-    const { installmentId, idTokenPay, requesterUserId, method } = input;
+    const { installmentId, idTokenPay, requesterUserId, method, anticipate } = input;
 
     const installment = await InstallmentRepository.findById(installmentId);
 
@@ -41,6 +44,34 @@ export async function generatePayment(input: GeneratePaymentInput): Promise<Paym
 
     if (installment.status === 'PAID') {
         throw Object.assign(new Error('Parcela já está paga'), { statusCode: 400 });
+    }
+
+    // Regra de ordem: parcelas vencem em sequência.
+    // - Adesão (1): sempre liberada.
+    // - N > 1 normal: só a parcela atual (todas as anteriores pagas).
+    // - N > 1 antecipação explícita: exige ao menos a adesão paga.
+    const paidNumbers = new Set(
+        (installment.subscription.installments || [])
+            .filter((i: any) => i.status === 'PAID')
+            .map((i: any) => i.number)
+    );
+
+    if (installment.number > 1) {
+        if (!anticipate) {
+            let firstUnpaid = 1;
+            while (paidNumbers.has(firstUnpaid)) firstUnpaid++;
+            if (installment.number !== firstUnpaid) {
+                throw Object.assign(
+                    new Error(`Pague a parcela atual primeiro (parcela ${firstUnpaid}).`),
+                    { statusCode: 400 }
+                );
+            }
+        } else if (!paidNumbers.has(1)) {
+            throw Object.assign(
+                new Error('Pague a adesão antes de antecipar parcelas.'),
+                { statusCode: 400 }
+            );
+        }
     }
 
     // Next installment index
@@ -84,6 +115,29 @@ export async function generatePayment(input: GeneratePaymentInput): Promise<Paym
             address: parsedAddress
         }
     });
+
+    // Valor original da parcela (a gateway pode cobrar um pouco menos — exibir como desconto)
+    paymentResult.requestedAmount = valueToPay;
+
+    // Expira tentativas anteriores e registra a nova (só vale o último PIX gerado)
+    try {
+        await prisma.paymentAttempt.updateMany({
+            where: { installmentId: installment.id, status: 'ACTIVE' },
+            data: { status: 'EXPIRED' }
+        });
+        await prisma.paymentAttempt.create({
+            data: {
+                installmentId: installment.id,
+                provider: paymentResult.provider,
+                externalId: paymentResult.paymentId || null,
+                amount: paymentResult.amount,
+                status: 'ACTIVE',
+                expiresAt: paymentResult.expirationDate ? new Date(paymentResult.expirationDate) : null
+            }
+        });
+    } catch (attemptErr) {
+        logger.error('[generatePayment] Erro ao registrar tentativa de pagamento:', attemptErr);
+    }
 
     return paymentResult;
 }

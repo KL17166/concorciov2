@@ -4,6 +4,8 @@ import { createBid } from '../../application/bids/createBid';
 import { listUserBids } from '../../application/bids/listUserBids';
 import { cancelBid } from '../../application/bids/cancelBid';
 import { generateBidPix } from '../../application/bids/generateBidPix';
+import { notifyBidPaymentCheck } from '../../application/bids/notifyBidPaymentCheck';
+import { recordTrackingEvent } from '../../application/tracking/recordEvent';
 import { CreateBidSchema } from '../../schemas/bidSchema';
 import { handleApiError } from '../../utils/errors';
 
@@ -85,6 +87,31 @@ export const generateClientBidPix = async (req: Request, res: Response): Promise
         });
     } catch (error: any) {
         handleApiError(res, error, 'Erro ao gerar PIX do lance', req);
+    }
+};
+
+export const notifyClientBidPaymentCheck = async (req: Request, res: Response): Promise<void> => {
+    const user = req.user as AuthPayload;
+    const bidId = req.params.id as string;
+    try {
+        const result = await notifyBidPaymentCheck({
+            bidId,
+            requesterUserId: user.userId
+        });
+        // Pixel: clique "Já paguei" do lance (funil + alerta já criado acima)
+        try {
+            await recordTrackingEvent({
+                userId: user.userId,
+                event: 'VERIFY_PAYMENT_CLICK',
+                entityType: 'bid',
+                entityId: bidId,
+                ipAddress: req.ip || req.socket.remoteAddress,
+                userAgent: req.headers['user-agent']
+            });
+        } catch { /* tracking nunca quebra o fluxo */ }
+        res.json({ success: true, notified: result.notified });
+    } catch (error: any) {
+        handleApiError(res, error, 'Erro ao registrar verificação de pagamento do lance', req);
     }
 };
 

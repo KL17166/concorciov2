@@ -1,0 +1,564 @@
+{
+  "produtos": [
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": null,
+      "category": "educacao",
+      "description": "MBA Executivo em Gestão de Negócios de 18 meses presencial na FGV. Com o consórcio você dilui o investimento de R$78 mil em parcelas sem juros e garante sua vaga sem descapitalizar a empresa.",
+      "imageUrl": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&q=80",
+        "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800&q=80",
+        "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&q=80"
+      ],
+      "isFeatured": false,
+      "isPopular": true,
+      "maxDuration": 60,
+      "minDuration": 24,
+      "model": null,
+      "name": "Consórcio MBA Executivo FGV Gestão de Negócios",
+      "price": 78000,
+      "specs": {
+        "cobertura": "SP, RJ, MG, PR, RS",
+        "descricao": "MBA Executivo em Gestão de Negócios, 18 meses, presencial",
+        "duracao": "18 meses",
+        "observacoes": "Inclui material didático digital. Parceria com FGV."
+      },
+      "type": "SERVICO",
+      "year": null
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": null,
+      "category": "viagem",
+      "description": "Pacote internacional Europa Clássica para 2 pessoas com 14 dias, aéreo + hotéis + passeios. O consórcio permite planejar a viagem dos sonhos em parcelas leves e embarcar contemplado sem usar crédito caro.",
+      "imageUrl": "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80",
+        "/img/servicos/europa-paris.jpg",
+        "/img/servicos/europa-roma.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": true,
+      "maxDuration": 60,
+      "minDuration": 24,
+      "model": null,
+      "name": "Consórcio Viagem Internacional Europa Clássica 14 Dias",
+      "price": 45000,
+      "specs": {
+        "cobertura": "Nacional - embarque GRU, GIG, CNF",
+        "descricao": "Pacote 14 dias Lisboa, Paris, Roma, aéreo + hotel 4 estrelas + passeios",
+        "duracao": "14 dias de viagem, uso em até 24 meses",
+        "observacoes": "Inclui seguro viagem e taxas. Parceria com operadora premium."
+      },
+      "type": "SERVICO",
+      "year": null
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": null,
+      "category": "saude",
+      "description": "Cobertura para cirurgias eletivas como bariátrica, ortopédica e plástica reparadora com rede premium. Pague seu procedimento com consórcio, sem juros abusivos e com livre escolha de clínica credenciada.",
+      "imageUrl": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80",
+        "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=800&q=80",
+        "https://images.unsplash.com/photo-1584820927498-cfe5211fd8bf?w=800&q=80"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 48,
+      "minDuration": 24,
+      "model": null,
+      "name": "Consórcio Cirurgia Eletiva Premium + Pós-Operatório",
+      "price": 35000,
+      "specs": {
+        "cobertura": "SP, RJ, MG, SC, PR, DF, BA",
+        "descricao": "Cirurgias eletivas, internação premium e pós-operatório fisioterápico",
+        "duracao": "Procedimento + 6 meses acompanhamento",
+        "observacoes": "Rede credenciada auditada. Inclui exames pré-operatórios."
+      },
+      "type": "SERVICO",
+      "year": null
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": null,
+      "category": "consultoria",
+      "description": "Projeto de consultoria empresarial estratégica para PMEs com diagnóstico, plano de crescimento e 6 meses de acompanhamento. Invista com consórcio e pague a transformação da empresa de forma parcelada e planejada.",
+      "imageUrl": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&q=80",
+        "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=800&q=80",
+        "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&q=80"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 60,
+      "minDuration": 24,
+      "model": null,
+      "name": "Consórcio Consultoria Empresarial Estratégica PME",
+      "price": 55000,
+      "specs": {
+        "cobertura": "Nacional - atendimento híbrido presencial + online",
+        "descricao": "Diagnóstico 360, planejamento estratégico e implementação 6 meses",
+        "duracao": "6 meses de projeto + 3 meses suporte",
+        "observacoes": "Consultores certificados. Inclui relatório executivo e KPIs."
+      },
+      "type": "SERVICO",
+      "year": null
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": null,
+      "category": "outros",
+      "description": "Reforma residencial completa até 100m² com projeto arquitetônico, elétrica, hidráulica e acabamento premium. Com consórcio você reforma agora e paga em até 60 meses sem comprometer a reserva.",
+      "imageUrl": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80",
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
+        "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80"
+      ],
+      "isFeatured": true,
+      "isPopular": false,
+      "maxDuration": 60,
+      "minDuration": 24,
+      "model": null,
+      "name": "Consórcio Reforma Residencial Completa Premium 100m²",
+      "price": 95000,
+      "specs": {
+        "cobertura": "SP, RJ, MG, PR, SC, RS, DF, GO",
+        "descricao": "Reforma completa 100m² com projeto, obra civil e acabamento premium",
+        "duracao": "3 a 6 meses de obra",
+        "observacoes": "Inclui ART/RRT, cronograma e garantia 12 meses."
+      },
+      "type": "SERVICO",
+      "year": null
+    },
+    {
+      "name": "Consórcio Intercâmbio Canadá 6 Meses com Curso e Acomodação",
+      "description": "Intercâmbio de 6 meses no Canadá com curso de inglês, acomodação, seguro e passagem. Com o consórcio você planeja o investimento de R$62 mil em parcelas mensais e embarca sem recorrer a empréstimo caro.",
+      "type": "SERVICO",
+      "category": "educacao",
+      "price": 62000,
+      "imageUrl": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80",
+        "https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=800&q=80",
+        "/img/servicos/intercambio-canada.jpg"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "Curso inglês 24 semanas + acomodação + seguro viagem + passagem",
+        "cobertura": "Nacional - embarque GRU, GIG, BSB",
+        "duracao": "6 meses",
+        "observacoes": "Inclui visto, material e suporte local. Parceria com agência certificada."
+      }
+    },
+    {
+      "name": "Consórcio Cruzeiro Caribe 7 Noites com Aéreo e All Inclusive",
+      "description": "Cruzeiro de 7 noites pelo Caribe Sul com aéreo ida e volta, todas as refeições e traslados. Pague em consórcio em até 60 meses e viaje contemplado com conforto premium sem juros.",
+      "type": "SERVICO",
+      "category": "viagem",
+      "price": 32000,
+      "imageUrl": "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800&q=80",
+        "https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800&q=80",
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "descricao": "Cruzeiro 7 noites MSC, cabine externa, aéreo + traslados + refeições",
+        "cobertura": "Nacional - saída Fortaleza / GRU para Fort-de-France",
+        "duracao": "9 dias total com aéreo",
+        "observacoes": "Taxas portuárias inclusas. Sem necessidade de visto americano."
+      }
+    },
+    {
+      "name": "Consórcio Tratamento Odontológico Implantes Completos",
+      "description": "Tratamento odontológico completo com implantes, próteses e acompanhamento de 12 meses. Use o consórcio saúde para parcelar R$28 mil sem juros e recuperar seu sorriso em clínica premium.",
+      "type": "SERVICO",
+      "category": "saude",
+      "price": 28000,
+      "imageUrl": "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&q=80",
+        "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=800&q=80",
+        "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&q=80"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 48,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "Implantes dentários completos + próteses + limpeza + acompanhamento",
+        "cobertura": "SP, RJ, MG, PR, SC, RS, DF",
+        "duracao": "6 a 12 meses de tratamento",
+        "observacoes": "Clínicas com certificação digital 3D. Garantia 5 anos implantes."
+      }
+    },
+    {
+      "name": "Consórcio Consultoria Jurídica Empresarial Anual",
+      "description": "Assessoria jurídica empresarial anual com contratos, compliance e contencioso preventivo. Com consórcio você garante 12 meses de proteção legal por parcelas fixas e evita custos surpresa.",
+      "type": "SERVICO",
+      "category": "consultoria",
+      "price": 40000,
+      "imageUrl": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80",
+        "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&q=80",
+        "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "Consultoria jurídica 12 meses, contratos, societário e trabalhista preventivo",
+        "cobertura": "Nacional - atendimento online + presencial SP/RJ",
+        "duracao": "12 meses renováveis",
+        "observacoes": "Inclui auditoria contratual e canal direto com advogados."
+      }
+    },
+    {
+      "name": "Consórcio Casamento Completo 100 Convidados Premium",
+      "description": "Casamento completo para 100 convidados com espaço, buffet, decoração, foto e DJ. Realize a festa dos sonhos de R$85 mil com consórcio, pagando antes ou depois da cerimônia sem endividamento.",
+      "type": "SERVICO",
+      "category": "outros",
+      "price": 85000,
+      "imageUrl": "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80",
+        "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&q=80",
+        "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=800&q=80"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "Espaço + buffet 100 pax + decoração floral + foto/vídeo + DJ + cerimonial",
+        "cobertura": "SP, RJ, MG, PR, SC, Curitiba e região",
+        "duracao": "Evento único + 12 meses planejamento",
+        "observacoes": "Fornecedores premium inclusos. Parcela acessível pré e pós-festa."
+      }
+    },
+    {
+      "name": "Consórcio Brevê Piloto Privado com Horas de Voo",
+      "description": "Formação completa de piloto privado com curso teórico, 46 horas de voo, CMA e taxas ANAC. Com o consórcio você financia os R$68 mil da formação em parcelas e voa sem depender de crédito caro.",
+      "type": "SERVICO",
+      "category": "educacao",
+      "price": 68000,
+      "imageUrl": "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=80",
+        "/img/servicos/breve-cockpit.jpg",
+        "/img/servicos/breve-cessna.jpg"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "Teórico EAD + 46h voo C152/C172 + CMA + bancas ANAC",
+        "cobertura": "SP, MG, PR, GO, MT - aeroclubes parceiros",
+        "duracao": "6 a 18 meses",
+        "observacoes": "Inclui fone e material. Hora excedente à parte."
+      }
+    },
+    {
+      "name": "Consórcio Lua de Mel Maldivas 7 Dias All Inclusive",
+      "description": "Lua de mel nas Maldivas com 7 dias, bangalô sobre as águas, all inclusive e aéreo. Planeje com consórcio em até 60 meses e viaje contemplado para o paraíso sem juros.",
+      "type": "SERVICO",
+      "category": "viagem",
+      "price": 58000,
+      "imageUrl": "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&q=80",
+        "/img/servicos/maldivas-ilha.jpg",
+        "/img/servicos/maldivas-resort.jpg"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "descricao": "7 dias Maldivas, bangalô, all inclusive + aéreo + traslados",
+        "cobertura": "Nacional - embarque GRU/GIG",
+        "duracao": "7 dias, uso em até 24 meses",
+        "observacoes": "Inclui seguro viagem e jantar romântico. Resort 5 estrelas."
+      }
+    },
+    {
+      "name": "Consórcio Fertilização In Vitro FIV Completa",
+      "description": "Ciclo completo de FIV com consultas, medicamentos, punção, laboratório ICSI e transferência. Pague os R$38 mil do tratamento com consórcio em parcelas fixas e realize o sonho sem descapitalizar a família.",
+      "type": "SERVICO",
+      "category": "saude",
+      "price": 38000,
+      "imageUrl": "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=800&q=80",
+        "https://images.unsplash.com/photo-1493894473891-10fc1e5dbd22?w=800&q=80",
+        "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&q=80"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 48,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "FIV com ICSI, cultivo a blastocisto, transferência + medicamentos",
+        "cobertura": "SP, RJ, MG, PR, RS, DF, BA",
+        "duracao": "2 a 4 meses por ciclo",
+        "observacoes": "Clínicas SBRA. PGT-A e criopreservação opcionais à parte."
+      }
+    },
+    {
+      "name": "Consórcio Projeto Arquitetura + Acompanhamento de Obra",
+      "description": "Projeto arquitetônico completo com executivo, 3D e 6 meses de acompanhamento de obra. Tire seu projeto do papel pagando com consórcio em parcelas planejadas.",
+      "type": "SERVICO",
+      "category": "consultoria",
+      "price": 48000,
+      "imageUrl": "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&q=80",
+        "/img/servicos/arquitetura-fachada.jpg",
+        "/img/servicos/obra-guindaste.jpg"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "Projeto + executivo + 3D + 6 meses acompanhamento com RRT",
+        "cobertura": "SP, RJ, MG, PR, SC - presencial e online",
+        "duracao": "3 a 8 meses",
+        "observacoes": "Arquitetos CAU. Inclui 3 revisões e memorial descritivo."
+      }
+    },
+    {
+      "name": "Consórcio Formatura Medicina Festa + Viagem",
+      "description": "Formatura de medicina completa com festa, becas, fotografia e viagem da turma. Com consórcio de R$105 mil a comissão organiza tudo sem rateio surpresa e cada formando paga sua cota em parcelas.",
+      "type": "SERVICO",
+      "category": "outros",
+      "price": 105000,
+      "imageUrl": "/img/servicos/formatura-turma.jpg",
+      "imageUrls": [
+        "/img/servicos/formatura-turma.jpg",
+        "/img/servicos/formatura-beca.jpg",
+        "/img/servicos/formatura-diploma.jpg"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "Festa formatura + becas + foto/vídeo + viagem da turma",
+        "cobertura": "Nacional - capitais e interior",
+        "duracao": "Evento + 12 meses organização",
+        "observacoes": "Gestão da comissão inclusa. Cota individual por formando."
+      }
+    },
+    {
+      "name": "Consórcio MBA Data Science e Inteligência Artificial",
+      "description": "MBA em Data Science e IA com 18 meses, aulas híbridas e projeto aplicado na sua empresa. Parcele os R$72 mil com consórcio e lidere a transformação digital sem descapitalizar o negócio.",
+      "type": "SERVICO",
+      "category": "educacao",
+      "price": 72000,
+      "imageUrl": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&q=80",
+        "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=800&q=80",
+        "/img/servicos/datascience-python.jpg"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "MBA 18 meses híbrido, Python, ML, IA generativa + TCC aplicado",
+        "cobertura": "Nacional - polos SP, RJ, MG, PR, RS + online",
+        "duracao": "18 meses",
+        "observacoes": "Inclui cloud labs e certificação internacional."
+      }
+    },
+    {
+      "name": "Consórcio Disney Orlando Família 10 Dias",
+      "description": "Pacote Disney Orlando para 4 pessoas com 10 dias, aéreo, hotel e ingressos dos parques. Com consórcio de R$55 mil a família viaja contemplada e paga a magia em parcelas leves.",
+      "type": "SERVICO",
+      "category": "viagem",
+      "price": 55000,
+      "imageUrl": "https://images.unsplash.com/photo-1498931299472-f7a63a5a1cfa?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1498931299472-f7a63a5a1cfa?w=800&q=80",
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=800&q=80",
+        "/img/servicos/disney-castelo.jpg"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "descricao": "10 dias Orlando, aéreo + hotel + 5 dias parques Disney/Universal",
+        "cobertura": "Nacional - embarque GRU, GIG, CNF, BSB",
+        "duracao": "10 dias, uso em até 24 meses",
+        "observacoes": "Inclui seguro, chip e assessoria de visto."
+      }
+    },
+    {
+      "name": "Consórcio Cirurgia Refrativa + Check-up Executivo",
+      "description": "Cirurgia refrativa a laser com check-up executivo completo em hospital premium. Pague os R$22 mil com consórcio saúde em parcelas sem juros e diga adeus aos óculos.",
+      "type": "SERVICO",
+      "category": "saude",
+      "price": 22000,
+      "imageUrl": "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=800&q=80",
+        "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=800&q=80",
+        "/img/servicos/refrativa-exame.jpg"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 48,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "Refrativa bilateral + check-up 40+ exames + retorno 12 meses",
+        "cobertura": "SP, RJ, MG, PR, SC, RS, DF",
+        "duracao": "30 dias + 12 meses acompanhamento",
+        "observacoes": "Tecnologia smile/lasik. Exames pré-operatórios inclusos."
+      }
+    },
+    {
+      "name": "Consórcio Consultoria Marketing Digital 12 Meses",
+      "description": "Assessoria de marketing digital por 12 meses com tráfego, conteúdo e CRM. Escale as vendas da empresa pagando a consultoria com consórcio em parcelas fixas.",
+      "type": "SERVICO",
+      "category": "consultoria",
+      "price": 36000,
+      "imageUrl": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
+        "/img/servicos/marketing-laptop.jpg",
+        "/img/servicos/marketing-social.jpg"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "Gestão tráfego + conteúdo + CRM + dashboards, 12 meses",
+        "cobertura": "Nacional - atendimento remoto + imersão presencial",
+        "duracao": "12 meses",
+        "observacoes": "Inclui setup analytics e relatório mensal de ROI."
+      }
+    },
+    {
+      "name": "Consórcio Evento Corporativo 500 Pessoas Completo",
+      "description": "Evento corporativo para 500 pessoas com espaço, buffet, palco, som, luz e transmissão. Realize a convenção de R$110 mil com consórcio e dilua o investimento sem estourar o budget anual.",
+      "type": "SERVICO",
+      "category": "outros",
+      "price": 110000,
+      "imageUrl": "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80",
+      "imageUrls": [
+        "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80",
+        "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80",
+        "/img/servicos/evento-plateia.jpg"
+      ],
+      "brand": null,
+      "model": null,
+      "year": null,
+      "minDuration": 24,
+      "maxDuration": 60,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "descricao": "Espaço 500 pax + buffet + palco/som/luz + streaming + staff",
+        "cobertura": "SP, RJ, MG, PR, SC, RS, DF",
+        "duracao": "Evento + 6 meses produção",
+        "observacoes": "Produtora dedicada. Patrocínios e estandes opcionais."
+      }
+    }
+  ]
+}

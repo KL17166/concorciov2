@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>DEV Fotos Honda — alinhamento</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #14181d; color: #eee; }
+  header { background: #263238; border-bottom: 3px solid #FF6D00; padding: 12px 20px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
+  header h1 { font-size: 18px; margin: 0; }
+  header h1 b { color: #FF6D00; }
+  header .hint { font-size: 12px; color: #aaa; }
+  #layout { display: flex; min-height: calc(100vh - 57px); }
+  aside { width: 300px; min-width: 300px; background: #1c2228; border-right: 1px solid #333; padding: 12px; overflow-y: auto; max-height: calc(100vh - 57px); position: sticky; top: 57px; }
+  aside input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #444; background: #111; color: #eee; margin-bottom: 10px; }
+  .model { padding: 8px 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; margin-bottom: 4px; }
+  .model:hover { background: #2a333b; }
+  .model.active { background: #2a333b; border-color: #FF6D00; }
+  .model .nm { font-size: 14px; font-weight: 600; }
+  .model .mt { font-size: 11px; color: #999; }
+  main { flex: 1; padding: 20px; max-width: 1100px; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .5px; color: #FFB74D; margin: 26px 0 10px; }
+  h2:first-child { margin-top: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .card { background: #1e262c; border: 2px solid #333; border-radius: 10px; overflow: hidden; position: relative; }
+  .card.cover { border-color: #FF6D00; }
+  .card img { width: 100%; height: 130px; object-fit: cover; display: block; background: #fff; cursor: zoom-in; }
+  .card .lb { font-size: 11px; padding: 6px 8px; word-break: break-all; color: #ccc; }
+  .card .lb small { color: #888; display: block; }
+  .card .ops { display: flex; gap: 4px; padding: 6px 8px 8px; flex-wrap: wrap; }
+  .card .ops button { flex: 1; min-width: 30px; padding: 5px 4px; font-size: 12px; border-radius: 6px; border: 1px solid #555; background: #2c363e; color: #eee; cursor: pointer; }
+  .card .ops button:hover { border-color: #FF6D00; }
+  .card .ops button.star.on { background: #FF6D00; border-color: #FF6D00; color: #fff; }
+  .badge { position: absolute; top: 6px; left: 6px; background: #FF6D00; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+  .badge.n { background: rgba(0,0,0,.65); }
+  .dup { background: #3a1515; border: 1px solid #a33; border-radius: 10px; padding: 12px; margin-bottom: 12px; font-size: 13px; }
+  .dup button { margin: 4px 6px 0 0; padding: 5px 10px; border-radius: 6px; border: 1px solid #a33; background: #5a1d1d; color: #fff; cursor: pointer; }
+  #savebar { position: sticky; bottom: 0; background: #1c2228; border-top: 2px solid #FF6D00; padding: 12px 20px; display: flex; gap: 12px; align-items: center; }
+  #savebar button.big { background: linear-gradient(135deg,#FF6D00,#FF8F00); border: none; color: #fff; font-weight: 800; font-size: 15px; padding: 12px 28px; border-radius: 10px; cursor: pointer; }
+  #msg { font-size: 13px; }
+  .up { border: 2px dashed #555; border-radius: 10px; padding: 16px; text-align: center; }
+  .up input { margin-top: 8px; color: #eee; }
+  .remote img { height: 110px; }
+  a { color: #FFB74D; }
+  #viewer { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: none; align-items: center; justify-content: center; z-index: 50; flex-direction: column; gap: 10px; padding: 20px; }
+  #viewer img { max-width: 92vw; max-height: 84vh; object-fit: contain; background: #fff; border-radius: 8px; }
+  #viewer .cap { color: #fff; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>DEV <b>Fotos Honda</b> — alinhamento por modelo</h1>
+  <span class="hint">1ª foto da galeria = capa do app · salva direto no MOTO.json · front: :3001 · aqui: :3002</span>
+</header>
+<div id="layout">
+  <aside>
+    <input id="q" placeholder="Buscar modelo… (ex: 750)" oninput="renderList()">
+    <div id="list"></div>
+  </aside>
+  <main id="main"><p style="color:#888">Escolhe um modelo à esquerda. Só aparecem as fotos extraídas <b>desse</b> modelo.</p></main>
+</div>
+<div id="viewer" onclick="this.style.display='none'"><img id="vimg"><div class="cap" id="vcap"></div></div>
+
+<script>
+let MODELS = [], CUR = null, ORDER = [];
+const $ = s => document.querySelector(s);
+
+async function boot() {
+  MODELS = await (await fetch('/api/models')).json();
+  renderList();
+  const slug = new URLSearchParams(location.search).get('slug');
+  if (slug && MODELS.some(m => m.slug === slug)) openModel(slug);
+}
+function renderList() {
+  const q = ($('#q').value || '').toLowerCase();
+  $('#list').innerHTML = MODELS
+    .filter(m => !q || m.name.toLowerCase().includes(q) || m.slug.includes(q))
+    .map(m => `<div class="model ${CUR===m.slug?'active':''}" onclick="openModel('${m.slug}')">
+      <div class="nm">${m.name}</div>
+      <div class="mt">${m.slug} · catálogo: ${m.galleryCount} · extraídas: ${m.localCount} · R$ ${Number(m.price).toLocaleString('pt-BR')}</div>
+    </div>`).join('');
+}
+async function openModel(slug) {
+  CUR = slug;
+  const d = await (await fetch('/api/model?slug=' + encodeURIComponent(slug))).json();
+  if (d.error) { alert(d.error); return; }
+  ORDER = [...(d.entry.imageUrls || [])];
+  renderList();
+  const inGal = new Set(ORDER);
+  const avail = d.files.filter(f => !inGal.has(f.url));
+  const brl = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  $('#main').innerHTML = `
+    <h2>${d.entry.name} — R$ ${brl(d.entry.price)} ${d.siteCard ? `· site hoje: <b>${d.siteCard.price}</b>` : ''}</h2>
+    <div class="hint" style="color:#888;font-size:12px;margin-bottom:10px">slug: ${slug} · <a href="${d.siteDetail ? d.siteDetail.url : (d.siteCard ? d.siteCard.url : '#')}" target="_blank">abrir página oficial</a></div>
+    ${d.dups.length ? `<div class="dup">⚠️ <b>Arquivos byte-idênticos</b> (regra dura: repetida = deleta):<br>${d.dups.map(g => `md5 igual → ${g.map(n => `<button onclick="delFile('${n}')">excluir ${n}</button>`).join('')}`).join('<br>')}</div>` : ''}
+    <h2>Galeria atual no catálogo (${ORDER.length}) — setas reordenam, ★ = capa</h2>
+    <div class="grid" id="gal"></div>
+    <h2>Extraídas deste modelo — clique em + p/ adicionar (${avail.length})</h2>
+    <div class="grid" id="avl"></div>
+    <h2>Do meu PC — enviar p/ este modelo</h2>
+    <div class="up"><div>Escolhe uma ou mais fotos do computador (vão p/ a pasta do <b>${slug}</b>)</div>
+      <input type="file" id="pc" accept="image/*" multiple><br><br>
+      <button class="big" style="background:#37474F;border:none;color:#fff;font-weight:700;padding:10px 22px;border-radius:8px;cursor:pointer" onclick="upload()">Enviar</button>
+      <span id="upmsg" style="font-size:12px;color:#aaa"></span></div>
+    ${(d.siteDetail && d.siteDetail.gallery.length) ? `<h2>Candidatas do site oficial (${d.siteDetail.gallery.length}) — peça p/ baixar as que gostar</h2>
+    <div class="grid">${d.siteDetail.gallery.map(g => `<div class="card remote"><img src="${g.src}" loading="lazy" onerror="this.style.opacity=.25" onclick="zoom('${g.src}','${(g.alt||'').replace(/'/g,'')}')"><div class="lb">${g.alt || ''}<small>${g.src.split('/').pop().slice(0,60)}</small></div><div class="ops"><button onclick="navigator.clipboard.writeText('${g.src}');this.textContent='copiado!'">copiar URL</button></div></div>`).join('')}</div>` : ''}
+    <div id="savebar" style="position:static;border:2px solid #FF6D00;border-radius:12px;margin-top:24px">
+      <button class="big" onclick="save()">💾 Salvar alinhamento no MOTO.json</button>
+      <span id="msg"></span>
+    </div>`;
+  paintGal(d); paintAvl(d, avail);
+  window._D = d;
+}
+function paintGal(d) {
+  $('#gal').innerHTML = ORDER.map((url, i) => {
+    const f = (d.files.find(x => x.url === url)) || { name: url.split('/').pop(), bytes: 0 };
+    return `<div class="card ${i===0?'cover':''}">
+      ${i===0?'<span class="badge">CAPA</span>':`<span class="badge n">${i+1}</span>`}
+      <img src="${url}" loading="lazy" onclick="zoom('${url}','${f.name}')">
+      <div class="lb">${f.name}<small>${f.bytes ? (f.bytes/1024).toFixed(0)+' KB' : 'URL externa'}</small></div>
+      <div class="ops">
+        <button onclick="mv(${i},-1)" ${i===0?'disabled':''}>◀</button>
+        <button onclick="mv(${i},1)" ${i===ORDER.length-1?'disabled':''}>▶</button>
+        <button class="star ${i===0?'on':''}" onclick="mkCover(${i})">★</button>
+        <button onclick="rm(${i})">✕</button>
+      </div></div>`;
+  }).join('') || '<p style="color:#888">Galeria vazia — adiciona das extraídas abaixo.</p>';
+}
+function paintAvl(d, avail) {
+  $('#avl').innerHTML = avail.map(f => `<div class="card">
+    <img src="${f.url}" loading="lazy" onclick="zoom('${f.url}','${f.name}')">
+    <div class="lb">${f.name}<small>${(f.bytes/1024).toFixed(0)} KB</small></div>
+    <div class="ops"><button onclick="add('${f.url}')">+ adicionar</button></div></div>`).join('')
+    || '<p style="color:#888">Nada fora da galeria — tudo já está acima, ou envia do PC.</p>';
+}
+function mv(i, dir) { const j = i + dir; if (j < 0 || j >= ORDER.length) return; [ORDER[i], ORDER[j]] = [ORDER[j], ORDER[i]]; paintGal(window._D); }
+function mkCover(i) { const [x] = ORDER.splice(i, 1); ORDER.unshift(x); paintGal(window._D); }
+function rm(i) { ORDER.splice(i, 1); openModel(CUR); }
+function add(url) { ORDER.push(url); openModel(CUR); }
+function zoom(src, cap) { $('#vimg').src = src; $('#vcap').textContent = cap; $('#viewer').style.display = 'flex'; }
+async function delFile(name) {
+  if (!confirm('Excluir o arquivo ' + name + ' do disco?')) return;
+  const r = await (await fetch('/api/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: name }) })).json();
+  alert(r.deleted ? 'Excluído: ' + r.deleted : r.error);
+  openModel(CUR);
+}
+async function upload() {
+  const inp = $('#pc');
+  if (!inp.files.length) { $('#upmsg').textContent = 'escolhe ao menos 1 arquivo'; return; }
+  const fd = new FormData();
+  for (const f of inp.files) fd.append('f', f, f.name);
+  $('#upmsg').textContent = 'enviando…';
+  const r = await (await fetch('/api/upload?slug=' + encodeURIComponent(CUR), { method: 'POST', body: fd })).json();
+  if (r.saved && r.saved.length) { for (const s of r.saved) ORDER.push(s.url); $('#upmsg').textContent = r.saved.length + ' enviada(s)!'; openModel(CUR); }
+  else { $('#upmsg').textContent = 'falhou: ' + (r.error || '?'); }
+}
+async function save() {
+  $('#msg').textContent = 'salvando…';
+  const r = await (await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: CUR, imageUrls: ORDER }) })).json();
+  if (r.ok) { $('#msg').innerHTML = `✅ salvo! capa = <b>${r.imageUrl}</b> (${r.total} fotos)`; }
+  else { $('#msg').innerHTML = `❌ <b>${r.error}</b><br>${(r.offenders || []).join('<br>')}`; }
+}
+boot();
+</script>
+</body>
+</html>

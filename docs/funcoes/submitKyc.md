@@ -1,0 +1,14 @@
+# submitKyc
+- **Arquivo:** server-consorcio/src/application/kyc/submitKyc.ts:11
+- **O que faz:** Envia os documentos do cliente para análise, marcando o KYC como SUBMITTED.
+- **O que ativa ela:** `submitClientKyc` (kycApiController, valida body via `SubmitKycSchema`) — POST /api/kyc/submit
+- **Entradas:**
+  - `userId: string` (do JWT); `documentFrontUrl`, `documentBackUrl`, `selfieUrl: string` (URLs após upload)
+  - Validações: 404 usuário inexistente; 409 se `kycStatus` já é APPROVED (não resubmete)
+- **Saídas:**
+  - Sucesso: `{ success: true, message: 'Documentos enviados…', kycStatus: 'SUBMITTED' }`
+  - Erros: 404 usuário não encontrado; 409 KYC já aprovado; 400 do schema (documentos incompletos, no controller)
+- **Regras/efeitos:**
+  - Sem transação: um `user.update` (documentos + SUBMITTED + limpa rejectReason) — permite reenvio após REJECTED
+  - Tabelas: `user` (leitura de `kycStatus` + update)
+  - Side-effects: `logger.info` do envio; sem side-effect externo

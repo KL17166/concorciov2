@@ -28,7 +28,8 @@
 
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
-    <link rel="stylesheet" href="/css/admin-design-system.css">
+    <link rel="stylesheet" href="/css/admin-design-system.css?v=20260923i">
+    <link rel="stylesheet" href="/css/ops-queue.css?v=20260923f">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -261,7 +262,7 @@
         .sidebar-header {
             padding: 1.5rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            background: #1e293b;
         }
 
         .sidebar-header h4 {
@@ -319,9 +320,9 @@
         }
 
         .sidebar-nav a.active {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            background: rgba(255, 255, 255, 0.12);
             color: white;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            box-shadow: none;
         }
 
         .sidebar-nav a i {
@@ -423,34 +424,15 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
         }
 
-        .stat-card.gradient-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-        }
-
-        .stat-card.gradient-success {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            border: none;
-        }
-
-        .stat-card.gradient-warning {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-            border: none;
-        }
-
-        .stat-card.gradient-danger {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-            border: none;
-        }
-
+        .stat-card.gradient-primary,
+        .stat-card.gradient-success,
+        .stat-card.gradient-warning,
+        .stat-card.gradient-danger,
         .stat-card.gradient-info {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
-            border: none;
+            background: var(--bg-secondary);
+            background-image: none;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
         }
 
         /* Alerts */
@@ -497,13 +479,28 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-            border: none;
+            background: #1e293b;
+            background-image: none;
+            border: 1px solid #1e293b;
+        }
+
+        [data-theme="dark"] .btn-primary {
+            background: #e2e8f0;
+            background-image: none;
+            border-color: #e2e8f0;
+            color: #0f172a;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+            background: #0f172a;
+            border-color: #0f172a;
+            transform: none;
+            box-shadow: none;
+        }
+
+        [data-theme="dark"] .btn-primary:hover {
+            background: #cbd5e1;
+            border-color: #cbd5e1;
         }
 
         /* Responsive */
@@ -535,7 +532,8 @@
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            background: #475569;
+            background-image: none;
             display: flex;
             align-items: center;
             justify-content: center;

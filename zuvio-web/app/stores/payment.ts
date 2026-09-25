@@ -87,8 +87,33 @@ export const usePaymentStore = defineStore('payment', {
       }
     },
 
-    async generateBoleto(
-      installmentOrId: Installment | string,
+    /**
+     * 1 PIX combinado somando N parcelas (adesão, do mês, antecipações).
+     * items: [{ number, idTokenPay }] — o backend valida dono, soma e cobra o total.
+     */
+    async generateBatchPix(
+      subscriptionId: string,
+      items: Array<{ number: number; idTokenPay: string }>
+    ): Promise<any | null> {
+      this.isLoading = true
+      const authStore = useAuthStore()
+      try {
+        const res = await $fetch<any>(`/api/payments/batch/pix`, {
+          method: 'POST',
+          headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+          body: { subscriptionId, items }
+        })
+        this.activePix = res
+        return res
+      } catch (err) {
+        console.error('Failed to generate batch PIX:', err)
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    async generateBoleto(      installmentOrId: Installment | string,
       maybeToken?: string
     ): Promise<BoletoPaymentResponse | null> {
       this.isLoading = true

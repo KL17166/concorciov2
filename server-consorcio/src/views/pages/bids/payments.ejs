@@ -1,0 +1,104 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar', { path: '/bids' }) %>
+        <div class="main-content">
+            <div class="top-bar">
+                <div>
+                    <h1 class="page-title"><i class="bi bi-trophy me-2"></i>Pagamentos de Lances</h1>
+                    <p class="text-muted mb-0">Vouchers PIX — Eldorado/G2G exigem confirmação manual na conta da operação</p>
+                </div>
+                <div class="top-bar-actions">
+                    <a href="/admin/bids" class="btn btn-outline-secondary shadow-sm" style="border-radius: 10px;"><i class="bi bi-arrow-left me-2"></i>Lances</a>
+                    <a href="/admin/notifications?type=BID_PAYMENT_CHECK" class="btn btn-outline-primary shadow-sm" style="border-radius: 10px;"><i class="bi bi-bell me-2"></i>Fila Já-paguei</a>
+                    <button class="theme-toggle" onclick="toggleTheme()"><i class="bi bi-moon-stars" id="themeIcon"></i></button>
+                </div>
+            </div>
+
+            <% if (typeof success_msg !== 'undefined' && success_msg && success_msg.length > 0) { %>
+                <div class="alert alert-success alert-dismissible fade show shadow-sm border-0" role="alert" style="border-radius: 12px;"><i class="bi bi-check-circle-fill me-2"></i><%= success_msg %><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+            <% } %>
+            <% if (typeof error_msg !== 'undefined' && error_msg && error_msg.length > 0) { %>
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0" role="alert" style="border-radius: 12px;"><i class="bi bi-exclamation-triangle-fill me-2"></i><%= error_msg %><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+            <% } %>
+
+            <div class="premium-info-card mb-4">
+                <div class="p-4 d-flex align-items-center gap-4 flex-wrap">
+                    <div><div class="info-label">Aguardando confirmação</div><div class="fw-bold" style="font-size:1.8rem; color:#f59e0b;"><%= pendingCount %></div></div>
+                    <div class="ms-auto d-flex gap-2 flex-wrap">
+                        <a href="/admin/bids/payments?status=ACTIVE" class="btn btn-sm <%= status === 'ACTIVE' ? 'btn-primary' : 'btn-outline-secondary' %>">Pendentes</a>
+                        <a href="/admin/bids/payments?status=PAID" class="btn btn-sm <%= status === 'PAID' ? 'btn-primary' : 'btn-outline-secondary' %>">Pagos</a>
+                        <a href="/admin/bids/payments?status=EXPIRED" class="btn btn-sm <%= status === 'EXPIRED' ? 'btn-primary' : 'btn-outline-secondary' %>">Expirados</a>
+                        <a href="/admin/bids/payments?status=CANCELLED" class="btn btn-sm <%= status === 'CANCELLED' ? 'btn-primary' : 'btn-outline-secondary' %>">Cancelados</a>
+                    </div>
+                </div>
+                <form method="GET" action="/admin/bids/payments" class="px-4 pb-3 d-flex gap-2 flex-wrap align-items-end">
+                    <input type="hidden" name="status" value="<%= status %>">
+                    <div><label class="form-label">Busca</label><input name="search" value="<%= typeof search!=='undefined'?search:'' %>" class="form-control form-control-sm" placeholder="nome, email, CPF, voucher..." style="min-width:220px;"></div>
+                    <div><label class="form-label">Gateway</label><select name="gateway" class="form-select form-select-sm"><option value="">Todas</option><option value="eldorado" <%= (typeof gateway!=='undefined'&&gateway==='eldorado')?'selected':'' %>>eldorado</option><option value="g2g" <%= (typeof gateway!=='undefined'&&gateway==='g2g')?'selected':'' %>>g2g</option><option value="pixgo" <%= (typeof gateway!=='undefined'&&gateway==='pixgo')?'selected':'' %>>pixgo</option><option value="sandbox" <%= (typeof gateway!=='undefined'&&gateway==='sandbox')?'selected':'' %>>sandbox</option></select></div>
+                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="onlyClaimed" value="1" <%= (typeof onlyClaimed!=='undefined'&&onlyClaimed)?'checked':'' %>><label class="form-check-label">Só com “Já paguei”</label></div>
+                    <button class="btn btn-sm btn-primary" type="submit">Filtrar</button>
+                    <a class="btn btn-sm btn-outline-secondary" href="/admin/bids/payments?status=<%= status %>">Limpar</a>
+                </form>
+            </div>
+
+            <div class="card shadow-sm border-0" style="border-radius: 12px;">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead><tr><th>Voucher</th><th>Cliente</th><th>Contrato</th><th class="text-end">Valor</th><th>Gateway</th><th>Expira</th><th>Status</th><th class="text-end">Ação</th></tr></thead>
+                            <tbody>
+                                <% if (payments && payments.length > 0) { %>
+                                    <% payments.forEach(function(p) { %>
+                                        <% const _hl = (typeof focusPaymentId!=='undefined' && focusPaymentId===p.id); %>
+                                        <% const _exp = p.expiresAt ? new Date(p.expiresAt) : null; const _urgent = _exp && (_exp.getTime()-Date.now()) < 5*60*1000 && p.status==='ACTIVE'; %>
+                                        <tr class="<%= _hl?'voucher-hl':'' %>">
+                                            <td><span class="mono-code"><%= String(p.id).slice(0,8) %></span><br><small class="text-muted">lance <%= String(p.bidId).slice(0,8) %></small><br><small class="text-muted"><%= new Date(p.createdAt).toLocaleString('pt-BR') %></small></td>
+                                            <td><div class="fw-semibold"><%= p.bid.subscription.user.name %></div><div class="text-muted" style="font-size:0.8rem;"><%= p.bid.subscription.user.email %></div><div class="text-muted" style="font-size:0.75rem;"><span class="mono-code"><%= p.bid.subscription.user.cpf %></span></div>
+                                                <% if (p.paidClick) { %><span class="paidclick-badge"><i class="bi bi-hand-index"></i> Já paguei <%= new Date(p.paidClick.at).toLocaleString('pt-BR') %><%= p.paidClick.count>1 ? ' ('+p.paidClick.count+'x)' : '' %></span><% } %>
+                                            </td>
+                                            <td><%= p.bid.subscription.plan.product.name %><br><small class="text-muted"><%= p.bid.subscription.groupNumber||'—' %>/<%= p.bid.subscription.quotaNumber||'—' %></small></td>
+                                            <td class="text-end fw-bold">R$ <%= Number(p.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></td>
+                                            <td><span class="mono-code"><%= p.provider %></span><br><small class="text-muted"><%= p.externalId||'' %></small></td>
+                                            <td class="<%= _urgent?'countdown-urgent':'' %>"><%= _exp ? _exp.toLocaleString('pt-BR') : '—' %><%= _urgent ? '<br><small>expira em <5min</small>' : '' %></td>
+                                            <td>
+                                                <% if (p.status === 'PAID') { %><span class="badge bg-success">PAGO</span>
+                                                <% } else if (p.status === 'ACTIVE') { %><span class="badge bg-warning text-dark">AGUARDANDO</span>
+                                                <% } else if (p.status === 'RESERVED') { %><span class="badge bg-info text-dark">EMITINDO</span>
+                                                <% } else { %><span class="badge bg-secondary"><%= p.status %></span><% } %>
+                                            </td>
+                                            <td class="text-end">
+                                                <% if (p.status === 'ACTIVE') { %>
+                                                    <form method="POST" action="/admin/bids/payments/<%= p.id %>/confirm" style="display:inline;" onsubmit="return confirm('Confirma que R$ <%= Number(p.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %> caiu na conta da operação? Confira extrato antes.');">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                        <button type="submit" class="btn btn-sm btn-success">Confirmar baixa</button>
+                                                    </form>
+                                                    <form method="POST" action="/admin/bids/payments/<%= p.id %>/refuse" style="display:inline;margin-top:4px;" onsubmit="var r=prompt('Motivo da recusa (mín. 8 caracteres):'); if(!r||r.trim().length<8){alert('Motivo obrigatório.');return false;} this.reason.value=r; return confirm('Recusar este voucher? O cliente poderá gerar novo PIX.');">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="reason" value="">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Recusar</button>
+                                                    </form>
+                                                <% } else if (p.status === 'PAID') { %>
+                                                    <form method="POST" action="/admin/bids/payments/<%= p.id %>/refund-request" style="display:inline;" onsubmit="var r=prompt('Motivo do estorno (mín. 8 caracteres):'); if(!r||r.trim().length<8){alert('Motivo obrigatório.');return false;} this.reason.value=r; return confirm('Pedir estorno? Exige confirmação de outro gerente.');">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="reason" value="">
+                                                        <button type="submit" class="btn btn-sm btn-outline-warning">Pedir estorno</button>
+                                                    </form>
+                                                    <form method="POST" action="/admin/bids/payments/<%= p.id %>/refund-confirm" style="display:inline;margin-top:4px;" onsubmit="var r=prompt('ID do estorno na gateway (providerRefundId):'); if(!r){alert('Obrigatório.');return false;} this.providerRefundId.value=r; return confirm('Confirmar estorno? Você NÃO pode ser quem pediu.');">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="providerRefundId" value="">
+                                                        <button type="submit" class="btn btn-sm btn-warning">Confirmar estorno</button>
+                                                    </form>
+                                                <% } else { %>—<% } %>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                <% } else { %>
+                                    <tr><td colspan="8" class="text-center text-muted py-4">Nenhum voucher neste filtro.</td></tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-muted mt-2" style="font-size:0.85rem;">Total: <%= total %> voucher(s). Página <%= pagination.page %> de <%= pagination.pages %>.</div>
+                    <% if (pagination.pages > 1) { %>
+                        <nav><ul class="pagination mt-2"><% for (let pg=1; pg<=pagination.pages; pg++) { %><li class="page-item <%= pg===pagination.page?'active':'' %>"><a class="page-link" href="<%= buildPageUrl(pg) %>"><%= pg %></a></li><% } %></ul></nav>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+<%- include('../../partials/footer') %>

@@ -17,7 +17,9 @@ export const CreateProductSchema = z.object({
     adminFeeRate: z.coerce.number().min(0).default(15.0),
     isFeatured: z.boolean().or(z.string()).optional().default(false),
     isPopular: z.boolean().or(z.string()).optional().default(false),
-    active: z.boolean().or(z.string()).optional().default(true)
+    active: z.boolean().or(z.string()).optional().default(true),
+    // Ordem de exibição no catálogo (menor aparece primeiro)
+    displayOrder: z.coerce.number().int().min(0).optional().default(0)
 });
 
 export type CreateProductDTO = z.infer<typeof CreateProductSchema>;

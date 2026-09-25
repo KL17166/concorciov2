@@ -1,0 +1,18 @@
+# createBid
+- **Arquivo:** server-consorcio/src/application/bids/createBid.ts:12
+- **O que faz:** Cria um lance PENDING para um contrato, após checar dono, adesão paga e valor.
+- **O que ativa ela:** `createClientBid` (bidsApiController, valida body via `CreateBidSchema`) — POST /api/bids
+- **Entradas:**
+  - `subscriptionId: string` — contrato precisa existir e ser do `requesterUserId`
+  - `requesterUserId: string` (do JWT)
+  - `type: 'FREE' | 'FIXED'`, `percentage: number`, `amount: number`
+  - Validações: 404 contrato inexistente; 403 não-dono; 400 contrato CANCELLED
+  - Validações: 403 se parcela 1 (adesão) não está PAID; 400 se `amount` diverge > R$ 0,05 do `creditValue * percentage / 100`
+- **Saídas:**
+  - Sucesso (cria com status PENDING): `{ id, type, percentage, amount, status, createdAt }`
+  - Erros: 404 contrato não encontrado; 403 acesso negado / adesão não paga; 400 contrato cancelado / valor inválido / lance PENDING ou APPROVED já existente
+- **Regras/efeitos:**
+  - Transação `Serializable`: `findFirst(PENDING,APPROVED)` + `bid.create` — impede lance duplicado concorrente
+  - Só um lance PENDING ou APPROVED por contrato por vez (APPROVED exige pagar ou cancelar antes de ofertar outro)
+  - Tabelas: `subscription` (leitura + installments nº 1), `bid` (leitura + insert)
+  - Side-effects: `logger.info` da criação; sem side-effect externo

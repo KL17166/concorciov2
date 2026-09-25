@@ -68,6 +68,7 @@ export const PRODUCT_CATEGORIES: { key: ProductTypeKey; label: string; subCatego
 export const DEFAULT_PRODUCTS: Product[] = [
   {
     id: 'prod_1',
+    displayOrder: 10,
     name: 'Honda CG 160 Titan',
     imageUrl: 'https://images.unsplash.com/photo-1558981852-426c6c22a060?w=800',
     imageUrls: [
@@ -108,6 +109,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
   },
   {
     id: 'prod_2',
+    displayOrder: 20,
     name: 'Yamaha MT-03 ABS',
     imageUrl: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=800',
     imageUrls: [
@@ -148,6 +150,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
   },
   {
     id: 'prod_3',
+    displayOrder: 30,
     name: 'Honda CB 500X ABS',
     imageUrl: 'https://images.unsplash.com/photo-1609630875171-b1321377ee65?w=800',
     imageUrls: [
@@ -187,6 +190,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
   },
   {
     id: 'prod_4',
+    displayOrder: 40,
     name: 'BMW G 310 GS',
     imageUrl: 'https://images.unsplash.com/photo-1599819811279-d5ad9cccf838?w=800',
     imageUrls: [
@@ -226,6 +230,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
   },
   {
     id: 'prod_5',
+    displayOrder: 50,
     name: 'Royal Enfield Hunter 350',
     imageUrl: 'https://images.unsplash.com/photo-1615172282427-9a57ef2d142e?w=800',
     imageUrls: [

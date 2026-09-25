@@ -35,14 +35,20 @@
                         let _d = {};
                         try { _d = a.details ? JSON.parse(a.details) : {}; } catch(e) {}
                         const _crit = a.severity === 'CRITICAL';
+                        const _kind = _d.kindLabel || _d.kind || (_d.bidId ? 'Lance' : '');
                     %>
-                    <div class="bell-alert-item <%= _crit ? 'crit' : '' %>" id="bell-alert-<%= a.id %>" onclick="openBellAlert('<%= a.id %>', '<%= _d.subscriptionId || '' %>')">
+                    <div class="bell-alert-item <%= _crit ? 'crit' : '' %>" id="bell-alert-<%= a.id %>" onclick="openBellAlert('<%= a.id %>', '<%= _d.subscriptionId || '' %>', '<%= _d.bidPaymentId || '' %>', '<%= _d.bidId || '' %>')">
                         <div class="bell-alert-icon <%= _crit ? 'crit' : '' %>">
                             <i class="bi <%= _crit ? 'bi-exclamation-octagon-fill' : 'bi-exclamation-triangle-fill' %>"></i>
                         </div>
                         <div class="bell-alert-body">
                             <div class="bell-alert-title"><%= a.title %></div>
                             <div class="bell-alert-msg"><%= a.message %></div>
+                            <div class="bell-chips">
+                                <% if (_kind) { %><span class="bell-chip"><%= _kind %><%= (_d.installmentNumber && _d.kind !== 'ADESAO') ? ' '+_d.installmentNumber : '' %></span><% } %>
+                                <% if (_d.amount != null) { %><span class="bell-chip amount">R$ <%= Number(_d.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></span><% } %>
+                                <% if (_d.provider) { %><span class="bell-chip"><%= _d.provider %></span><% } %>
+                            </div>
                             <div class="bell-alert-time"><i class="bi bi-clock me-1"></i><%= new Date(a.createdAt).toLocaleString('pt-BR') %></div>
                         </div>
                         <button type="button" class="bell-dismiss" title="Dispensar" onclick="event.stopPropagation(); markAlertAsRead('<%= a.id %>')">
@@ -55,55 +61,11 @@
                     <span>Nenhum aviso pendente.</span>
                 </div>
             </div>
+            <div class="bell-footer">
+                <a class="bell-see-all" href="/admin/notifications"><i class="bi bi-grid me-1"></i>Ver Central de Notificações</a>
+            </div>
         </div>
     </div>
-    <style>
-        .bell-wrap { position: relative; padding: 0.75rem 1rem 0.25rem 1rem; }
-        .bell-btn {
-            width: 100%; display: flex; align-items: center; gap: 0.6rem;
-            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
-            color: #fff; border-radius: 10px; padding: 0.55rem 0.8rem;
-            font-size: 0.88rem; font-weight: 600; cursor: pointer; position: relative;
-        }
-        .bell-btn:hover { background: rgba(255,255,255,0.15); }
-        .bell-badge {
-            margin-left: auto; min-width: 22px; height: 22px; padding: 0 6px;
-            border-radius: 11px; background: #ef4444; color: #fff;
-            font-size: 0.72rem; font-weight: 800;
-            display: inline-flex; align-items: center; justify-content: center;
-        }
-        .bell-dropdown {
-            position: absolute; top: calc(100% + 6px); left: 0.75rem;
-            width: 330px; max-height: 420px; overflow-y: auto;
-            background: var(--bg-secondary); border: 1px solid var(--border-color);
-            border-radius: 14px;
-            box-shadow: 0 16px 40px rgba(0,0,0,0.25);
-            z-index: 2000; padding: 0.5rem;
-        }
-        .bell-dropdown-head {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0.5rem 0.6rem; font-size: 0.9rem; color: var(--text-primary);
-        }
-        .bell-clear { background: none; border: none; color: #6366f1; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
-        .bell-list { display: flex; flex-direction: column; gap: 0.35rem; }
-        .bell-alert-item {
-            display: flex; gap: 0.6rem; padding: 0.6rem; border-radius: 10px;
-            cursor: pointer; border-left: 4px solid #f59e0b; background: rgba(245,158,11,0.06);
-        }
-        .bell-alert-item.crit { border-left-color: #ef4444; background: rgba(239,68,68,0.06); }
-        .bell-alert-item:hover { background: rgba(127,127,127,0.12); }
-        .bell-alert-icon { font-size: 1.2rem; color: #f59e0b; flex-shrink: 0; }
-        .bell-alert-icon.crit { color: #ef4444; }
-        .bell-alert-body { flex: 1; min-width: 0; }
-        .bell-alert-title { font-size: 0.82rem; font-weight: 800; color: var(--text-primary); }
-        .bell-alert-msg {
-            font-size: 0.76rem; color: var(--text-secondary); line-height: 1.4;
-            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-        }
-        .bell-alert-time { font-size: 0.7rem; color: var(--text-secondary); opacity: 0.75; margin-top: 2px; }
-        .bell-dismiss { background: none; border: none; color: var(--text-secondary); cursor: pointer; align-self: flex-start; padding: 2px; }
-        .bell-empty { text-align: center; color: var(--text-secondary); font-size: 0.82rem; padding: 1.2rem 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; align-items: center; }
-    </style>
     <script>
         (function() {
             var toggle = document.getElementById('bellToggle');
@@ -135,15 +97,28 @@
             else { badge.style.display = ''; badge.textContent = cur > 9 ? '9+' : String(cur); }
         }
 
-        function openBellAlert(id, subscriptionId) {
-            fetch('/admin/alerts/' + id + '/read', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'csrf-token': bellCsrf() }
-            }).finally(function() {
-                if (subscriptionId) window.location.href = '/admin/contracts/' + subscriptionId;
-                else window.location.href = '/admin/dashboard';
-            });
+        function openBellAlert(id, subscriptionId, bidPaymentId, bidId) {
+            if (bidPaymentId) { window.location.href = '/admin/bids/payments?paymentId=' + bidPaymentId + '&alertId=' + id; return; }
+            if (bidId) { window.location.href = '/admin/bids/' + bidId; return; }
+            if (subscriptionId) { window.location.href = '/admin/contracts/' + subscriptionId; return; }
+            window.location.href = '/admin/notifications?alertId=' + id;
         }
+
+        // Live leve: atualiza badge a cada 30s sem reload (SSE está em /admin/notifications/stream p/ a Central)
+        (function bellPoll() {
+            setInterval(function() {
+                fetch('/admin/notifications/unread-count', { headers: { 'Accept': 'application/json' } })
+                    .then(function(r) { if (!r.ok) return null; return r.json(); })
+                    .then(function(j) {
+                        if (!j) return;
+                        var badge = document.getElementById('bell-count-badge');
+                        if (!badge) return;
+                        if (!j.open || j.open <= 0) { badge.style.display = 'none'; return; }
+                        badge.style.display = '';
+                        badge.textContent = j.open > 9 ? '9+' : String(j.open);
+                    }).catch(function() {});
+            }, 30000);
+        })();
 
         function markAlertAsRead(alertId) {
             fetch('/admin/alerts/' + alertId + '/read', {
@@ -180,6 +155,7 @@
         <div class="nav-section">Operação</div>
         <% if (hasCapability('people.view')) { %><a href="/admin/people" class="<%= path === '/people' ? 'active' : '' %>"><i class="bi bi-people"></i><span>Pessoas e Contas</span></a><% } %>
         <% if (hasCapability('contracts.view')) { %><a href="/admin/contracts" class="<%= path === '/contracts' ? 'active' : '' %>"><i class="bi bi-file-earmark-text"></i><span>Contratos</span></a><% } %>
+        <% if (hasCapability('notifications.view')) { %><a href="/admin/notifications" class="<%= path === '/notifications' ? 'active' : '' %>"><i class="bi bi-bell"></i><span>Notificações</span></a><% } %>
         <% if (hasCapability('support.view')) { %><a href="/admin/tickets" class="<%= path === '/tickets' ? 'active' : '' %>"><i class="bi bi-headset"></i><span>Atendimentos</span></a><% } %>
         <% if (hasCapability('payments.view')) { %><a href="/admin/payments" class="<%= path === '/payments' ? 'active' : '' %>"><i class="bi bi-cash-coin"></i><span>Financeiro</span></a><% } %>
         <% if (hasCapability('bids.view')) { %><a href="/admin/bids" class="<%= path === '/bids' ? 'active' : '' %>"><i class="bi bi-trophy"></i><span>Lances</span></a><% } %>
@@ -187,6 +163,7 @@
         <div class="nav-section">Catálogo e análise</div>
         <% if (hasCapability('catalog.view')) { %><a href="/admin/products" class="<%= path === '/products' ? 'active' : '' %>"><i class="bi bi-box-seam"></i><span>Catálogo</span></a><% } %>
         <% if (hasCapability('reports.view')) { %><a href="/admin/reports" class="<%= path === '/reports' ? 'active' : '' %>"><i class="bi bi-bar-chart-line"></i><span>Relatórios</span></a><% } %>
+        <% if (hasCapability('reports.view')) { %><a href="/admin/tracking" class="<%= path === '/tracking' ? 'active' : '' %>"><i class="bi bi-crosshair"></i><span>Tracking</span></a><% } %>
 
         <div class="nav-section">Controle e segurança</div>
         <% if (hasCapability('compliance.view')) { %><a href="/admin/kyc" class="<%= path === '/kyc' ? 'active' : '' %>"><i class="bi bi-person-check"></i><span>Compliance / KYC</span></a><% } %>

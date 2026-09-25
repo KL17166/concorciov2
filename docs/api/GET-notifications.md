@@ -1,0 +1,15 @@
+# GET /api/notifications
+- **Ativado por:** sino/central de notificações do app
+  - BFF espelho: `zuvio-web/server/api/notifications/index.get.ts`
+  - Handler: `listNotifications` (prisma direto)
+- **Auth / rate-limit:** `authenticate` + `trackingLimiter`
+  - App: `generalLimiter` + `securityMiddleware`
+- **Request:** sem body nem params
+  - Dono via JWT (`userId`)
+- **O que o servidor retorna:**
+  - 200 `{ success: true, unreadCount, notifications: [{ id, type, title, message, read, createdAt }] }`
+  - Últimas 20, mais recentes primeiro
+  - 401 → não autenticado
+- **Efeitos:**
+  - Somente leitura (`notification` por `userId` + count de não lidas)
+  - Sem escrita

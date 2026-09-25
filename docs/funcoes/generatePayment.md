@@ -1,0 +1,16 @@
+# generatePayment
+- **Arquivo:** server-consorcio/src/application/payments/generatePayment.ts:19
+- **O que faz:** Gera cobrança PIX ou BOLETO de uma parcela, validando token HMAC, ordem de vencimento e endereço.
+- **O que ativa ela:** `generatePixPayment` — POST /api/payments/:installmentId/pix; `generateBoletoPayment` — POST /api/payments/:installmentId/boleto (ambos exigem `idTokenPay` via `GeneratePaymentSchema`)
+- **Entradas:**
+  - `installmentId: string` (params); `idTokenPay: string` (HMAC de subscriptionId+number+userId); `requesterUserId` (JWT); `method: PIX|BOLETO`; `anticipate?: boolean`
+  - Validações: 404 parcela inexistente; 403 não-dono ou token inválido; 400 parcela PAID
+  - Ordem: sem `anticipate`, só a primeira não-paga; com `anticipate`, exige adesão (nº 1) paga; BOLETO exige endereço completo
+- **Saídas:**
+  - Sucesso: `PaymentResult` da gateway (`provider`, `paymentId`, `qrCode`, `copyPaste`, `amount`, `requestedAmount`, `expirationDate`)
+  - Erros: 404/403/400 acima (controller responde via `handleApiError`)
+- **Regras/efeitos:**
+  - Valor via `calculateInstallmentValue(amount, number, nextIndex)`; cobrança via `PaymentFailoverService.executePaymentWithFailover`
+  - Registra tentativa: expira `paymentAttempt` ACTIVE anteriores e cria nova ACTIVE (best-effort, com try/catch)
+  - Tabelas: `installment`+`subscription`+`user` (leitura via repositório), `paymentAttempt` (expira + insert)
+  - Side-effects: cobrança real na gateway; `logger.warn` em token inválido

@@ -111,9 +111,17 @@ export const notifySubscriptionPaymentCheck = async (req: Request, res: Response
     const user = req.user as AuthPayload;
     try {
         const subscriptionId = req.params.subscriptionId as string;
+        const installmentId = (req.body?.installmentId as string) || undefined;
+        const installmentIds = Array.isArray(req.body?.installmentIds)
+            ? (req.body.installmentIds as unknown[]).filter((x): x is string => typeof x === 'string')
+            : undefined;
+        const batchId = (req.body?.batchId as string) || undefined;
         const result = await notifyPaymentCheck({
             subscriptionId,
-            requesterUserId: user.userId
+            requesterUserId: user.userId,
+            installmentId,
+            installmentIds,
+            batchId
         });
 
         res.json({ success: true, notified: result.notified });

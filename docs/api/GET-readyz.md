@@ -1,0 +1,15 @@
+# GET /readyz
+- **Ativado por:** sonda de readiness (K8s)
+  - Sem BFF espelho; fora do prefixo `/api`
+  - Handler inline em `src/app.ts:179`
+- **Auth / rate-limit:** pública, sem middlewares
+  - Sem `authenticate`, sem limiter, sem `securityMiddleware`
+- **Request:** sem params, query ou body
+- **O que o servidor retorna:**
+  - 200 `{ status: 'READY', database: 'connected' }` (`SELECT 1` ok)
+  - 503 `{ status: 'NOT_READY', database: 'disconnected' }` (`SELECT 1` falhou)
+- **Efeitos:**
+  - Somente `prisma.$queryRaw SELECT 1`
+  - Sem escrita; falha logada via logger
+  - K8s tira o pod do tráfego enquanto 503
+  - Não exige autenticação de propósito (kubelet não tem token)

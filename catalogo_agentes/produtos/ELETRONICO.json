@@ -1,0 +1,645 @@
+{
+  "produtos": [
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": "Apple",
+      "category": "notebook",
+      "description": "MacBook Pro 14 com chip M3 Pro, tela Liquid Retina XDR 120Hz e até 18h de bateria para trabalho profissional pesado. Performance sustentada para código, vídeo 4K e 3D sem engasgos. No consórcio você parcela o topo de linha Apple sem juros abusivos e planeja o upgrade.",
+      "imageUrl": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/mac-macbook-pro-size-unselect-202601-gallery-1?wid=1200&hei=630&fmt=jpeg&qlt=95&.v=1767812220981",
+      "imageUrls": [
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/mac-macbook-pro-size-unselect-202601-gallery-1?wid=1200&hei=630&fmt=jpeg&qlt=95&.v=1767812220981",
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/mac-macbook-pro-size-unselect-202601-gallery-2?wid=1200&hei=630&fmt=jpeg&qlt=95&.v=1767812220981",
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/mac-macbook-pro-size-unselect-202601-gallery-3?wid=1200&hei=630&fmt=jpeg&qlt=95&.v=1767812220981"
+      ],
+      "isFeatured": true,
+      "isPopular": true,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "MacBook Pro 14 M3 Pro",
+      "name": "Apple MacBook Pro 14 M3 Pro 2024",
+      "price": 24999,
+      "specs": {
+        "armazenamento": "512GB SSD NVMe",
+        "bateria": "Até 18h",
+        "gpu": "GPU integrada 14-core",
+        "processador": "Apple M3 Pro 11-core",
+        "ram": "18GB Unified Memory",
+        "tela": "14.2 Retina XDR 120Hz"
+      },
+      "type": "ELETRONICO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": "Samsung",
+      "category": "smartphone",
+      "description": "Galaxy S24 Ultra com Snapdragon 8 Gen 3 for Galaxy, câmera quádrupla de 200MP e Galaxy AI com tradução simultânea. Corpo em titânio, S Pen integrada e tela de 6.8 QHD+ 120Hz. Ideal para consórcio: flagship que mantém valor de revenda alto por anos.",
+      "imageUrl": "/img/eletronicos/s24-ultra-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/s24-ultra-a.jpg",
+        "/img/eletronicos/s24-ultra-b.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": true,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "Galaxy S24 Ultra SM-S928B",
+      "name": "Samsung Galaxy S24 Ultra 256GB Titânio Preto 2024",
+      "price": 5399,
+      "specs": {
+        "armazenamento": "256GB UFS 4.0",
+        "bateria": "5000mAh 45W",
+        "gpu": "Adreno 750",
+        "processador": "Snapdragon 8 Gen 3 for Galaxy",
+        "ram": "12GB",
+        "tela": "6.8 Dynamic AMOLED 2X QHD+ 120Hz"
+      },
+      "type": "ELETRONICO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": "Apple",
+      "category": "tablet",
+      "description": "iPad Air 11 com chip M2, tela Liquid Retina 11 e suporte a Apple Pencil Pro e Magic Keyboard. Leve com 462g, perfeito para estudos, desenho e trabalho móvel. No consórcio você dilui o valor e garante ferramenta de produtividade premium.",
+      "imageUrl": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-air-11-m2-select-202405_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1713308272877",
+      "imageUrls": [
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-air-11-m2-select-202405_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1713308272877",
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-air-11-m2-back-202405_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1713308272877",
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-air-11-m2-side-202405_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1713308272877"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "iPad Air 11 M2",
+      "name": "Apple iPad Air 11 M2 128GB Wi-Fi 2024",
+      "price": 7499,
+      "specs": {
+        "armazenamento": "128GB",
+        "bateria": "Até 10h Wi-Fi",
+        "gpu": "GPU 9-core",
+        "processador": "Apple M2 8-core",
+        "ram": "8GB",
+        "tela": "11 Liquid Retina 2360x1640 P3 True Tone"
+      },
+      "type": "ELETRONICO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": "Asus",
+      "category": "gaming",
+      "description": "ROG Strix G16 com i9-14900HX e RTX 4070 140W, tela Nebula 16 WQXGA 240Hz 100% DCI-P3. Refrigeração Tri-Fan com metal líquido para sessões longas. Perfeito para consórcio gamer: máquina de R$13k diluída em 36x sem cartão estourado.",
+      "imageUrl": "https://rog.asus.com/br/laptops/rog-strix/rog-strix-g16-2024/images/gallery/gallery-1.jpg",
+      "imageUrls": [
+        "https://rog.asus.com/br/laptops/rog-strix/rog-strix-g16-2024/images/gallery/gallery-1.jpg",
+        "https://rog.asus.com/br/laptops/rog-strix/rog-strix-g16-2024/images/gallery/gallery-2.jpg",
+        "https://rog.asus.com/br/laptops/rog-strix/rog-strix-g16-2024/images/gallery/gallery-3.jpg"
+      ],
+      "isFeatured": true,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "ROG Strix G16 G614JIR",
+      "name": "Asus ROG Strix G16 RTX 4070 i9-14900HX 2024",
+      "price": 12999,
+      "specs": {
+        "armazenamento": "1TB PCIe 4.0 NVMe",
+        "bateria": "90Wh",
+        "gpu": "NVIDIA RTX 4070 8GB GDDR6 140W",
+        "processador": "Intel Core i9-14900HX 24 núcleos até 5.8GHz",
+        "ram": "16GB DDR5-5600",
+        "tela": "16 WQXGA 2560x1600 240Hz DCI-P3"
+      },
+      "type": "ELETRONICO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "brand": "LG",
+      "category": "outros",
+      "description": "Smart TV OLED evo C3 55 polegadas 4K 120Hz com processador α9 AI Gen6 e Dolby Vision. Pretos perfeitos para cinema e 0.1ms para PS5/Xbox. No consórcio você monta o home theater dos sonhos parcelado sem juros de cartão.",
+      "imageUrl": "https://www.lg.com/br/tv/lg-oled55c3psa/images/gallery/gallery-1_front_white-bg.jpg",
+      "imageUrls": [
+        "https://www.lg.com/br/tv/lg-oled55c3psa/images/gallery/gallery-1_front_white-bg.jpg",
+        "https://www.lg.com/br/tv/lg-oled55c3psa/images/gallery/gallery-2_side_white-bg.jpg",
+        "https://www.lg.com/br/tv/lg-oled55c3psa/images/gallery/gallery-3_detail_white-bg.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "OLED55C3PSA",
+      "name": "LG Smart TV OLED evo C3 55 4K 120Hz 2024",
+      "price": 7999,
+      "specs": {
+        "armazenamento": "8GB interno apps webOS 23",
+        "bateria": "N/A bivolt 110-220V",
+        "gpu": "AI Upscaling 4K 120Hz",
+        "processador": "α9 AI Processor 4K Gen6",
+        "ram": "4GB sistema",
+        "tela": "55 OLED evo 4K 3840x2160 120Hz Dolby Vision"
+      },
+      "type": "ELETRONICO",
+      "year": 2024
+    },
+    {
+      "name": "Apple iPhone 15 Pro 128GB Titânio Natural 2023",
+      "description": "iPhone 15 Pro com chip A17 Pro, corpo em titânio e câmera 48MP com zoom 3x para fotos profissionais. Botão de Ação e USB-C para produtividade total. No consórcio você garante o iPhone Pro sem juros de cartão e com parcela planejada.",
+      "type": "ELETRONICO",
+      "category": "smartphone",
+      "price": 9299,
+      "imageUrl": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-15-pro-finish-select-202309-6-1inch-naturaltitanium_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1692845702708",
+      "imageUrls": [
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-15-pro-finish-select-202309-6-1inch-naturaltitanium_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1692845702708",
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-15-pro-finish-select-202309-6-1inch-naturaltitanium-back_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1692845702708",
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-15-pro-finish-select-202309-6-1inch-naturaltitanium-side_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1692845702708"
+      ],
+      "brand": "Apple",
+      "model": "iPhone 15 Pro A3101",
+      "year": 2023,
+      "minDuration": 12,
+      "maxDuration": 36,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": true,
+      "active": true,
+      "specs": {
+        "processador": "Apple A17 Pro 6-core",
+        "gpu": "GPU 6-core Ray Tracing",
+        "ram": "8GB",
+        "armazenamento": "128GB NVMe",
+        "tela": "6.1 Super Retina XDR 120Hz",
+        "bateria": "Até 23h vídeo"
+      }
+    },
+    {
+      "name": "Dell XPS 13 9345 Snapdragon X Elite 2024",
+      "description": "Dell XPS 13 com Snapdragon X Elite 12 núcleos e NPU 45 TOPS, certificado Copilot+ PC para IA local. Tela Tandem OLED 3K touch e até 17h de bateria no corpo mais leve da linha. Ideal para consórcio executivo premium.",
+      "type": "ELETRONICO",
+      "category": "notebook",
+      "price": 19999,
+      "imageUrl": "https://www.dell.com/content/dam/images/products/laptops/xps/9345/gallery/xps-13-9345-gallery-1-white-bg.jpg",
+      "imageUrls": [
+        "https://www.dell.com/content/dam/images/products/laptops/xps/9345/gallery/xps-13-9345-gallery-1-white-bg.jpg",
+        "https://www.dell.com/content/dam/images/products/laptops/xps/9345/gallery/xps-13-9345-gallery-2-top-white-bg.jpg",
+        "https://www.dell.com/content/dam/images/products/laptops/xps/9345/gallery/xps-13-9345-gallery-3-side-white-bg.jpg"
+      ],
+      "brand": "Dell",
+      "model": "XPS 13 9345",
+      "year": 2024,
+      "minDuration": 12,
+      "maxDuration": 36,
+      "adminFeeRate": 15,
+      "isFeatured": true,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "processador": "Snapdragon X Elite X1E-80-100 12-core até 4GHz",
+        "gpu": "Qualcomm Adreno",
+        "ram": "32GB LPDDR5X",
+        "armazenamento": "1TB SSD NVMe",
+        "tela": "13.4 3K OLED Touch 400nits",
+        "bateria": "Até 17h"
+      }
+    },
+    {
+      "name": "Samsung Galaxy Tab S9 11 Wi-Fi 128GB 2023",
+      "description": "Galaxy Tab S9 com Snapdragon 8 Gen 2, tela Dynamic AMOLED 2X 11 120Hz e IP68 resistente à água. S Pen e capa teclado inclusas para estudo e desenho. No consórcio você parcela o tablet premium com acessórios sem entrada.",
+      "type": "ELETRONICO",
+      "category": "tablet",
+      "price": 5999,
+      "imageUrl": "https://images.samsung.com/br/tablets/galaxy-tab-s9/v1/images/galaxy-tab-s9_front_graphite.jpg",
+      "imageUrls": [
+        "https://images.samsung.com/br/tablets/galaxy-tab-s9/v1/images/galaxy-tab-s9_front_graphite.jpg",
+        "https://images.samsung.com/br/tablets/galaxy-tab-s9/v1/images/galaxy-tab-s9_back_graphite.jpg",
+        "https://images.samsung.com/br/tablets/galaxy-tab-s9/v1/images/galaxy-tab-s9_side_graphite.jpg"
+      ],
+      "brand": "Samsung",
+      "model": "Galaxy Tab S9 SM-X710",
+      "year": 2023,
+      "minDuration": 12,
+      "maxDuration": 36,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "processador": "Snapdragon 8 Gen 2 octa-core",
+        "gpu": "Adreno 740",
+        "ram": "8GB",
+        "armazenamento": "128GB + microSD",
+        "tela": "11 Dynamic AMOLED 2X 2560x1600 120Hz",
+        "bateria": "8400mAh 45W"
+      }
+    },
+    {
+      "name": "Acer Nitro V15 RTX 4050 i5-13420H 2024",
+      "description": "Nitro V15 com i5-13420H e RTX 4050 6GB GDDR6 com DLSS 3 e Ray Tracing para Full HD no ultra. Tela IPS 15.6 165Hz e 16GB DDR5 para jogos e edição. Custo-benefício gamer perfeito para consórcio de até 36x.",
+      "type": "ELETRONICO",
+      "category": "gaming",
+      "price": 7999,
+      "imageUrl": "https://br-store.acer.com/media/catalog/product/a/n/anv15-52-57mc__0e6fa2a6-5a71-479a-a9c2-ca8a47c910d1.jpg",
+      "imageUrls": [
+        "https://br-store.acer.com/media/catalog/product/a/n/anv15-52-57mc__0e6fa2a6-5a71-479a-a9c2-ca8a47c910d1.jpg",
+        "https://br-store.acer.com/media/catalog/product/a/n/anv15-52-57mc__43b27edd-c61c-4780-aeb2-f3a3d29ca425.jpg",
+        "https://br-store.acer.com/media/catalog/product/a/n/anv15-52-57mc__072fd471-fc6c-41d8-b41c-c2dc3a723580.jpg"
+      ],
+      "brand": "Acer",
+      "model": "Nitro V15 ANV15-52-57MC",
+      "year": 2024,
+      "minDuration": 12,
+      "maxDuration": 36,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "processador": "Intel Core i5-13420H 8 núcleos até 4.6GHz",
+        "gpu": "NVIDIA RTX 4050 6GB GDDR6",
+        "ram": "8GB DDR5-5200 expansível 32GB",
+        "armazenamento": "512GB SSD NVMe PCIe Gen4",
+        "tela": "15.6 IPS Full HD 165Hz",
+        "bateria": "57Wh"
+      }
+    },
+    {
+      "name": "Apple Watch Ultra 2 49mm GPS Cellular 2023",
+      "description": "Watch Ultra 2 com caixa em titânio 49mm, chip S9 e tela mais brilhante para esportes extremos. GPS de precisão, 36h de bateria e 64GB. No consórcio você adiciona o wearable ultimate ao setup Apple parcelado.",
+      "type": "ELETRONICO",
+      "category": "outros",
+      "price": 8999,
+      "imageUrl": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/watch-ultra-2-select-202309_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1692844781064",
+      "imageUrls": [
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/watch-ultra-2-select-202309_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1692844781064",
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/watch-ultra-2-back-202309_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1692844781064",
+        "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/watch-ultra-2-side-202309_GEO_BR?wid=1200&hei=630&fmt=jpeg&qlt=90&.v=1692844781064"
+      ],
+      "brand": "Apple",
+      "model": "Watch Ultra 2 49mm",
+      "year": 2023,
+      "minDuration": 12,
+      "maxDuration": 36,
+      "adminFeeRate": 15,
+      "isFeatured": false,
+      "isPopular": false,
+      "active": true,
+      "specs": {
+        "processador": "Apple S9 SiP dual-core",
+        "gpu": "PowerVR integrada",
+        "ram": "2GB sistema",
+        "armazenamento": "64GB",
+        "tela": "49mm Retina LTPO OLED 3000nits",
+        "bateria": "Até 36h uso normal 72h economia"
+      }
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "O Galaxy S24 com Snapdragon 8 Gen 3, Galaxy AI com tradução simultânea e câmera tripla de 50MP em corpo compacto de 6.2 polegadas. Potência de flagship com preço mais acessível, ideal para o primeiro consórcio de topo de linha.",
+      "imageUrl": "/img/eletronicos/s24-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/s24-a.jpg",
+        "/img/eletronicos/s24-b.jpg",
+        "/img/eletronicos/s24-c.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "Galaxy S24 SM-S921B",
+      "name": "Samsung Galaxy S24 5G 256GB 2024",
+      "price": 2649.55,
+      "specs": {
+        "armazenamento": "256GB UFS 4.0",
+        "bateria": "4000mAh 25W",
+        "gpu": "Adreno 750",
+        "processador": "Snapdragon 8 Gen 3 for Galaxy",
+        "ram": "8GB",
+        "tela": "6.2 Dynamic AMOLED 2X FHD+ 120Hz"
+      },
+      "type": "ELETRONICO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "Tela grande QHD+ de 6.7 polegadas com Snapdragon 8 Gen 3 e 12GB de RAM para multitarefa pesada. Câmera tripla de 50MP com zoom de 30x e bateria de 4900mAh para o dia inteiro. O equilíbrio perfeito da linha S24.",
+      "imageUrl": "/img/eletronicos/s24-plus-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/s24-plus-a.jpg",
+        "/img/eletronicos/s24-plus-b.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "Galaxy S24+ SM-S926B",
+      "name": "Samsung Galaxy S24+ 5G 256GB 2024",
+      "price": 3020.05,
+      "specs": {
+        "armazenamento": "256GB UFS 4.0",
+        "bateria": "4900mAh 45W",
+        "gpu": "Adreno 750",
+        "processador": "Snapdragon 8 Gen 3 for Galaxy",
+        "ram": "12GB",
+        "tela": "6.7 Dynamic AMOLED 2X QHD+ 120Hz"
+      },
+      "type": "ELETRONICO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "Snapdragon 8 Elite com Galaxy AI completa em corpo compacto e leve de 162g. Câmera tripla de 50MP com Nightography e ProVisual Engine. O flagship compacto mais inteligente da Samsung.",
+      "imageUrl": "/img/eletronicos/s25-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/s25-a.jpg",
+        "/img/eletronicos/s25-b.jpg",
+        "/img/eletronicos/s25-c.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "Galaxy S25 SM-S931B",
+      "name": "Samsung Galaxy S25 5G 128GB 2025",
+      "price": 5332.22,
+      "specs": {
+        "armazenamento": "128GB UFS 4.0",
+        "bateria": "4000mAh 25W",
+        "gpu": "Adreno 830",
+        "processador": "Snapdragon 8 Elite for Galaxy",
+        "ram": "12GB",
+        "tela": "6.2 Dynamic AMOLED 2X FHD+ 120Hz"
+      },
+      "type": "ELETRONICO",
+      "year": 2025
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "Tela QHD+ de 6.7 polegadas com Snapdragon 8 Elite e 12GB de RAM. Câmera tripla de 50MP, bateria de 4900mAh com recarga de 45W e Galaxy AI em tudo. Tela grande e desempenho máximo sem ir ao Ultra.",
+      "imageUrl": "/img/eletronicos/s25-plus-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/s25-plus-a.jpg",
+        "/img/eletronicos/s25-plus-b.jpg",
+        "/img/eletronicos/s25-plus-c.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "Galaxy S25+ SM-S936B",
+      "name": "Samsung Galaxy S25+ 5G 256GB 2025",
+      "price": 3999,
+      "specs": {
+        "armazenamento": "256GB UFS 4.0",
+        "bateria": "4900mAh 45W",
+        "gpu": "Adreno 830",
+        "processador": "Snapdragon 8 Elite for Galaxy",
+        "ram": "12GB",
+        "tela": "6.7 Dynamic AMOLED 2X QHD+ 120Hz"
+      },
+      "type": "ELETRONICO",
+      "year": 2025
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "O ápice da Samsung: Snapdragon 8 Elite, câmera quádrupla de 200MP com zoom de 100x e S Pen integrada em corpo de titânio. Tela QHD+ de 6.9 polegadas e Galaxy AI no nível máximo. Revenda mais forte do Android.",
+      "imageUrl": "/img/eletronicos/s25-ultra-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/s25-ultra-a.jpg",
+        "/img/eletronicos/s25-ultra-b.jpg",
+        "/img/eletronicos/s25-ultra-c.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": true,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "Galaxy S25 Ultra SM-S938B",
+      "name": "Samsung Galaxy S25 Ultra 5G 256GB 2025",
+      "price": 5399,
+      "specs": {
+        "armazenamento": "256GB UFS 4.0",
+        "bateria": "5000mAh 45W",
+        "gpu": "Adreno 830",
+        "processador": "Snapdragon 8 Elite for Galaxy",
+        "ram": "12GB",
+        "tela": "6.9 Dynamic AMOLED 2X QHD+ 120Hz"
+      },
+      "type": "ELETRONICO",
+      "year": 2025
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "Experiência Fan Edition: Exynos 2400 com Galaxy AI, tela AMOLED de 6.7 polegadas e câmera tripla de 50MP. O custo-benefício flagship da Samsung com bateria de 4900mAh e certificação IP68.",
+      "imageUrl": "/img/eletronicos/s25-fe-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/s25-fe-a.jpg",
+        "/img/eletronicos/s25-fe-b.jpg",
+        "/img/eletronicos/s25-fe-c.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "Galaxy S25 FE SM-S721B",
+      "name": "Samsung Galaxy S25 FE 5G 256GB 2025",
+      "price": 3998,
+      "specs": {
+        "armazenamento": "256GB UFS 4.0",
+        "bateria": "4900mAh 25W",
+        "gpu": "Xclipse 940",
+        "processador": "Exynos 2400",
+        "ram": "8GB",
+        "tela": "6.7 Dynamic AMOLED 2X FHD+ 120Hz"
+      },
+      "type": "ELETRONICO",
+      "year": 2025
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "O dobrável definitivo: tela interna de 7.6 polegadas que vira tablet e externa de 6.3 para o dia a dia. Snapdragon 8 Gen 3, 12GB de RAM e multitarefa com três apps simultâneos. Status e produtividade no bolso.",
+      "imageUrl": "/img/eletronicos/z-fold6-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/z-fold6-a.jpg",
+        "/img/eletronicos/z-fold6-b.jpg",
+        "/img/eletronicos/z-fold6-c.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "Galaxy Z Fold6 SM-F956B",
+      "name": "Samsung Galaxy Z Fold6 5G 512GB 2025",
+      "price": 8641.95,
+      "specs": {
+        "armazenamento": "512GB UFS 4.0",
+        "bateria": "4400mAh 25W",
+        "gpu": "Adreno 750",
+        "processador": "Snapdragon 8 Gen 3 for Galaxy",
+        "ram": "12GB",
+        "tela": "7.6 Dobrável AMOLED 2X 120Hz + externa 6.3"
+      },
+      "type": "ELETRONICO",
+      "year": 2025
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "Dynamic Island, câmera de 48MP e chip A16 Bionic com conector USB-C. Tela Super Retina XDR de 6.1 polegadas e Ceramic Shield. A porta de entrada atualizada para o ecossistema Apple.",
+      "imageUrl": "/img/eletronicos/iphone-15-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/iphone-15-a.jpg",
+        "/img/eletronicos/iphone-15-b.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "iPhone 15 A3090",
+      "name": "Apple iPhone 15 128GB Preto 2023",
+      "price": 4776.77,
+      "specs": {
+        "armazenamento": "128GB NVMe",
+        "bateria": "3349mAh 20W",
+        "gpu": "Apple GPU 5-core",
+        "processador": "Apple A16 Bionic",
+        "ram": "6GB",
+        "tela": "6.1 Super Retina XDR OLED"
+      },
+      "type": "ELETRONICO",
+      "year": 2023
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "Chip A18 com Apple Intelligence, câmera Fusion de 48MP e botão de Controle da Câmera. Tela Super Retina XDR de 6.1 polegadas com Dynamic Island. O iPhone equilibrado da nova geração.",
+      "imageUrl": "/img/eletronicos/iphone-16-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/iphone-16-a.jpg",
+        "/img/eletronicos/iphone-16-b.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "iPhone 16 A3081",
+      "name": "Apple iPhone 16 128GB Branco 2024",
+      "price": 4599,
+      "specs": {
+        "armazenamento": "128GB NVMe",
+        "bateria": "3561mAh 25W MagSafe",
+        "gpu": "Apple GPU 5-core",
+        "processador": "Apple A18",
+        "ram": "8GB",
+        "tela": "6.1 Super Retina XDR OLED"
+      },
+      "type": "ELETRONICO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "Tela grande de 6.7 polegadas com chip A18 e a maior bateria já vista num iPhone: até 27 horas de vídeo. Câmera Fusion de 48MP e Apple Intelligence. Para quem quer tela e bateria máximas sem ir ao Pro.",
+      "imageUrl": "/img/eletronicos/iphone-16-plus-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/iphone-16-plus-a.jpg",
+        "/img/eletronicos/iphone-16-plus-b.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": false,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "iPhone 16 Plus A3082",
+      "name": "Apple iPhone 16 Plus 256GB Preto 2024",
+      "price": 7299.1,
+      "specs": {
+        "armazenamento": "256GB NVMe",
+        "bateria": "4674mAh 25W MagSafe",
+        "gpu": "Apple GPU 5-core",
+        "processador": "Apple A18",
+        "ram": "8GB",
+        "tela": "6.7 Super Retina XDR OLED"
+      },
+      "type": "ELETRONICO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "Titânio aeroespacial, chip A18 Pro e tela ProMotion de 6.3 polegadas com bordas mais finas. Câmera tripla Pro de 48MP com zoom óptico de 5x e vídeo 4K Dolby Vision a 120fps. Ferramenta profissional no bolso.",
+      "imageUrl": "/img/eletronicos/iphone-16-pro-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/iphone-16-pro-a.jpg",
+        "/img/eletronicos/iphone-16-pro-b.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": true,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "iPhone 16 Pro A3083",
+      "name": "Apple iPhone 16 Pro 128GB Titânio Deserto 2024",
+      "price": 10499,
+      "specs": {
+        "armazenamento": "128GB NVMe",
+        "bateria": "3582mAh 25W MagSafe",
+        "gpu": "Apple GPU 6-core",
+        "processador": "Apple A18 Pro",
+        "ram": "8GB",
+        "tela": "6.3 Super Retina XDR ProMotion 120Hz"
+      },
+      "type": "ELETRONICO",
+      "year": 2024
+    },
+    {
+      "adminFeeRate": 15,
+      "active": true,
+      "category": "smartphone",
+      "description": "A maior tela já feita num iPhone: 6.9 polegadas ProMotion em titânio, com chip A18 Pro e a melhor bateria da linha, 33 horas de vídeo. Câmeras Pro de 48MP com zoom de 5x. O topo absoluto para consórcio premium.",
+      "imageUrl": "/img/eletronicos/iphone-16-pro-max-a.jpg",
+      "imageUrls": [
+        "/img/eletronicos/iphone-16-pro-max-a.jpg",
+        "/img/eletronicos/iphone-16-pro-max-b.jpg"
+      ],
+      "isFeatured": false,
+      "isPopular": true,
+      "maxDuration": 36,
+      "minDuration": 12,
+      "model": "iPhone 16 Pro Max A3084",
+      "name": "Apple iPhone 16 Pro Max 256GB Titânio Deserto 2024",
+      "price": 12499,
+      "specs": {
+        "armazenamento": "256GB NVMe",
+        "bateria": "4685mAh 25W MagSafe",
+        "gpu": "Apple GPU 6-core",
+        "processador": "Apple A18 Pro",
+        "ram": "8GB",
+        "tela": "6.9 Super Retina XDR ProMotion 120Hz"
+      },
+      "type": "ELETRONICO",
+      "year": 2024
+    }
+  ]
+}
