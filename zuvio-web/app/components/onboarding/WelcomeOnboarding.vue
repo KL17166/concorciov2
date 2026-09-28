@@ -70,27 +70,11 @@ function onKeyDown(e: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
-  // Trava a altura UMA vez no carregamento — a barra de URL do celular
-  // expandindo/recolhendo não mexe mais no layout
-  lockViewportHeight()
-  window.addEventListener('orientationchange', handleOrientationChange)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeyDown)
-  window.removeEventListener('orientationchange', handleOrientationChange)
 })
-
-// Mede a altura visível uma única vez e congela em --app-h.
-// Só mede de novo ao girar o aparelho (retrato <-> paisagem).
-function lockViewportHeight() {
-  if (typeof window === 'undefined') return
-  document.documentElement.style.setProperty('--app-h', `${window.innerHeight}px`)
-}
-
-function handleOrientationChange() {
-  window.setTimeout(lockViewportHeight, 300)
-}
 
 // ── Modals State ────────────────────────────────────────────────────────────
 const showInfoModal = ref(false)
@@ -613,16 +597,19 @@ function goToLogin() {
 </template>
 
 <style scoped>
+
+/* Fundo da página igual ao da tela (sem emenda quando a barra some) */
+:global(body) {
+  background-color: #FAFAFA;
+}
 /* ── Container Layout ──────────────────────────────────────────────────────── */
 .onboarding-container {
   width: 100%;
   max-width: 100%;
   min-height: 100vh;
   height: 100vh;
-  height: 100dvh;
   height: 100svh;
-  height: var(--app-h, 100svh);
-  max-height: var(--app-h, 100svh);
+  max-height: 100svh;
   overscroll-behavior-y: none;
   margin: 0 auto;
   background-color: #FAFAFA;
@@ -646,7 +633,7 @@ function goToLogin() {
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  padding: calc(env(safe-area-inset-top, 0px)) 20px 4px;
+  padding: 4px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -815,6 +802,8 @@ function goToLogin() {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  /* respiro garantido entre a moto e o botão Cadastre-se */
+  margin-bottom: -24px;
 }
 
 /* Fotos principais: tamanho só pela LARGURA (nunca pela altura) — sem corte */
