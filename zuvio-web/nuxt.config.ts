@@ -63,7 +63,15 @@ export default defineNuxtConfig({
     backendBase: process.env.NUXT_BACKEND_BASE || process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000',
     public: {
       appName: 'Katari Consórcios',
-      appSubtitle: 'Seu sonho em duas rodas'
+      appSubtitle: 'Seu sonho em duas rodas',
+      // ── Pixels externos — deixe vazio para desativar ────────────────────
+      // Defina no .env ou nas variáveis de ambiente do servidor:
+      // NUXT_PUBLIC_GA4_ID=G-XXXXXXXXXX
+      // NUXT_PUBLIC_META_PIXEL_ID=1234567890
+      // NUXT_PUBLIC_TIKTOK_PIXEL_ID=CXXXXXXXXXXXXXXXXX
+      ga4Id: process.env.NUXT_PUBLIC_GA4_ID ?? '',
+      metaPixelId: process.env.NUXT_PUBLIC_META_PIXEL_ID ?? '',
+      tiktokPixelId: process.env.NUXT_PUBLIC_TIKTOK_PIXEL_ID ?? ''
     }
   },
 

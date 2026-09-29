@@ -54,6 +54,34 @@ export async function learnFromEvent(
         const pid = productIdOf(input);
 
         switch (input.event) {
+            case 'VIEW_ITEM':
+            case 'VIEW_ITEM_LIST':
+                if (pid) {
+                    if (userId) await bumpCounter(userId, `aff:PROD:${pid}`, 1);
+                    await bumpCounter('global', `pop:PROD:${pid}`, 1);
+                }
+                break;
+            case 'ADD_TO_CART':
+                if (pid) {
+                    // Interesse explícito = sinal 2x.
+                    if (userId) await bumpCounter(userId, `aff:PROD:${pid}`, 2);
+                    await bumpCounter('global', `pop:PROD:${pid}`, 2);
+                }
+                break;
+            case 'BEGIN_CHECKOUT':
+            case 'CHECKOUT_STEP':
+            case 'CHECKOUT_COMPLETE':
+                if (userId) await emaUpdate(userId, 'prop:checkout', 1);
+                await emaUpdate('global', 'conv:view_checkout', 1);
+                break;
+            case 'REGISTER':
+                if (userId) await emaUpdate(userId, 'prop:registered', 1);
+                await emaUpdate('global', 'conv:visit_register', 1);
+                break;
+            case 'KYC_SUBMITTED':
+                if (userId) await emaUpdate(userId, 'prop:kyc', 1);
+                await emaUpdate('global', 'conv:register_kyc', 1);
+                break;
             case 'GENERATE_QR_CLICK':
             case 'QR_SHOWN':
                 if (pid) {

@@ -53,7 +53,7 @@ const toast = useToast()
 // State
 const bidPercentage = ref(30)
 const selectedBidType = ref<0 | 1 | 2>(0) // 0 = Livre, 1 = Fixo, 2 = Embutido
-const bidDestination = ref<'REDUCE_TERM' | 'REDUCE_INSTALLMENT'>('REDUCE_TERM')
+
 const isConfirmModalOpen = ref(false)
 const isHistoryOpen = ref(false)
 const isSubmitting = ref(false)
@@ -216,12 +216,12 @@ const modalityDetails = computed(() => {
   } else {
     return {
       title: 'Lance Embutido (25%)',
-      badge: 'R$ 0 do seu bolso',
+      badge: 'Usa parcelas já pagas',
       badgeColor: '#7B1FA2',
       badgeBg: '#F3E5F5',
-      explanation: 'Você NÃO precisa desembolsar dinheiro do bolso! O valor do lance é descontado diretamente da sua carta de crédito na contemplação, quitando parcelas automaticamente.',
+      explanation: 'O valor do lance é coberto pelo saldo já acumulado nas suas parcelas pagas. Você não precisa desembolsar dinheiro extra — o próprio histórico de pagamentos do grupo é usado como lance.',
       cashOutflow: 'R$ 0,00 (Sem desembolso)',
-      netCredit: formatCurrency(Math.max(0, creditValue.value - bidValue.value)),
+      netCredit: formatCurrency(creditValue.value),
       isEmbedded: true
     }
   }
@@ -747,35 +747,7 @@ async function handleConfirmCancelBid(bidId: string) {
         </div>
       </div>
 
-      <!-- ── 6. INCREMENTO: Simulador de Amortização (Prazo vs Valor) ────── -->
-      <div class="amortization-choice-card">
-        <h3 class="choice-title">Como deseja abater seu lance caso contemplado?</h3>
-        <div class="choice-buttons-grid">
-          <div
-            class="choice-btn"
-            :class="{ active: bidDestination === 'REDUCE_TERM' }"
-            @click="bidDestination = 'REDUCE_TERM'"
-          >
-            <div class="choice-radio" :class="{ active: bidDestination === 'REDUCE_TERM' }"></div>
-            <div class="choice-texts">
-              <span class="choice-name">Reduzir Prazo</span>
-              <span class="choice-impact">Abate ~{{ installmentsFromBid }} parcelas finais</span>
-            </div>
-          </div>
 
-          <div
-            class="choice-btn"
-            :class="{ active: bidDestination === 'REDUCE_INSTALLMENT' }"
-            @click="bidDestination = 'REDUCE_INSTALLMENT'"
-          >
-            <div class="choice-radio" :class="{ active: bidDestination === 'REDUCE_INSTALLMENT' }"></div>
-            <div class="choice-texts">
-              <span class="choice-name">Reduzir Parcela</span>
-              <span class="choice-impact">Parcela cai para {{ formatCurrency(reducedInstallmentValue) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- ── 7. INCREMENTO: Sanduíche de Histórico de Lances Anteriores ──── -->
       <div class="sandwich-accordion-card">
@@ -927,12 +899,7 @@ async function handleConfirmCancelBid(bidId: string) {
             <span class="calc-label">Crédito Líquido na Liberação</span>
             <span class="calc-val">{{ modalityDetails.netCredit }}</span>
           </div>
-          <div class="calc-row">
-            <span class="calc-label">Destino do Abatimento</span>
-            <span class="calc-val">
-              {{ bidDestination === 'REDUCE_TERM' ? 'Reduzir Prazo (~' + installmentsFromBid + ' parcelas)' : 'Reduzir Parcela (para ' + formatCurrency(reducedInstallmentValue) + ')' }}
-            </span>
-          </div>
+
         </div>
 
         <div class="confirmation-notice">

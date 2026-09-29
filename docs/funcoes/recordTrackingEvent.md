@@ -1,14 +1,14 @@
 # recordTrackingEvent
-- **Arquivo:** server-consorcio/src/application/tracking/recordEvent.ts:15
+- **Arquivo:** server-consorcio/src/application/tracking/recordEvent.ts
 - **O que faz:** Registra um evento de funil do pixel próprio (tela/clique); best-effort, nunca quebra o fluxo.
-- **O que ativa ela:** `recordClientEvent` — POST /api/track (userId do JWT, valida `TrackEventSchema`; inválido → 200 com `recorded: false`); uso interno em `notifyClientBidPaymentCheck` (evento `VERIFY_PAYMENT_CLICK`, entityType `bid`)
+- **O que ativa ela:** `recordClientEvent` — POST /api/track (userId do JWT via `optionalAuth`, guestId do body validado; inválido → 200 com `recorded: false`); uso interno em `notifyClientBidPaymentCheck` (evento `VERIFY_PAYMENT_CLICK`, entityType `bid`)
 - **Entradas:**
-  - `userId: string | null` (do JWT, nunca do body — anti-spoof); `event`, `screen?`, `entityType?`, `entityId?`, `metadata?` (allowlist no schema); `ipAddress?` (64 chars), `userAgent?` (512 chars)
+  - `userId: string | null` (do JWT, nunca do body — anti-spoof); `guestId?: string | null` (UUID anônimo p/ costura pré-login); `event`, `screen?`, `entityType?`, `entityId?`, `metadata?` (allowlist 27 eventos no schema); `ipAddress?` (64 chars), `userAgent?` (512 chars)
   - Sem validações próprias que lancem — falha de insert vira `{ recorded: false }`
 - **Saídas:**
   - Sucesso: `{ recorded: true }`; falha interna: `{ recorded: false }` (controller sempre responde 200)
   - Erros lançados: nenhum (catch-all com `logger.warn`)
 - **Regras/efeitos:**
-  - Sem transação; um `trackingEvent.create` (`metadata` como JSON truncado em 2048 chars)
+  - Sem transação; um `trackingEvent.create` (`metadata` como JSON truncado em 2048 chars, `guestId` persistido com índice)
   - Tabelas: `trackingEvent` (insert)
-  - Side-effects: `logger.warn [Tracking]` só em falha; nenhum efeito no fluxo do cliente
+  - Side-effects: `learnFromEvent` (ranking/EMA — inclui sinais VIEW_ITEM/ADD_TO_CART/BEGIN_CHECKOUT/REGISTER/KYC desde 2026-09-28); `dispatchServerConversions` fire-and-forget p/ PAYMENT_CONFIRMED_VIEW/REGISTER/BEGIN_CHECKOUT/ADD_TO_CART/VIEW_ITEM (Meta CAPI + GA4 MP, `services/conversionsService.ts`); `logger.warn [Tracking]` só em falha; nenhum efeito no fluxo do cliente

@@ -3,7 +3,6 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useConsortiumStore } from '~/stores/consortium'
 import { formatCurrency } from '~~/shared/utils/currency'
-import { DEFAULT_PRODUCTS } from '~~/shared/utils/catalogData'
 import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
 import { trackEvent } from '~/composables/useTrack'
 import {
@@ -45,10 +44,7 @@ const lightboxIndex = ref(0)
 // Resolve Product
 const product = computed<Product | null>(() => {
   const paramId = String(route.params.id || '')
-  const fromStore = consortiumStore.products.find(p => p.id === paramId)
-  if (fromStore) return fromStore
-  const fromDefault = DEFAULT_PRODUCTS.find(p => p.id === paramId)
-  return fromDefault || null
+  return consortiumStore.products.find(p => p.id === paramId) || null
 })
 
 // Gallery Images list
@@ -91,20 +87,34 @@ onMounted(async () => {
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('keydown', handleKeydown)
 
-  // Garante o catálogo real: a store inicia com DEFAULT_PRODUCTS (5 mocks) e o
-  // guard antigo (length === 0) nunca disparava em deep-link/refresh,
-  // causando "Nenhum produto selecionado" para ids reais do catálogo.
+  const paramId = String(route.params.id || '')
+  if (paramId && !consortiumStore.products.some(p => p.id === paramId)) {
+    await consortiumStore.fetchProductById(paramId)
+  }
   await consortiumStore.ensureProductsLoaded()
   isPageLoading.value = false
   autoSelectBestPlan()
-  // Produto visto com identidade: alimenta a afinidade do algoritmo.
-  // Esta página é dona do próprio SCREEN_VIEW (fora do middleware global
-  // para não duplicar): com productId quando resolve, sem quando não.
+  // SCREEN_VIEW + VIEW_ITEM para alimentar algoritmo de recomendação e pixels externos
   trackEvent({
     event: 'SCREEN_VIEW',
-    screen: 'products',
+    screen: 'product_detail',
+    entityType: 'product',
+    entityId: product.value?.id,
     ...(product.value?.id ? { metadata: { productId: product.value.id } } : {})
   })
+  if (product.value) {
+    trackEvent({
+      event: 'VIEW_ITEM',
+      screen: 'product_detail',
+      entityType: 'product',
+      entityId: product.value.id,
+      metadata: {
+        productName: product.value.name,
+        price: product.value.price,
+        category: product.value.type ?? ''
+      }
+    })
+  }
 })
 
 watch(product, () => {
@@ -177,6 +187,31 @@ function handleContinue() {
   if (!product.value || !selectedPlan.value) return
   consortiumStore.selectedProduct = product.value
   consortiumStore.selectedPlan = selectedPlan.value
+
+  // Funil: produto selecionado → carrinho → início do checkout
+  trackEvent({
+    event: 'ADD_TO_CART',
+    screen: 'product_detail',
+    entityType: 'product',
+    entityId: product.value.id,
+    metadata: {
+      productName: product.value.name,
+      planId: selectedPlan.value.id,
+      durationMonths: selectedPlan.value.durationMonths,
+      price: selectedPlan.value.monthlyInstallment
+    }
+  })
+  trackEvent({
+    event: 'BEGIN_CHECKOUT',
+    screen: 'product_detail',
+    entityType: 'product',
+    entityId: product.value.id,
+    metadata: {
+      productName: product.value.name,
+      price: product.value.price
+    }
+  })
+
   router.push({
     path: '/checkout',
     query: {

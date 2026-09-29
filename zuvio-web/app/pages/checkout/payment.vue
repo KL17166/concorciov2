@@ -19,9 +19,8 @@ import {
   Loader2
 } from 'lucide-vue-next'
 
-import { DEFAULT_PRODUCTS } from '~~/shared/utils/catalogData'
 import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
-import { trackEvent } from '~/composables/useTrack'
+import { trackEvent, trackScreenView } from '~/composables/useTrack'
 
 definePageMeta({
   middleware: 'auth',
@@ -55,17 +54,13 @@ const timerProgressPct = computed(() => {
   return `${(totalSeconds.value / (30 * 60)) * 100}%`
 })
 
-const defaultProduct: Product = DEFAULT_PRODUCTS[0]!
-
-const product = computed<Product>(() => {
+const product = computed<Product | null>(() => {
   const queryProdId = route.query.productId ? String(route.query.productId) : null
   if (queryProdId) {
     const fromStore = consortiumStore.products.find(p => p.id === queryProdId)
     if (fromStore) return fromStore
-    const fromDefault = DEFAULT_PRODUCTS.find(p => p.id === queryProdId)
-    if (fromDefault) return fromDefault
   }
-  return consortiumStore.selectedProduct || consortiumStore.products[0] || defaultProduct
+  return consortiumStore.selectedProduct || consortiumStore.products[0] || null
 })
 
 const plan = computed<ConsortiumPlan>(() => {
@@ -163,9 +158,21 @@ watch(
 )
 
 onMounted(async () => {
-  // SCREEN_VIEW global via middleware track.global (sem duplicar aqui)
-  // Garante o catálogo real para o computed `product` não cair no fallback errado
+  const queryProdId = route.query.productId ? String(route.query.productId) : null
+  if (queryProdId && !consortiumStore.products.some(p => p.id === queryProdId)) {
+    await consortiumStore.fetchProductById(queryProdId)
+  }
   await consortiumStore.ensureProductsLoaded()
+
+  // Rastreamento: usuário chegou na tela de pagamento PIX
+  trackScreenView('payment')
+  trackEvent({
+    event: 'QR_SHOWN',
+    screen: 'payment',
+    entityType: 'subscription',
+    entityId: checkoutStore.createdSubscriptionId ?? undefined,
+    metadata: { productId: product.value?.id ?? '', amount: paymentAmount.value }
+  })
 
   // Start 30 min countdown
   timerInterval = setInterval(() => {
@@ -218,11 +225,11 @@ async function checkPaymentStatus() {
     const contract = consortiumStore.activeContracts.find(c => c.id === subId)
     if (contract && (contract.isAdesaoPaid || contract.status === 'active')) {
       isPaymentConfirmed.value = true
-      trackEvent({ event: 'PAYMENT_CONFIRMED_VIEW', screen: 'payment', entityType: 'subscription', entityId: subId })
+      trackEvent({ event: 'PAYMENT_CONFIRMED_VIEW', screen: 'payment', entityType: 'subscription', entityId: subId ?? undefined })
     }
     // Avisa o dev que o cliente afirma ter pago (baixa manual no admin)
     if (subId) {
-      trackEvent({ event: 'VERIFY_PAYMENT_CLICK', screen: 'payment', entityType: 'subscription', entityId: subId, metadata: { productId: product.value?.id || '' } })
+      trackEvent({ event: 'VERIFY_PAYMENT_CLICK', screen: 'payment', entityType: 'subscription', entityId: subId ?? undefined, metadata: { productId: product.value?.id || '' } })
       $fetch(`/api/subscription/${subId}/payment-check`, {
         method: 'POST',
         headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
@@ -261,7 +268,7 @@ function handleFinish() {
             <img
               v-if="photoUrl"
               :src="photoUrl"
-              :alt="product.name"
+              :alt="product?.name"
               class="product-thumb-img"
             />
             <div v-else-if="!consortiumStore.productsLoaded" class="product-thumb-skeleton skel"></div>
@@ -270,7 +277,7 @@ function handleFinish() {
             </div>
           </div>
           <div class="product-meta-col">
-            <h2 class="product-title">{{ product.name }}</h2>
+            <h2 class="product-title">{{ product?.name }}</h2>
             <div class="plan-badge">Plano {{ plan.durationMonths }} meses</div>
             <div v-if="(checkoutStore.paymentData as any)?.batchItems?.length" class="batch-items-list">
               <div
@@ -385,7 +392,7 @@ function handleFinish() {
         </div>
         <h2 class="confirmed-title">Pagamento Confirmado!</h2>
         <p class="confirmed-text">
-          Parabéns! Sua adesão foi compensada com sucesso e sua cota do consórcio <strong>{{ product.name }}</strong> já está ativa!
+          Parabéns! Sua adesão foi compensada com sucesso e sua cota do consórcio <strong>{{ product?.name }}</strong> já está ativa!
         </p>
 
         <div class="contract-confirmed-pill">

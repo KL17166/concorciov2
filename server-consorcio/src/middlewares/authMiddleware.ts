@@ -82,6 +82,36 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
 };
 
+/**
+ * Auth opcional: tenta validar o JWT e preenche req.user quando válido,
+ * mas NUNCA rejeita — segue anônimo. Usado pelo pixel próprio (/api/track),
+ * que precisa enxergar visitante sem login. userId continua vindo só do
+ * JWT verificado (anti-spoof); guestId vem do body validado no schema.
+ */
+export const optionalAuth = async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+        const authHeader = req.headers.authorization;
+        const parts = authHeader?.split(' ') ?? [];
+        if (parts.length === 2 && parts[0] === 'Bearer' && parts[1]) {
+            const payload = jwt.verify(parts[1], process.env.JWT_SECRET as string, {
+                algorithms: ['HS256'],
+            }) as AuthPayload;
+            let blacklisted = false;
+            if (payload.jti && redisClient) {
+                try {
+                    blacklisted = !!(await redisClient.get(`jti:blacklist:${payload.jti}`));
+                } catch (redisErr) {
+                    logger.warn('optionalAuth: blacklist check failed — seguindo com JWT', { jti: payload.jti });
+                }
+            }
+            if (!blacklisted) req.user = payload;
+        }
+    } catch {
+        // Token ausente/inválido — segue anônimo.
+    }
+    return next();
+};
+
 export const authorize = (roles: string[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) {

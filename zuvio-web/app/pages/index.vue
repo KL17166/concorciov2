@@ -440,7 +440,7 @@ function handlePayAdhesion(contract: ActiveContract) {
               :class="{ 'is-active': consortiumStore.selectedSubCategory === sub.key }"
               @click="consortiumStore.updateSubCategory(consortiumStore.selectedSubCategory === sub.key ? null : sub.key)"
             >
-              <span class="sub-emoji">{{ sub.icon }}</span>
+              <span v-if="sub.icon" class="sub-emoji">{{ sub.icon }}</span>
               <span>{{ sub.displayName }}</span>
             </button>
           </div>

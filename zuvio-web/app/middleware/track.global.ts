@@ -1,8 +1,7 @@
-import { useAuthStore } from '~/stores/auth'
 import { trackScreenView, type TrackScreen } from '~/composables/useTrack'
 
 // Pixel global: TODA navegação gera SCREEN_VIEW (presente e futuro).
-// Roda depois do auth/guest — só registra logado (o /api/track exige JWT).
+// Funciona anônimo (guestId costura pré-login) e logado (userId do JWT).
 const PATH_TO_SCREEN: Array<[RegExp, TrackScreen]> = [
   [/^\/$/, 'home'],
   [/^\/welcome/, 'welcome'],
@@ -22,8 +21,6 @@ const PATH_TO_SCREEN: Array<[RegExp, TrackScreen]> = [
 ]
 
 export default defineNuxtRouteMiddleware((to) => {
-  const authStore = useAuthStore()
-  if (!authStore.isAuthenticated) return
   for (const [re, screen] of PATH_TO_SCREEN) {
     if (re.test(to.path)) {
       trackScreenView(screen)

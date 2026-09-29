@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import type { Product, ProductTypeKey, ActiveContract, ConsortiumPlan } from '~~/shared/types/catalog'
-import { DEFAULT_PRODUCTS } from '~~/shared/utils/catalogData'
 import { useAuthStore } from './auth'
 
 // Reordena pela lista aprendida (índice menor primeiro); fora da lista mantém
@@ -13,16 +12,12 @@ function applyRecOrder<T extends { id: string }>(items: T[], recOrder: string[])
 
 export const useConsortiumStore = defineStore('consortium', {
   state: () => ({
-    products: DEFAULT_PRODUCTS as Product[],
+    products: [] as Product[],
     activeContracts: [] as ActiveContract[],
     selectedProduct: null as Product | null,
     selectedPlan: null as ConsortiumPlan | null,
     isLoading: false,
-    // true após a primeira tentativa de carga do catálogo real (evita refetch em loop;
-    // o fallback DEFAULT_PRODUCTS continua valendo se a API falhar)
     productsLoaded: false,
-    // true SOMENTE quando a API devolveu o catálogo (foto/preço confiáveis;
-    // falso = mocks/fallbacks, que nunca devem aparecer como se fossem reais)
     productsReal: false,
     searchQuery: '',
     selectedCategory: 'TODOS' as ProductTypeKey,
@@ -52,7 +47,18 @@ export const useConsortiumStore = defineStore('consortium', {
             (p.model && p.model.toLowerCase().includes(q))
 
           const matchesCat = state.selectedCategory === 'TODOS' || p.type === state.selectedCategory
-          const matchesSub = !state.selectedSubCategory || p.category === state.selectedSubCategory
+
+          const isCategoryMatch = (selected: string, itemCat: string) => {
+            if (!itemCat) return false
+            if (selected === itemCat) return true
+            const s = selected.toLowerCase()
+            const c = itemCat.toLowerCase()
+            if ((s === 'esportiva' || s === 'sport') && (c === 'esportiva' || c === 'sport')) return true
+            if ((s === 'picape' || s === 'pickup') && (c === 'picape' || c === 'pickup')) return true
+            return false
+          }
+
+          const matchesSub = !state.selectedSubCategory || isCategoryMatch(state.selectedSubCategory, p.category)
 
           return matchesQuery && matchesCat && matchesSub
         })
@@ -80,17 +86,18 @@ export const useConsortiumStore = defineStore('consortium', {
   actions: {
     async loadHomeData() {
       const authStore = useAuthStore()
+      const authHeaders: Record<string, string> = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
 
       const promises: Promise<any>[] = [
-        $fetch<Product[]>('/api/products')
+        $fetch<Product[]>('/api/products', { headers: authHeaders })
           .then(apiProducts => {
             if (Array.isArray(apiProducts) && apiProducts.length > 0) {
               this.products = [...apiProducts].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
               this.productsReal = true
             }
           })
-          .catch(() => {
-            if (!this.products.length) this.products = DEFAULT_PRODUCTS
+          .catch(err => {
+            console.error('Falha ao carregar catálogo da API/banco:', err)
           })
       ]
 
@@ -131,12 +138,34 @@ export const useConsortiumStore = defineStore('consortium', {
       } catch (_) {}
     },
 
-    // Garante o catálogo real carregado antes de resolver produto por id.
-    // Corrige o "Nenhum produto selecionado" em deep-link/refresh (a store
-    // inicia com DEFAULT_PRODUCTS e o detalhe/checkout não recarregavam).
+    // Garante o catálogo carregado do servidor antes de resolver rotas que dependem dele
     async ensureProductsLoaded() {
       if (this.productsLoaded) return
       await this.loadHomeData()
+    },
+
+    async fetchProductById(id: string): Promise<Product | null> {
+      const existing = this.products.find(p => p.id === id)
+      if (existing) return existing
+
+      const authStore = useAuthStore()
+      const authHeaders: Record<string, string> = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+
+      try {
+        const prod = await $fetch<Product>(`/api/products/${id}`, { headers: authHeaders })
+        if (prod) {
+          const idx = this.products.findIndex(p => p.id === id)
+          if (idx >= 0) {
+            this.products[idx] = prod
+          } else {
+            this.products.push(prod)
+          }
+          return prod
+        }
+      } catch (err) {
+        console.error(`Erro ao buscar produto ${id} do servidor/DB:`, err)
+      }
+      return null
     },
 
     selectProduct(product: Product) {

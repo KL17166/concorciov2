@@ -1,18 +1,18 @@
 # POST /api/track
-- **Ativado por:** pixel próprio do app (telas/cliques de funil)
+- **Ativado por:** pixel próprio do app (telas/cliques de funil) + jornada anônima
   - BFF espelho: `zuvio-web/server/api/track.post.ts`
   - Handler: `recordClientEvent` → `recordTrackingEvent` (best-effort)
-- **Auth / rate-limit:** `authenticate` + `trackingLimiter` (config/rateLimits)
+- **Auth / rate-limit:** `optionalAuth` (JWT validado quando presente; sem token segue anônimo) + `trackingLimiter` (config/rateLimits)
   - App: `generalLimiter` + `securityMiddleware`
 - **Request:** body zod `TrackEventSchema` (strict, `schemas/trackingSchema.ts`)
-  - `event`: SCREEN_VIEW | GENERATE_QR_CLICK | QR_SHOWN | COPY_PIX_CLICK | VERIFY_PAYMENT_CLICK | PAYMENT_CONFIRMED_VIEW | BID_CREATED
-  - `screen?`: home | welcome | auth | bids | payment | checkout | contract | adhesion | contracts | payments | statement | kyc | products | profile
-  - `entityType?`: bid | installment | subscription; `entityId?`: uuid
-  - `metadata?`: JSON ≤ 2KB; `userId` vem do JWT, nunca do body (anti-spoof)
+  - `event`: 27 eventos (2026-09-28) — SCREEN_VIEW, VIEW_ITEM_LIST, VIEW_ITEM, SEARCH, FILTER_CATEGORY, ADD_TO_CART, BEGIN_CHECKOUT, CHECKOUT_STEP, CHECKOUT_COMPLETE, GENERATE_QR_CLICK, QR_SHOWN, COPY_PIX_CLICK, VERIFY_PAYMENT_CLICK, PAYMENT_CONFIRMED_VIEW, BID_CREATED, BID_VIEWED, LOGIN, LOGOUT, REGISTER, KYC_STARTED, KYC_SUBMITTED, KYC_APPROVED, KYC_REJECTED, ONBOARDING_STARTED, ONBOARDING_COMPLETE, SHARE, NOTIFICATION_CLICK
+  - `screen?`: 15 telas (incl. `product_detail`); `entityType?`: bid | installment | subscription | product | user; `entityId?`: uuid; `guestId?`: uuid anônimo (costura pré-login, localStorage `kat_gid`)
+  - `metadata?`: JSON ≤ 2KB — carrega atribuição first-touch (`utm_*`, `fbclid/gclid/ttclid`, `landing`, `referrer`), `eid` (deduplicação CAPI), `fbp/fbc/ga_client_id` (match server-side); `userId` vem do JWT, nunca do body (anti-spoof)
 - **O que o servidor retorna:**
   - Sempre 200 `{ success: true, recorded: boolean }`
   - Body inválido → 200 com `recorded: false` (não é erro)
   - Falha interna → `handleApiError`
 - **Efeitos:**
-  - Grava evento de tracking com IP + user-agent
+  - Grava evento de tracking com userId (JWT) ou guestId + IP + user-agent
+  - `learnFromEvent` (ranking/EMA) + espelho server-side fire-and-forget p/ eventos de dinheiro/cadastro (`services/conversionsService.ts` — Meta CAPI + GA4 MP, no-op sem credenciais)
   - Nunca quebra o fluxo principal

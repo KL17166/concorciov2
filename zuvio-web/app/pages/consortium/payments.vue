@@ -57,6 +57,16 @@ const batchTotal = computed(() => {
     .reduce((s, n) => s + getInstallmentValue(n), 0)
 })
 
+// Economia total = soma dos descontos de amortização de cada parcela antecipada
+const batchSavings = computed(() => {
+  if (!contract.value?.nextPaymentAmount) return 0
+  const base = contract.value.nextPaymentAmount
+  return [...selectedNumbers.value].reduce((s, n) => {
+    const discount = base - getInstallmentValue(n)
+    return s + (discount > 0.01 ? discount : 0)
+  }, 0)
+})
+
 async function processBatchPayment() {
   if (!contract.value || selectedNumbers.value.length === 0) return
   if (authStore.user?.kycStatus === 'REJECTED') {
@@ -75,7 +85,7 @@ async function processBatchPayment() {
     }))
     trackEvent({
       event: 'GENERATE_QR_CLICK', screen: 'payments', entityType: 'batch',
-      entityId: contract.value.id, metadata: { numbers, count: numbers.length }
+      entityId: contract.value.id, metadata: { numbers: JSON.stringify(numbers), count: numbers.length }
     })
     const res = await paymentStore.generateBatchPix(contract.value.id, items)
     if (!res?.copyPaste) throw new Error('Não foi possível gerar o PIX combinado.')
@@ -93,7 +103,7 @@ async function processBatchPayment() {
     }
     trackEvent({
       event: 'QR_SHOWN', screen: 'payments', entityType: 'batch',
-      entityId: res.batchId, metadata: { numbers, count: numbers.length }
+      entityId: res.batchId, metadata: { numbers: JSON.stringify(numbers), count: numbers.length }
     })
     router.push({ path: '/payment', query: { batch: '1', contractId: contract.value.id } })
   } catch (err: any) {
@@ -190,7 +200,19 @@ const thisMonthNumber = computed(() => {
 })
 
 const thisMonthPaid = computed(() => {
-  return thisMonthNumber.value !== null && isPaid(thisMonthNumber.value)
+  if (thisMonthNumber.value === null) return false
+  // Preferir lista do servidor; fallback: paidInstallments do contrato
+  const fromServer = paymentStore.installments?.find(i => i.number === thisMonthNumber.value)
+  if (fromServer) return fromServer.status === 'PAID'
+  return isPaid(thisMonthNumber.value)
+})
+
+// Mostrar BOLA DA VEZ só se há parcela VENCIDA ou parcela do MÊS ATUAL não paga.
+// Se a parcela do mês está paga (ou não existe parcela neste mês), mostra "Tudo certo".
+const showBolaDaVez = computed(() => {
+  if (overdueCount.value > 0) return true
+  if (thisMonthNumber.value !== null && !thisMonthPaid.value) return true
+  return false
 })
 
 const thisMonthPaidDate = computed(() => {
@@ -403,6 +425,51 @@ async function processPayment() {
 
     <!-- Main Payments View with Accordions (Sanduíches) -->
     <div v-else-if="contract" class="business-main-container">
+      <!-- 1. Summary Header Card -->
+      <div class="business-summary-card">
+        <div class="summary-indicators-row">
+          <!-- Pagas -->
+          <div class="summary-stat-col">
+            <div class="stat-icon-circle dark">
+              <CheckCircle :size="22" color="#212121" />
+            </div>
+            <span class="stat-number dark">{{ paidCount }}</span>
+            <span class="stat-label">Pagas</span>
+          </div>
+
+          <!-- A pagar (vencidas — exigem ação agora) -->
+          <div class="summary-stat-col">
+            <div class="stat-icon-circle orange">
+              <Clock :size="22" color="#FF6D00" />
+            </div>
+            <span class="stat-number orange">{{ hasPending ? overdueCount : '—' }}</span>
+            <span class="stat-label">A pagar</span>
+          </div>
+
+          <!-- Agendadas -->
+          <div class="summary-stat-col">
+            <div class="stat-icon-circle grey">
+              <Hourglass :size="22" color="#9E9E9E" />
+            </div>
+            <span class="stat-number grey">{{ scheduledCount }}</span>
+            <span class="stat-label">Agendadas</span>
+          </div>
+        </div>
+
+        <div class="summary-divider"></div>
+
+        <!-- Next Due Date Row -->
+        <div class="summary-due-row">
+          <CalendarCheck :size="20" color="#FF6D00" />
+          <span class="due-text" :class="{ 'paid-off': !hasPending }">
+            {{ hasPending ? `Próxima: ${formatDate(contract.dueDate)}` : 'Contrato Quitado' }}
+          </span>
+          <div v-if="hasPending" class="due-amount-pill">
+            {{ formatCurrency(contract.nextPaymentAmount || 289.90) }}
+          </div>
+        </div>
+      </div>
+
       <!-- 0. Contract Card -->
       <div class="contract-id-card">
         <div class="contract-icon-box">
@@ -433,80 +500,17 @@ async function processPayment() {
         </span>
       </div>
 
-      <!-- 1. Summary Header Card -->
-      <div class="business-summary-card">
-        <div class="summary-indicators-row">
-          <!-- Pagas -->
-          <div class="summary-stat-col">
-            <div class="stat-icon-circle green">
-              <CheckCircle :size="22" color="#4CAF50" />
-            </div>
-            <span class="stat-number green">{{ paidCount }}</span>
-            <span class="stat-label">Pagas</span>
-          </div>
 
-          <!-- A pagar (vencidas — exigem ação agora) -->
-          <div class="summary-stat-col">
-            <div class="stat-icon-circle orange">
-              <Clock :size="22" color="#FF9800" />
-            </div>
-            <span class="stat-number orange">{{ hasPending ? overdueCount : '—' }}</span>
-            <span class="stat-label">A pagar</span>
-          </div>
-
-          <!-- Agendadas -->
-          <div class="summary-stat-col">
-            <div class="stat-icon-circle grey">
-              <Hourglass :size="22" color="#9E9E9E" />
-            </div>
-            <span class="stat-number grey">{{ scheduledCount }}</span>
-            <span class="stat-label">Agendadas</span>
-          </div>
-        </div>
-
-        <div class="summary-divider"></div>
-
-        <!-- Next Due Date Row -->
-        <div class="summary-due-row">
-          <CalendarCheck :size="20" color="#4CAF50" />
-          <span class="due-text" :class="{ 'paid-off': !hasPending }">
-            {{ hasPending ? `Próxima: ${formatDate(contract.dueDate)}` : 'Contrato Quitado' }}
-          </span>
-          <div v-if="hasPending" class="due-amount-pill">
-            {{ formatCurrency(contract.nextPaymentAmount || 289.90) }}
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. Consortium Info Cards (Grupo / Cota) -->
-      <div class="consortium-meta-row">
-        <!-- Grupo -->
-        <div class="meta-card">
-          <Users :size="20" color="#FF6D00" />
-          <div class="meta-texts">
-            <span class="meta-label">Grupo</span>
-            <span class="meta-value">{{ contract.groupNumber }}</span>
-          </div>
-        </div>
-
-        <!-- Cota -->
-        <div class="meta-card">
-          <Ticket :size="20" color="#FF6D00" />
-          <div class="meta-texts">
-            <span class="meta-label">Cota</span>
-            <span class="meta-value">{{ contract.quotaNumber }}</span>
-          </div>
-        </div>
-      </div>
 
       <!-- ── SECTION A: PARCELA ATUAL / A PAGAR (HERO HIGHLIGHT) ──────────── -->
       <div
         v-if="hasPending"
         class="highlight-pending-section"
       >
-        <div v-if="thisMonthPaid" class="all-good-card">
+        <!-- Mês pago OU sem vencimento este mês e sem vencidas → Tudo certo -->
+        <div v-if="!showBolaDaVez" class="all-good-card">
           <div class="all-good-icon">
-            <CheckCircle :size="34" color="#4CAF50" />
+            <CheckCircle :size="34" color="#FF6D00" />
           </div>
           <div class="all-good-title">Tudo certo por aqui ✓</div>
           <div class="all-good-desc">
@@ -562,8 +566,8 @@ async function processPayment() {
           @click="isPaidAccordionOpen = !isPaidAccordionOpen"
         >
           <div class="sandwich-header-left">
-            <div class="sandwich-icon-wrap green">
-              <CheckCircle :size="20" color="#4CAF50" />
+            <div class="sandwich-icon-wrap dark">
+              <CheckCircle :size="20" color="#212121" />
             </div>
             <div class="sandwich-header-texts">
               <h3 class="sandwich-title">
@@ -580,7 +584,7 @@ async function processPayment() {
             <component
               :is="isPaidAccordionOpen ? ChevronUp : ChevronDown"
               :size="20"
-              color="#4CAF50"
+              color="#212121"
             />
           </div>
         </div>
@@ -623,8 +627,8 @@ async function processPayment() {
           @click="isFutureAccordionOpen = !isFutureAccordionOpen"
         >
           <div class="sandwich-header-left">
-            <div class="sandwich-icon-wrap blue">
-              <Sparkles :size="20" color="#2196F3" />
+            <div class="sandwich-icon-wrap orange">
+              <Sparkles :size="20" color="#FF6D00" />
             </div>
             <div class="sandwich-header-texts">
               <h3 class="sandwich-title">
@@ -641,7 +645,7 @@ async function processPayment() {
             <component
               :is="isFutureAccordionOpen ? ChevronUp : ChevronDown"
               :size="20"
-              color="#2196F3"
+              color="#FF6D00"
             />
           </div>
         </div>
@@ -664,7 +668,7 @@ async function processPayment() {
                   <component
                     :is="openYearGroup === yr ? FolderOpen : Folder"
                     :size="18"
-                    color="#1976D2"
+                    color="#FF6D00"
                   />
                   <span class="year-name">Ano {{ yr }}</span>
                   <span class="year-count-pill">{{ insts.length }} parcelas</span>
@@ -771,18 +775,7 @@ async function processPayment() {
       </div>
     </div>
 
-    <!-- ── Barra do PIX combinado (multi-seleção) ─────────────────────────── -->
-    <div v-if="selectedNumbers.length > 0" class="batch-bar">
-      <div class="batch-info">
-        <strong>{{ selectedNumbers.length }} parcela{{ selectedNumbers.length > 1 ? 's' : '' }}</strong>
-        <span>{{ formatCurrency(batchTotal) }} em 1 PIX</span>
-      </div>
-      <button class="btn-batch-pay" :disabled="isBatchSubmitting" @click="processBatchPayment">
-        <span v-if="!isBatchSubmitting">GERAR PIX COMBINADO</span>
-        <span v-else>Gerando...</span>
-      </button>
-    </div>
-    <p v-if="batchError" class="batch-error">{{ batchError }}</p>
+
 
     <!-- ── KYC Rejected Alert Modal ──────────────────────────────────────── -->    <div v-if="isKycAlertOpen" class="modal-overlay" @click.self="isKycAlertOpen = false">
       <div class="kyc-alert-dialog">
@@ -803,13 +796,35 @@ async function processPayment() {
       </div>
     </div>
   </div>
+
+  <!-- ── Barra fixa do PIX combinado (multi-seleção) — fora do container -->
+  <Teleport to="body">
+    <Transition name="batch-slide">
+      <div v-if="selectedNumbers.length > 0" class="batch-bar-fixed">
+        <div class="batch-bar-inner">
+          <div class="batch-info">
+            <strong class="batch-count">{{ selectedNumbers.length }} parcela{{ selectedNumbers.length > 1 ? 's' : '' }} selecionada{{ selectedNumbers.length > 1 ? 's' : '' }}</strong>
+            <span class="batch-total">{{ formatCurrency(batchTotal) }} em 1 PIX</span>
+            <span v-if="batchSavings > 0" class="batch-savings">
+              Economizando {{ formatCurrency(batchSavings) }}
+            </span>
+          </div>
+          <button class="btn-batch-pay" :disabled="isBatchSubmitting" @click="processBatchPayment">
+            <span v-if="!isBatchSubmitting">GERAR PIX</span>
+            <span v-else>Gerando...</span>
+          </button>
+        </div>
+        <p v-if="batchError" class="batch-error">{{ batchError }}</p>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
 /* ── Tudo certo (parcela do mês já paga — no lugar do BOLA DA VEZ) ── */
 .all-good-card {
-  background: #F1F8E9;
-  border: 1px solid #C5E1A5;
+  background: rgba(255, 109, 0, 0.06);
+  border: 1.5px solid rgba(255, 109, 0, 0.25);
   border-radius: 16px;
   padding: 22px 18px;
   display: flex;
@@ -821,11 +836,11 @@ async function processPayment() {
 .all-good-title {
   font-size: 17px;
   font-weight: 800;
-  color: #2E7D32;
+  color: #263238;
 }
 .all-good-desc {
   font-size: 13.5px;
-  color: #558B2F;
+  color: #616161;
   line-height: 1.5;
 }
 
@@ -920,21 +935,21 @@ async function processPayment() {
 }
 
 .st-active {
-  background: #E8F5E9;
-  color: #2E7D32;
+  background: #FFF3E0;
+  color: #E65100;
 }
 
 .st-canceled {
-  background: #FFEBEE;
-  color: #C62828;
+  background: #F5F5F5;
+  color: #616161;
 }
 
 .st-finished {
-  background: #E3F2FD;
-  color: #1565C0;
+  background: #F5F5F5;
+  color: #212121;
 }
 
-/* ── Multi-seleção p/ PIX combinado ── */
+/* ── Multi-seleção: checkbox e highlight ── */
 .batch-check {
   width: 22px; height: 22px; accent-color: #FF6D00; flex-shrink: 0;
   margin-right: 2px; cursor: pointer;
@@ -942,18 +957,102 @@ async function processPayment() {
 .installment-card.is-selected {
   outline: 2px solid #FF6D00; outline-offset: -2px;
 }
-.batch-bar {
-  position: sticky; bottom: 12px; z-index: 20;
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  background: #263238; color: #fff; border-radius: 14px; padding: 14px 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); margin-top: 16px;
+
+/* ── Barra fixa do PIX combinado ── */
+.batch-bar-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  padding: 12px 16px env(safe-area-inset-bottom, 12px);
+  background: #FFFFFF;
+  border-top: 1px solid #EEEEEE;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
 }
-.batch-info { display: flex; flex-direction: column; font-size: 14px; }
-.batch-info span { opacity: 0.8; font-size: 13px; }
+
+.batch-bar-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.batch-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.batch-count {
+  font-size: 15px;
+  font-weight: 800;
+  color: #263238;
+}
+
+.batch-total {
+  font-size: 13px;
+  color: #757575;
+}
+
+.batch-savings {
+  font-size: 12px;
+  font-weight: 700;
+  color: #FF6D00;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.batch-savings::before {
+  content: '▼';
+  font-size: 9px;
+}
+
 .btn-batch-pay {
-  background: #FF6D00; color: #fff; border: none; border-radius: 10px;
-  padding: 12px 18px; font-weight: 800; cursor: pointer;
+  background: var(--color-primary, #FF6D00);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 22px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(255, 109, 0, 0.35);
+  transition: background 0.15s ease, transform 0.15s ease;
 }
-.btn-batch-pay:disabled { opacity: 0.6; }
-.batch-error { color: #C62828; font-size: 13px; margin-top: 8px; }
+
+.btn-batch-pay:hover {
+  background: #E65100;
+  transform: translateY(-1px);
+}
+
+.btn-batch-pay:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.batch-error {
+  color: #D32F2F;
+  font-size: 12px;
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* Slide-up / slide-down animation */
+.batch-slide-enter-active,
+.batch-slide-leave-active {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+
+.batch-slide-enter-from,
+.batch-slide-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+}
 </style>

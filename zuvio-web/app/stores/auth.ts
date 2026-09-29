@@ -76,6 +76,10 @@ export const useAuthStore = defineStore('auth', {
 
         if (response?.token && response?.user) {
           this.setSession({ token: response.token, user: response.user })
+          // Costura guest → user: o evento carrega guestId (body) + userId (JWT).
+          import('~/composables/useTrack').then(({ trackEvent }) => {
+            trackEvent({ event: 'LOGIN' })
+          }).catch(() => {})
           return { success: true }
         }
 
@@ -121,6 +125,9 @@ export const useAuthStore = defineStore('auth', {
 
         if (response?.token && response?.user) {
           this.setSession({ token: response.token, user: response.user })
+          import('~/composables/useTrack').then(({ trackEvent }) => {
+            trackEvent({ event: 'REGISTER' })
+          }).catch(() => {})
           return { success: true, message: response.message }
         }
 

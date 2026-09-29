@@ -6,8 +6,8 @@ import { useConsortiumStore } from '~/stores/consortium'
 import { useCheckoutStore } from '~/stores/checkout'
 import { useToast } from '~/composables/useToast'
 import { formatCurrency } from '~~/shared/utils/currency'
-import { DEFAULT_PRODUCTS } from '~~/shared/utils/catalogData'
 import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
+import { trackEvent, trackScreenView } from '~/composables/useTrack'
 import {
   ArrowLeft,
   ArrowRight,
@@ -48,18 +48,13 @@ const frontInputRef = ref<HTMLInputElement | null>(null)
 const backInputRef = ref<HTMLInputElement | null>(null)
 const selfieInputRef = ref<HTMLInputElement | null>(null)
 
-const defaultProduct: Product = DEFAULT_PRODUCTS[0]!
-
-// Selected product and plan fallback
-const product = computed<Product>(() => {
+const product = computed<Product | null>(() => {
   const queryProdId = route.query.productId ? String(route.query.productId) : null
   if (queryProdId) {
     const fromStore = consortiumStore.products.find(p => p.id === queryProdId)
     if (fromStore) return fromStore
-    const fromDefault = DEFAULT_PRODUCTS.find(p => p.id === queryProdId)
-    if (fromDefault) return fromDefault
   }
-  return consortiumStore.selectedProduct || consortiumStore.products[0] || defaultProduct
+  return consortiumStore.selectedProduct || consortiumStore.products[0] || null
 })
 
 const plan = computed<ConsortiumPlan>(() => {
@@ -102,13 +97,15 @@ onMounted(async () => {
 
   // Garante o catálogo real: sem isso, um refresh aqui caía no fallback
   // products[0] (produto ERRADO) quando o ?productId não estava na store.
-  await consortiumStore.ensureProductsLoaded()
   const qId = route.query.productId ? String(route.query.productId) : null
+  if (qId && !consortiumStore.products.some(p => p.id === qId)) {
+    await consortiumStore.fetchProductById(qId)
+  }
+  await consortiumStore.ensureProductsLoaded()
   if (
     qId &&
     consortiumStore.selectedProduct?.id !== qId &&
-    !consortiumStore.products.some(p => p.id === qId) &&
-    !DEFAULT_PRODUCTS.some(p => p.id === qId)
+    !consortiumStore.products.some(p => p.id === qId)
   ) {
     toast.error('Produto não encontrado no catálogo. Escolha novamente.')
     router.replace('/')
@@ -116,13 +113,21 @@ onMounted(async () => {
   }
 
   // Check initial height in case screen is very large
-  setTimeout(() => {
-    handleScroll()
-  }, 300)
+  setTimeout(() => { handleScroll() }, 300)
 
   if (!checkoutStore.personal.name) {
     router.replace('/checkout')
   }
+
+  // Rastreamento: chegou na revisão do contrato
+  trackScreenView('contract')
+  trackEvent({
+    event: 'CHECKOUT_STEP',
+    screen: 'contract',
+    entityType: 'product',
+    entityId: product.value?.id,
+    metadata: { step: 4, stepName: 'contract_review', productId: product.value?.id ?? '' }
+  })
 })
 
 onUnmounted(() => {
@@ -160,12 +165,22 @@ async function handleSignContract() {
   try {
     const res = await checkoutStore.finalizeCheckout(product.value as any, plan.value as any)
     if (res.success) {
+      // Funil completo: contrato assinado e checkout finalizado
+      trackEvent({
+        event: 'CHECKOUT_COMPLETE',
+        screen: 'contract',
+        entityType: 'subscription',
+        entityId: res.subscriptionId,
+        metadata: {
+          productId: product.value?.id ?? '',
+          productName: product.value?.name ?? '',
+          planDuration: plan.value.durationMonths,
+          price: plan.value.monthlyInstallment
+        }
+      })
       router.push({
         path: '/checkout/payment',
-        query: {
-          ...route.query,
-          subscriptionId: res.subscriptionId
-        }
+        query: { ...route.query, subscriptionId: res.subscriptionId }
       })
     } else {
       errorMessage.value = res.message || 'Erro ao processar contratação. Tente novamente.'

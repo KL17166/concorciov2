@@ -4,20 +4,41 @@ import { proxyToBackend } from '../utils/backendProxy'
 
 const EVENTS = new Set([
   'SCREEN_VIEW',
+  'VIEW_ITEM_LIST',
+  'VIEW_ITEM',
+  'SEARCH',
+  'FILTER_CATEGORY',
+  'ADD_TO_CART',
+  'BEGIN_CHECKOUT',
+  'CHECKOUT_STEP',
+  'CHECKOUT_COMPLETE',
   'GENERATE_QR_CLICK',
   'QR_SHOWN',
   'COPY_PIX_CLICK',
   'VERIFY_PAYMENT_CLICK',
   'PAYMENT_CONFIRMED_VIEW',
-  'BID_CREATED'
+  'BID_CREATED',
+  'BID_VIEWED',
+  'LOGIN',
+  'LOGOUT',
+  'REGISTER',
+  'KYC_STARTED',
+  'KYC_SUBMITTED',
+  'KYC_APPROVED',
+  'KYC_REJECTED',
+  'ONBOARDING_STARTED',
+  'ONBOARDING_COMPLETE',
+  'SHARE',
+  'NOTIFICATION_CLICK'
 ])
 
 const SCREENS = new Set([
   'home', 'welcome', 'auth', 'bids', 'payment', 'checkout', 'contract',
-  'adhesion', 'contracts', 'payments', 'statement', 'kyc', 'products', 'profile'
+  'adhesion', 'contracts', 'payments', 'statement', 'kyc', 'products',
+  'product_detail', 'profile'
 ])
 
-const ENTITY_TYPES = new Set(['bid', 'installment', 'subscription'])
+const ENTITY_TYPES = new Set(['bid', 'installment', 'subscription', 'product', 'user'])
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -36,6 +57,9 @@ export default defineEventHandler(async (event) => {
   if (body.entityId !== undefined && body.entityId !== null && !UUID_RE.test(String(body.entityId))) {
     throw createError({ statusCode: 400, message: 'entityId inválido' })
   }
+  if (body.guestId !== undefined && body.guestId !== null && !UUID_RE.test(String(body.guestId))) {
+    throw createError({ statusCode: 400, message: 'guestId inválido' })
+  }
   if (body.metadata !== undefined && body.metadata !== null) {
     if (typeof body.metadata !== 'object' || Array.isArray(body.metadata)) {
       throw createError({ statusCode: 400, message: 'metadata inválido' })
@@ -52,6 +76,7 @@ export default defineEventHandler(async (event) => {
       screen: body.screen ?? null,
       entityType: body.entityType ?? null,
       entityId: body.entityId ?? null,
+      guestId: body.guestId ?? null,
       metadata: body.metadata ?? null
     }
   })

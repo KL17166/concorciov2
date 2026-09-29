@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useConsortiumStore } from '~/stores/consortium'
 import { useCheckoutStore } from '~/stores/checkout'
-import { DEFAULT_PRODUCTS } from '~~/shared/utils/catalogData'
+import { trackEvent, trackScreenView } from '~/composables/useTrack'
 import {
   ArrowLeft,
   ArrowRight,
@@ -115,14 +115,16 @@ const route = useRoute()
 onMounted(async () => {
   await checkoutStore.initFromAuth()
 
-  // Garante o catálogo real antes de resolver o ?productId (a store inicia
-  // com DEFAULT_PRODUCTS; sem isso o deep-link/refresh não achava o produto).
+  // Garante o catálogo carregado do servidor antes de resolver o ?productId
   await consortiumStore.ensureProductsLoaded()
 
   // Sync selectedProduct and selectedPlan from route query if present
   if (route.query.productId) {
     const prodId = String(route.query.productId)
-    const prod = consortiumStore.products.find(p => p.id === prodId) || DEFAULT_PRODUCTS.find(p => p.id === prodId)
+    let prod: import('~~/shared/types/catalog').Product | null | undefined = consortiumStore.products.find(p => p.id === prodId)
+    if (!prod) {
+      prod = await consortiumStore.fetchProductById(prodId)
+    }
     if (prod) {
       consortiumStore.selectedProduct = prod
       if (route.query.planId) {
@@ -131,7 +133,6 @@ onMounted(async () => {
         if (pl) consortiumStore.selectedPlan = pl
       }
     } else {
-      // Id da URL não existe no catálogo (nem na API nem no fallback)
       productNotFound.value = true
       return
     }
@@ -158,6 +159,18 @@ onMounted(async () => {
   docFront.value = checkoutStore.documents.front
   docBack.value = checkoutStore.documents.back
   selfie.value = checkoutStore.documents.selfie
+
+  // Rastreamento: entrada no checkout
+  trackScreenView('checkout')
+  trackEvent({
+    event: 'BEGIN_CHECKOUT',
+    screen: 'checkout',
+    entityType: 'product',
+    entityId: consortiumStore.selectedProduct?.id,
+    metadata: consortiumStore.selectedProduct
+      ? { productName: consortiumStore.selectedProduct.name, price: consortiumStore.selectedProduct.price }
+      : {}
+  })
 })
 
 // Formatting helpers
@@ -342,32 +355,25 @@ function handleContinue() {
   if (!validateCurrentStep()) return
 
   if (currentStep.value === 0) {
-    // Apenas o telefone pode ser atualizado — nome e CPF vêm do cadastro e são imutáveis
-    checkoutStore.updatePersonal({
-      phone: phone.value
-    })
+    checkoutStore.updatePersonal({ phone: phone.value })
+    trackEvent({ event: 'CHECKOUT_STEP', screen: 'checkout', metadata: { step: 1, stepName: 'personal' } })
     currentStep.value = 1
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } else if (currentStep.value === 1) {
     checkoutStore.updateAddress({
-      cep: cep.value,
-      street: street.value,
-      number: number.value,
-      district: district.value,
-      city: city.value,
-      state: state.value.toUpperCase(),
-      complement: complement.value
+      cep: cep.value, street: street.value, number: number.value,
+      district: district.value, city: city.value,
+      state: state.value.toUpperCase(), complement: complement.value
     })
+    trackEvent({ event: 'CHECKOUT_STEP', screen: 'checkout', metadata: { step: 2, stepName: 'address' } })
     currentStep.value = 2
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } else if (currentStep.value === 2) {
     checkoutStore.updateDocument('front', docFront.value!)
     checkoutStore.updateDocument('back', docBack.value!)
     checkoutStore.updateDocument('selfie', selfie.value!)
-    router.push({
-      path: '/checkout/contract',
-      query: route.query
-    })
+    trackEvent({ event: 'CHECKOUT_STEP', screen: 'checkout', metadata: { step: 3, stepName: 'documents' } })
+    router.push({ path: '/checkout/contract', query: route.query })
   }
 }
 </script>

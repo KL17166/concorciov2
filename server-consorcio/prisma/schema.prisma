@@ -208,6 +208,7 @@ model BidPayment {
 model TrackingEvent {
   id          String   @id @default(uuid())
   userId      String?  // dono (do JWT); null = anônimo/opt-out futuro
+  guestId     String?  // UUID anônimo do front (costura jornada pré-login)
   event       String   // SCREEN_VIEW | GENERATE_QR_CLICK | QR_SHOWN | COPY_PIX_CLICK | VERIFY_PAYMENT_CLICK | PAYMENT_CONFIRMED_VIEW
   screen      String?  // welcome | bids | payment | checkout | contracts | payments | kyc | products
   entityType  String?  // bid | installment | subscription
@@ -219,7 +220,18 @@ model TrackingEvent {
 
   @@index([event, createdAt])
   @@index([userId, createdAt])
+  @@index([guestId, createdAt])
   @@map("tracking_events")
+}
+
+model PixelConfig {
+  id        String   @id @default(uuid())
+  provider  String   @unique // "ga4" | "meta" | "tiktok"
+  pixelId   String   @default("")
+  enabled   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@map("pixel_configs")
 }
 
 // Pesos do algoritmo de aprendizado (loop estilo TikTok, versão consórcio).
