@@ -561,7 +561,7 @@ export const performDraw = async (req: Request, res: Response) => {
             return res.redirect('/admin/bids/draw');
         }
 
-        const winners  = eligibleBids.slice(0, parseInt(numberOfWinners) || 1);
+        const winners  = eligibleBids.slice(0, Math.max(1, parseInt(numberOfWinners) || 1));
         const drawDate = new Date();
 
         const ops = winners.flatMap(winner => [

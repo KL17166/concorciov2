@@ -826,7 +826,7 @@
                 const inactive = !p.active ? 'opacity: .45; filter: grayscale(.6);' : '';
                 return '<div class="d-flex align-items-center gap-2 mb-2 p-2 bg-white rounded-3" style="border: 1px solid #eee;' + inactive + '">' +
                     '<span class="fw-bold" style="width: 26px; text-align: center; color: #FF6D00;">' + (idx + 1) + 'º</span>' +
-                    (p.imageUrl ? '<img src="' + p.imageUrl + '" style="width: 52px; height: 40px; border-radius: 8px; object-fit: cover; background: #eee;">' : '<div style="width: 52px; height: 40px; border-radius: 8px; background: #eee;"></div>') +
+                    (p.imageUrl ? '<img src="' + escapeHtml(p.imageUrl) + '" style="width: 52px; height: 40px; border-radius: 8px; object-fit: cover; background: #eee;">' : '<div style="width: 52px; height: 40px; border-radius: 8px; background: #eee;"></div>') +
                     '<div class="flex-grow-1" style="min-width: 0;"><div class="fw-bold text-truncate" style="font-size: 13px; color: #263238;">' + escapeHtml(p.name) + '</div>' +
                     '<div style="font-size: 11px; color: #757575;">#' + p.displayOrder + ' • ' + fmtBRL(p.estimatedMonthly) + '/mês' + (!p.active ? ' • inativo' : '') + '</div></div>' +
                     (p.isFeatured ? '<span class="app-tag" style="background: #FF6D00; color: #fff;">★</span>' : '') +

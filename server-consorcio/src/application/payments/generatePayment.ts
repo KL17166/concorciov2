@@ -5,6 +5,8 @@ import { parseAddress } from '../../mappers/addressMapper';
 import { PaymentFailoverService } from '../../services/paymentFailoverService';
 import { PaymentMethod, PaymentResult } from '../../integrations/payments/PaymentGateway';
 import { prisma } from '../../config/database';
+import { redisClient } from '../../config/redis';
+import crypto from 'crypto';
 import { logger } from '../../config/logger';
 
 export interface GeneratePaymentInput {
@@ -91,6 +93,59 @@ export async function generatePayment(input: GeneratePaymentInput): Promise<Paym
 
     const valueToPay = calculateInstallmentValue(Number(installment.amount), installment.number, nextIndex);
 
+    // A1: trava distribuída ANTES da gateway — duplo-clique/retry paralelo
+    // gera 1 cobrança real, não 2. Sem Redis, segue sem trava (log alerta).
+    const lockKey = `pay:gen:${installment.id}`;
+    const lockToken = crypto.randomBytes(16).toString('hex');
+    let lockHeld = false;
+    try {
+        if (redisClient) {
+            const acquired = await (redisClient as any).set(lockKey, lockToken, { NX: true, PX: 90000 });
+            if (!acquired) {
+                throw Object.assign(new Error('Geração de PIX em andamento — aguarde alguns segundos.'), { statusCode: 409 });
+            }
+            lockHeld = true;
+        } else {
+            logger.warn('[generatePayment] Redis indisponível — sem trava anti duplo-PIX.');
+        }
+    } catch (err: any) {
+        if (err?.statusCode === 409) throw err;
+        logger.warn('[generatePayment] Falha ao adquirir trava — seguindo sem ela.', err);
+    }
+
+    // Reserva registrada ANTES da gateway + expira vouchers antigos (só vale o último).
+    let reservationId: string | null = null;
+    try {
+        await prisma.paymentAttempt.updateMany({
+            where: { installmentId: installment.id, status: 'ACTIVE' },
+            data: { status: 'EXPIRED' }
+        });
+        const reservation = await prisma.paymentAttempt.create({
+            data: {
+                installmentId: installment.id,
+                provider: 'pending',
+                externalId: null,
+                amount: valueToPay,
+                status: 'RESERVED',
+                expiresAt: new Date(Date.now() + 30 * 60 * 1000)
+            }
+        });
+        reservationId = reservation.id;
+    } catch (reserveErr) {
+        logger.error('[generatePayment] Erro ao reservar tentativa:', reserveErr);
+    }
+
+    const releaseLock = async () => {
+        if (!lockHeld || !redisClient) return;
+        try {
+            // Libera só se ainda somos donos (compara-e-apaga atômico).
+            await (redisClient as any).eval(
+                "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+                { keys: [lockKey], arguments: [lockToken] }
+            );
+        } catch { /* TTL de 90s cobre */ }
+    };
+
     let parsedAddress = null;
     if (installment.subscription.user.address) {
         parsedAddress = parseAddress(installment.subscription.user.address);
@@ -98,46 +153,69 @@ export async function generatePayment(input: GeneratePaymentInput): Promise<Paym
 
     if (method === 'BOLETO') {
         if (!parsedAddress || !parsedAddress.cep || !parsedAddress.street || !parsedAddress.number || !parsedAddress.neighborhood || !parsedAddress.city || !parsedAddress.state) {
+            await releaseLock();
             throw Object.assign(new Error('Endereço completo é obrigatório para gerar boleto. Por favor, atualize seu cadastro.'), { statusCode: 400 });
         }
     }
 
-    const paymentResult = await PaymentFailoverService.executePaymentWithFailover({
-        installmentId: installment.id,
-        installmentNumber: installment.number,
-        amount: valueToPay,
-        method,
-        customer: {
-            name: installment.subscription.user.name,
-            email: installment.subscription.user.email,
-            document: installment.subscription.user.cpf,
-            phone: installment.subscription.user.phone || undefined,
-            address: parsedAddress
+    let paymentResult: PaymentResult;
+    try {
+        paymentResult = await PaymentFailoverService.executePaymentWithFailover({
+            installmentId: installment.id,
+            installmentNumber: installment.number,
+            amount: valueToPay,
+            method,
+            customer: {
+                name: installment.subscription.user.name,
+                email: installment.subscription.user.email,
+                document: installment.subscription.user.cpf,
+                phone: installment.subscription.user.phone || undefined,
+                address: parsedAddress
+            }
+        });
+    } catch (gwErr) {
+        if (reservationId) {
+            await prisma.paymentAttempt.update({
+                where: { id: reservationId },
+                data: { status: 'EXPIRED' }
+            }).catch(() => {});
         }
-    });
+        await releaseLock();
+        throw gwErr;
+    }
 
     // Valor original da parcela (a gateway pode cobrar um pouco menos — exibir como desconto)
     paymentResult.requestedAmount = valueToPay;
 
-    // Expira tentativas anteriores e registra a nova (só vale o último PIX gerado)
+    // Promove a reserva a ACTIVE com os dados reais da cobrança.
     try {
-        await prisma.paymentAttempt.updateMany({
-            where: { installmentId: installment.id, status: 'ACTIVE' },
-            data: { status: 'EXPIRED' }
-        });
-        await prisma.paymentAttempt.create({
-            data: {
-                installmentId: installment.id,
-                provider: paymentResult.provider,
-                externalId: paymentResult.paymentId || null,
-                amount: paymentResult.amount,
-                status: 'ACTIVE',
-                expiresAt: paymentResult.expirationDate ? new Date(paymentResult.expirationDate) : null
-            }
-        });
+        if (reservationId) {
+            await prisma.paymentAttempt.update({
+                where: { id: reservationId },
+                data: {
+                    provider: paymentResult.provider,
+                    externalId: paymentResult.paymentId || null,
+                    amount: paymentResult.amount,
+                    status: 'ACTIVE',
+                    expiresAt: paymentResult.expirationDate ? new Date(paymentResult.expirationDate) : null
+                }
+            });
+        } else {
+            await prisma.paymentAttempt.create({
+                data: {
+                    installmentId: installment.id,
+                    provider: paymentResult.provider,
+                    externalId: paymentResult.paymentId || null,
+                    amount: paymentResult.amount,
+                    status: 'ACTIVE',
+                    expiresAt: paymentResult.expirationDate ? new Date(paymentResult.expirationDate) : null
+                }
+            });
+        }
     } catch (attemptErr) {
         logger.error('[generatePayment] Erro ao registrar tentativa de pagamento:', attemptErr);
     }
 
+    await releaseLock();
     return paymentResult;
 }

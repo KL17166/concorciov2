@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/database';
 import { logger } from '../config/logger';
-import { isAuthenticatedAdmin } from '../security/adminAuth';
 
 // ========================================
 // THREAT SCORE CONFIGURATION
@@ -192,8 +191,10 @@ async function logThreat(
 // MAIN SECURITY MIDDLEWARE
 // ========================================
 export const securityMiddleware = async (req: Request, res: Response, next: NextFunction) => {
-    // Admin bypass: admins autenticados com token válido pulam TODAS as checagens
-    if (isAuthenticatedAdmin(req)) {
+    // Bypass: SÓ sessão admin HttpOnly válida (A10 — token via JS removido).
+    // Clientes API (JWT) não têm session.user → nunca pulam as checagens.
+    const sessUser = (req.session as any)?.user;
+    if (sessUser?.id && ['MASTER', 'MANAGER', 'SUPPORT'].includes(sessUser.role)) {
         return next();
     }
 

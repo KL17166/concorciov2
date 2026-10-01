@@ -1,6 +1,6 @@
 # POST /api/auth/register
 - **Ativado por:** tela de cadastro do app
-  - BFF espelho: `zuvio-web/server/api/auth/register.post.ts`
+  - BFF espelho: `zuvio-web/server/api/auth/register.post.ts` (desde 2026-09-29 lê/valida/encaminha allowlist `{name,email,cpf,phone,password}` — antes descartava o body; validações BFF: nome, e-mail, CPF 11 dígitos, senha ≥8)
   - Fluxo: primeiro acesso, cria conta CLIENT
 - **Auth / rate-limit:** sem `authenticate`
   - Rota: `authRateLimiter` (10 req / 15min por CPF ou IP)

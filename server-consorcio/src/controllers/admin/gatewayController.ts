@@ -231,6 +231,17 @@ export const getSigiloPayBalance = async (req: Request, res: Response) => {
 
 // POST /admin/gateways/sigilopay/withdraw — Request withdrawal from SigiloPay
 export const requestSigiloPayWithdraw = async (req: Request, res: Response) => {
+    // B8: saques congelados até existir step-up (senha+2FA fresh, teto, dupla
+    // aprovação). SigiloPay OFF por decisão do operador (2026-09-29).
+    // Reativar exige: SIGILOPAY_WITHDRAW_ENABLED=true NO .ENV + step-up implementado.
+    if (process.env.SIGILOPAY_WITHDRAW_ENABLED !== 'true') {
+        res.status(503).json({
+            success: false,
+            error: 'WITHDRAW_DISABLED',
+            message: 'Saques SigiloPay desativados. Fale com o mestre para reativar com aprovações.'
+        });
+        return;
+    }
     try {
         const { amount, pixKey, pixKeyType, description } = req.body;
 

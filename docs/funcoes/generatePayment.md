@@ -11,6 +11,7 @@
   - Erros: 404/403/400 acima (controller responde via `handleApiError`)
 - **Regras/efeitos:**
   - Valor via `calculateInstallmentValue(amount, number, nextIndex)`; cobrança via `PaymentFailoverService.executePaymentWithFailover`
+  - Anti duplo-PIX (A1, 2026-09-29): lock Redis `pay:gen:{installmentId}` (SET NX 90s, libera com Lua compare-del; concorrente recebe 409) + reserva `paymentAttempt` RESERVED **antes** da gateway (expira ACTIVE antigos); sucesso promove a ACTIVE, falha de gateway marca EXPIRED. Sem Redis segue sem trava (warn).
   - Registra tentativa: expira `paymentAttempt` ACTIVE anteriores e cria nova ACTIVE (best-effort, com try/catch)
   - Tabelas: `installment`+`subscription`+`user` (leitura via repositório), `paymentAttempt` (expira + insert)
   - Side-effects: cobrança real na gateway; `logger.warn` em token inválido

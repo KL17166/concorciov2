@@ -4,7 +4,8 @@ import process from 'node:process'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  // Devtools só em dev: em prod exporia internals + peso no bundle.
+  devtools: { enabled: process.env.NODE_ENV !== 'production' },
 
   modules: [
     '@pinia/nuxt',
@@ -61,6 +62,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Server-only (not exposed to browser)
     backendBase: process.env.NUXT_BACKEND_BASE || process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000',
+    // HMAC p/ assinar chamadas BFF→backend (B1: nunca hardcoded).
+    // Idêntico ao REQUEST_SIGNING_SECRET do backend.
+    hmacSecret: process.env.NUXT_HMAC_SECRET || '',
     public: {
       appName: 'Katari Consórcios',
       appSubtitle: 'Seu sonho em duas rodas',
@@ -101,5 +105,15 @@ export default defineNuxtConfig({
 
   typescript: {
     strict: true
+  },
+
+  nitro: {
+    // Handler próprio: nunca serializa stack nas respostas de erro
+    // (nem em dev — o front roda `nuxt dev` como servidor vivo).
+    // `~~` = raiz do projeto (o `~` aponta para app/).
+    errorHandler: '~~/server/error',
+    // h3 só inclui `stack` no JSON de erro com debug ligado — mantém
+    // desligado sempre (logs de terminal continuam completos).
+    debug: false
   }
 })

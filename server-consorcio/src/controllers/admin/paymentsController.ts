@@ -30,13 +30,13 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
             const subIdsAll = [...new Set(pendIds.map(p => p.subscriptionId))];
             let firstAll = new Map<string, number>();
             if (subIdsAll.length > 0) {
-                const rows = await prisma.$queryRawUnsafe<any[]>(`
+                const rows = await prisma.$queryRaw<any[]>`
                     SELECT "subscriptionId" AS "sub", MIN(number) AS "first"
                     FROM installments
-                    WHERE "subscriptionId" = ANY($1)
+                    WHERE "subscriptionId" = ANY(${subIdsAll})
                       AND status IN ('PENDING', 'OVERDUE')
                     GROUP BY "subscriptionId"
-                `, subIdsAll);
+                `;
                 firstAll = new Map(rows.map((r: any) => [r.sub, Number(r.first)]));
             }
             const scheduledIds = pendIds
@@ -101,7 +101,7 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
         // ── Primeira parcela em aberto por assinatura (A PAGAR vs AGENDADA) ──
         // A pagar = menor number não pago da assinatura (PENDING/OVERDUE).
         // Agendada = PENDING que ainda não é a atual.
-        const [dueAgg] = await prisma.$queryRawUnsafe<any[]>(`
+        const [dueAgg] = await prisma.$queryRaw<any[]>`
             SELECT COUNT(*) AS "count", COALESCE(SUM(amount), 0) AS "total"
             FROM installments i
             WHERE i.status IN ('PENDING', 'OVERDUE')
@@ -110,8 +110,8 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
                 WHERE "subscriptionId" = i."subscriptionId"
                   AND status IN ('PENDING', 'OVERDUE')
               )
-        `);
-        const [schedAgg] = await prisma.$queryRawUnsafe<any[]>(`
+        `;
+        const [schedAgg] = await prisma.$queryRaw<any[]>`
             SELECT COUNT(*) AS "count", COALESCE(SUM(amount), 0) AS "total"
             FROM installments i
             WHERE i.status = 'PENDING'
@@ -120,7 +120,7 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
                 WHERE "subscriptionId" = i."subscriptionId"
                   AND status IN ('PENDING', 'OVERDUE')
               )
-        `);
+        `;
 
         // Abas virtuais ADESOES / PENDING (respeitam busca/mês/método)
         let finalInstallments = installments;
@@ -138,13 +138,13 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
             const subIds = [...new Set(candidates.map(c => c.subscriptionId))];
             let realFirst = new Map<string, number>();
             if (subIds.length > 0) {
-                const rows = await prisma.$queryRawUnsafe<any[]>(`
+                const rows = await prisma.$queryRaw<any[]>`
                     SELECT "subscriptionId" AS "sub", MIN(number) AS "first"
                     FROM installments
-                    WHERE "subscriptionId" = ANY($1)
+                    WHERE "subscriptionId" = ANY(${subIds})
                       AND status IN ('PENDING', 'OVERDUE')
                     GROUP BY "subscriptionId"
-                `, subIds);
+                `;
                 realFirst = new Map(rows.map((r: any) => [r.sub, Number(r.first)]));
             }
             const wanted = candidates.filter(c => {
@@ -175,12 +175,12 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
         }
 
         // Contadores das abas: Adesões (parcela 1 em aberto) e Pendentes (atuais, exceto adesão)
-        const [adesaoAgg] = await prisma.$queryRawUnsafe<any[]>(`
+        const [adesaoAgg] = await prisma.$queryRaw<any[]>`
             SELECT COUNT(*) AS "count", COALESCE(SUM(amount), 0) AS "total"
             FROM installments
             WHERE number = 1 AND status IN ('PENDING', 'OVERDUE')
-        `);
-        const [pendAgg] = await prisma.$queryRawUnsafe<any[]>(`
+        `;
+        const [pendAgg] = await prisma.$queryRaw<any[]>`
             SELECT COUNT(*) AS "count", COALESCE(SUM(amount), 0) AS "total"
             FROM installments i
             WHERE i.status = 'PENDING' AND i.number > 1
@@ -189,24 +189,24 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
                 WHERE "subscriptionId" = i."subscriptionId"
                   AND status IN ('PENDING', 'OVERDUE')
               )
-        `);
+        `;
         // Mapa assinatura -> primeira em aberto (p/ selo A PAGAR nas linhas da página)
         const pageSubIds = [...new Set(finalInstallments.map(i => i.subscriptionId))];
         let currentMap: Record<string, number> = {};
         if (pageSubIds.length > 0) {
-            const rows = await prisma.$queryRawUnsafe<any[]>(`
+            const rows = await prisma.$queryRaw<any[]>`
                 SELECT "subscriptionId" AS "sub", MIN(number) AS "first"
                 FROM installments
-                WHERE "subscriptionId" = ANY($1)
+                WHERE "subscriptionId" = ANY(${pageSubIds})
                   AND status IN ('PENDING', 'OVERDUE')
                 GROUP BY "subscriptionId"
-            `, pageSubIds);
+            `;
             currentMap = Object.fromEntries(rows.map((r: any) => [r.sub, Number(r.first)]));
         }
 
         // ── All-installments summary (ignores filters for totals) ────────
         // Só entra no total depois da adesão paga (contrato não-PENDING).
-        const [summaryResult] = await prisma.$queryRawUnsafe<any[]>(`
+        const [summaryResult] = await prisma.$queryRaw<any[]>`
             SELECT
                 COALESCE(SUM(CASE WHEN i.status = 'PENDING' THEN i.amount ELSE 0 END), 0) AS "totalPending",
                 COALESCE(SUM(CASE WHEN i.status = 'OVERDUE'  THEN i.amount ELSE 0 END), 0) AS "totalOverdue",
@@ -220,19 +220,19 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
             FROM installments i
             JOIN subscriptions s ON s.id = i."subscriptionId"
             WHERE s.status <> 'PENDING'
-        `);
+        `;
 
         // ── This month received ──────────────────────────────────────────
         const now = new Date();
         const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const [monthResult] = await prisma.$queryRawUnsafe<any[]>(`
+        const [monthResult] = await prisma.$queryRaw<any[]>`
             SELECT COALESCE(SUM(i.amount), 0) AS "receivedThisMonth"
             FROM installments i
             JOIN subscriptions s ON s.id = i."subscriptionId"
             WHERE i.status = 'PAID'
               AND s.status <> 'PENDING'
-              AND i."paymentDate" >= $1
-        `, firstOfMonth);
+              AND i."paymentDate" >= ${firstOfMonth}
+        `;
 
         // ── Near-due (next 7 days, still PENDING) ────────────────────────
         const in7Days = new Date(now);
@@ -461,7 +461,7 @@ export const updatePayment = async (req: Request, res: Response, next: NextFunct
                 if (inst.number === 1 && inst.subscription.status === 'PENDING') {
                     // B7: fim da ativação sem KYC. Antes, a baixa manual ativava o
                     // contrato direto (ACTIVE) mesmo com KYC pendente — mesma regra
-                    // do fluxo automático (`markInstallmentAsPaid`): sem KYC aprovado,
+                    // do fluxo automático (`markInstallmentAsPaid`: sem KYC aprovado,
                     // o contrato vai para PENDING_KYC e aguarda revisão.
                     const kycStatus = (inst.subscription as any).user?.kycStatus;
                     if (kycStatus && kycStatus !== 'APPROVED') {

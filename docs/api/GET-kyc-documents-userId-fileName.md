@@ -7,6 +7,7 @@
   - App: `generalLimiter` + `securityMiddleware`
 - **Request:** params `userId` + `fileName`
   - `fileName` deve ser basename exato (`..` ou path → 400)
+  - `userId` restrito a `^[A-Za-z0-9_-]{1,64}$` (A5, 2026-09-29 — antes entrava cru no `path.join`)
   - Sem body
 - **O que o servidor retorna:**
   - 200 arquivo (sendFile; `nosniff`; `private, no-cache, no-store`)

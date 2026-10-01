@@ -754,13 +754,15 @@
                     const data = await resp.json();
                     if (resp.ok && data.success) {
                         res.className = 'wd-result ok';
-                        res.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>' + (data.message || 'Saque solicitado!');
+                        res.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>';
+                        res.appendChild(document.createTextNode(data.message || 'Saque solicitado!'));
                     } else {
                         throw new Error(data.error || data.details || 'Erro desconhecido');
                     }
                 } catch (err) {
                     res.className = 'wd-result err';
-                    res.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>' + err.message;
+                    res.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>';
+                    res.appendChild(document.createTextNode((err && err.message) || 'Erro desconhecido'));
                 }
 
                 res.style.display = 'block';

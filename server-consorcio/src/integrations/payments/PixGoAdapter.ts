@@ -1,5 +1,6 @@
 import { PaymentGateway, PaymentMethod, PaymentRequest, PaymentResult } from './PaymentGateway';
 import { PixGoService } from '../../services/gateways/pixGoService';
+import { buildWebhookUrl } from './webhookUrls';
 
 export class PixGoAdapter implements PaymentGateway {
     readonly name = 'pixgo';
@@ -13,9 +14,8 @@ export class PixGoAdapter implements PaymentGateway {
             throw new Error('PixGo suporta apenas pagamentos via PIX');
         }
 
-        const webhookUrl = process.env.PIXGO_WEBHOOK_URL
-            ? `${process.env.PIXGO_WEBHOOK_URL}/webhooks/pixgo`
-            : undefined;
+        // B4: rota real é /api/webhooks/pixgo (builder central — nunca concatenar na mão).
+        const webhookUrl = buildWebhookUrl('pixgo');
 
         const result = await PixGoService.createPayment({
             amount: request.amount,

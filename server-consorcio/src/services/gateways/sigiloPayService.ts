@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { logger } from '../../config/logger';
 import { prisma } from '../../config/database';
+import { buildWebhookUrl } from '../../integrations/payments/webhookUrls';
 
 // =============================================
 // SigiloPay API — Production Integration
@@ -121,7 +122,7 @@ export class SigiloPayService {
         logger.info(`[SigiloPay] Creating PIX deposit: ${params.external_id} - R$ ${params.amount}`);
 
         const cleanDoc = params.payer.document.replace(/\D/g, '');
-        const webhookUrl = process.env.PIXGO_WEBHOOK_URL ? `${process.env.PIXGO_WEBHOOK_URL}/api/webhooks/sigilopay` : undefined;
+        const webhookUrl = buildWebhookUrl('sigilopay');
 
         const payload = {
             identifier: params.external_id,

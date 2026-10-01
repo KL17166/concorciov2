@@ -37,6 +37,8 @@ export { redisClient };
 
 // Trust proxy for rate limiting behind reverse proxy / Cloudflare
 app.set('trust proxy', 1);
+// Sem ETag (vazava inode do FS — nikto). Cache continua via Cache-Control.
+app.set('etag', false);
 
 // ========================================
 // SECURITY & HEADERS

@@ -11,14 +11,9 @@
             "hash": "d743ea1e4b7c47537afdd2837b120ba42aee64371d86f5fce20d6871f85a5e17"
         },
         {
-            "date": 1790651629523,
-            "name": "logs/combined-2026-09-28.log",
-            "hash": "0ebbedbdab117b4b6524e467e6b3d723925dfa22726d12ea552c497293501688"
-        },
-        {
-            "date": 1790655237611,
-            "name": "logs/combined-2026-09-29.log",
-            "hash": "3571d8b53f8299387f5d6ddc1522270068453eb387b4dafdbdcf1ae7d7c27a99"
+            "date": 1790853859852,
+            "name": "logs/combined-2026-10-01.log",
+            "hash": "7a167388e8bc02af7595cc3b4ef29c209adbb4f6cd3a096e95bb6c3ab815f1ba"
         }
     ],
     "hashType": "sha256"

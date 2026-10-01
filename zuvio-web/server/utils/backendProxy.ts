@@ -7,9 +7,15 @@
  * Authorization headers completely out of the browser bundle.
  */
 import crypto from 'crypto'
-import { H3Event, getHeader, createError } from 'h3'
+import { H3Event, getHeader, setResponseStatus } from 'h3'
 
-const STATIC_HMAC_SECRET = 'd8f9a2b3c4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcde'
+// B1: segredo via env server-only (NUXT_HMAC_SECRET), nunca hardcoded.
+// Deve ser idêntico ao REQUEST_SIGNING_SECRET do backend.
+function hmacSecret(fallbackSession?: string | null): string {
+  if (fallbackSession && fallbackSession.length > 0) return fallbackSession
+  const config = useRuntimeConfig()
+  return (config as any).hmacSecret || ''
+}
 
 function buildSignatureHeaders(
   method: string,
@@ -19,7 +25,7 @@ function buildSignatureHeaders(
 ): Record<string, string> {
   const timestamp = Math.floor(Date.now() / 1000).toString()
   const nonce = crypto.randomBytes(8).toString('hex')
-  const secret = sessionSecret && sessionSecret.length > 0 ? sessionSecret : STATIC_HMAC_SECRET
+  const secret = hmacSecret(sessionSecret)
 
   const bodyHash = body
     ? crypto.createHash('sha256').update(body).digest('hex')
@@ -84,9 +90,27 @@ export async function proxyToBackend<T>(
     })
     return result as T
   } catch (err: any) {
-    // Preserve the original HTTP status from server-consorcio
+    // Sem `throw`: o h3 em dev serializa `error.stack` em TODA exceção
+    // (e os knobs `nitro.debug`/`errorHandler` são ignorados pelo dev server).
+    // Respondendo direto, o corpo é exatamente este objeto — sem stack,
+    // em dev e em prod. O $fetch do front continua lançando pelo status,
+    // com `error.data.message` intacto para as telas.
     const status = err?.status || err?.statusCode || 500
     const message = err?.data?.message || err?.data?.error || err?.message || 'Erro no servidor'
-    throw createError({ statusCode: status, message, data: err?.data })
+    const rawData = err?.data && typeof err.data === 'object' ? err.data : undefined
+    let data: Record<string, unknown> | undefined
+    if (rawData) {
+      const { stack, stackTrace, trace, ...rest } = rawData as Record<string, unknown>
+      data = rest
+    }
+    setResponseStatus(event, status, 'Server Error')
+    return {
+      error: true,
+      url: event.path,
+      statusCode: status,
+      statusMessage: 'Server Error',
+      message,
+      ...(data ? { data } : {})
+    } as T
   }
 }

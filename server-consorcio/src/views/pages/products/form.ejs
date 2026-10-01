@@ -410,10 +410,10 @@
                         imageContainer.innerHTML = imageUrls.map((url, index) => `
                             <div class="input-group mb-2 align-items-center gallery-row" data-image-row="${index}" draggable="${url ? 'true' : 'false'}">
                                 <span class="gallery-grip" title="Arrastar para reordenar"><i class="bi bi-grip-vertical"></i></span>
-                                <img src="${String(url).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" alt="miniatura ${index + 1}" class="gallery-thumb" onerror="this.src='${FALLBACK_THUMB}'">
+                                <img src="${String(url).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}" alt="miniatura ${index + 1}" class="gallery-thumb" onerror="this.src='${FALLBACK_THUMB}'">
                                 ${index === 0 ? '<span class="badge bg-primary ms-1">capa</span>' : ''}
                                 ${DEV_REVIEW && verifiedUrls.includes(url) ? '<span class="badge bg-success ms-1"><i class="bi bi-check-lg me-1"></i>verificada</span>' : ''}
-                                <input type="url" class="form-control image-url-input" value="${String(url).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" placeholder="https://... ou /img/...">
+                                <input type="url" class="form-control image-url-input" value="${String(url).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}" placeholder="https://... ou /img/...">
                                 ${DEV_REVIEW && url && !verifiedUrls.includes(url) ? `<button type="button" class="btn btn-outline-success verify-image" title="Marcar foto como conferida e ir para a próxima"><i class="bi bi-patch-check"></i></button>` : ''}
                                 <label class="btn btn-outline-secondary mb-0" title="Enviar foto do computador">
                                     <i class="bi bi-upload"></i><input type="file" class="d-none gallery-file" accept=".jpg,.jpeg,.png,.webp" data-row="${index}">

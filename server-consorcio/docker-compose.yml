@@ -3,6 +3,12 @@
 # ══════════════════════════════════════════════
 # Sobe PostgreSQL e Redis. O backend Node.js
 # continua rodando local via npm run dev.
+#
+# SEGURANÇA (2026-09-29):
+# - Portas expostas SÓ em 127.0.0.1 (nada em 0.0.0.0).
+# - Senhas (PG_PASSWORD, REDIS_PASSWORD) no `.env` do projeto (gitignored).
+#   O compose lê esse arquivo p/ interpolar ${...} automaticamente.
+# - Redis com requirepass + appendonly (restart não apaga mais sessões).
 # ══════════════════════════════════════════════
 
 services:
@@ -11,10 +17,10 @@ services:
     container_name: katari-postgres
     restart: unless-stopped
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "099"
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?defina PG_PASSWORD no .env}
       POSTGRES_DB: consorcio
     volumes:
       - katari_pgdata:/var/lib/postgresql/data
@@ -29,10 +35,12 @@ services:
     container_name: katari-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
-    command: redis-server --save "" --appendonly no
+      - "127.0.0.1:6379:6379"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?defina REDIS_PASSWORD no .env}
+    command: redis-server --requirepass ${REDIS_PASSWORD:?defina REDIS_PASSWORD no .env} --appendonly yes --save "60 1"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD} ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 10

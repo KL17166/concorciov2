@@ -99,6 +99,16 @@ export const getKycDocument = async (req: Request, res: Response): Promise<void>
         return;
     }
 
+    // A5: userId nunca entra cru no path — ids são uuid/slug.
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(requestedUserId)) {
+        res.status(400).json({
+            success: false,
+            error: 'BAD_REQUEST',
+            message: 'Usuário inválido.'
+        });
+        return;
+    }
+
     // Check primary private storage
     const primaryPath = path.join(KYC_STORAGE_DIR, requestedUserId, safeFileName);
     const legacyPath = path.join(process.cwd(), 'public', 'uploads', 'documents', requestedUserId, safeFileName);

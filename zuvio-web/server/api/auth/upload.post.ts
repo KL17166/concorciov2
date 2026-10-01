@@ -1,6 +1,7 @@
 // POST /api/auth/upload?type=...
-import { defineEventHandler, getQuery, readMultipartFormData, createError } from 'h3'
+import { defineEventHandler, getQuery, readMultipartFormData } from 'h3'
 import { getHeader } from 'h3'
+import { sendHttpError } from '~~/server/utils/httpError'
 import crypto from 'crypto'
 
 /**
@@ -13,13 +14,13 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const type = query.type as string
 
-  if (!type) throw createError({ statusCode: 400, statusMessage: 'Query param "type" is required' })
+  if (!type) return sendHttpError(event, 400, 'Query param "type" is required')
 
   const parts = await readMultipartFormData(event)
-  if (!parts || parts.length === 0) throw createError({ statusCode: 400, statusMessage: 'Arquivo ausente' })
+  if (!parts || parts.length === 0) return sendHttpError(event, 400, 'Arquivo ausente')
 
   const filePart = parts[0]
-  if (!filePart || !filePart.data) throw createError({ statusCode: 400, statusMessage: 'Arquivo inválido' })
+  if (!filePart || !filePart.data) return sendHttpError(event, 400, 'Arquivo inválido')
 
   // Re-create FormData with the file
   // Convert Node Buffer → Uint8Array for standard Blob compatibility
@@ -27,13 +28,14 @@ export default defineEventHandler(async (event) => {
   const blob = new Blob([new Uint8Array(filePart.data)], { type: filePart.type || 'application/octet-stream' })
   formData.append('file', blob, filePart.filename || 'upload')
 
-  // HMAC signature (body undefined for multipart — header marks no body)
-  const STATIC_HMAC_SECRET = 'd8f9a2b3c4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcde'
+  // HMAC signature (body undefined for multipart — header marks no body).
+  // Segredo via env server-only (nunca hardcoded — B1).
+  const hmacSecret = useRuntimeConfig().hmacSecret as string | undefined
   const timestamp = Math.floor(Date.now() / 1000).toString()
   const nonce = crypto.randomBytes(8).toString('hex')
   const bodyHash = crypto.createHash('sha256').update('').digest('hex')
   const canonical = `POST:/api/auth/upload:${timestamp}:${nonce}:${bodyHash}`
-  const signature = crypto.createHmac('sha256', STATIC_HMAC_SECRET).update(canonical).digest('hex')
+  const signature = crypto.createHmac('sha256', hmacSecret || '').update(canonical).digest('hex')
 
   const authHeader = getHeader(event, 'authorization')
   const headers: Record<string, string> = {
@@ -55,6 +57,6 @@ export default defineEventHandler(async (event) => {
   } catch (err: any) {
     const status = err?.status || 500
     const message = err?.data?.error || err?.message || 'Erro ao fazer upload'
-    throw createError({ statusCode: status, statusMessage: message })
+    return sendHttpError(event, status, message)
   }
 })

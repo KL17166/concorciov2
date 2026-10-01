@@ -20,6 +20,21 @@ const parseDisplayOrder = (raw: any, fallback: number): number => {
     return Number.isFinite(n) && n >= 0 ? n : fallback;
 };
 
+// A13: trava financeira de produto (preço positivo, tipo do enum, taxa 0–100).
+// Retorna mensagem de erro ou null se válido.
+function validateProductMoney(body: any): string | null {
+    const priceNum = Number(body?.price);
+    if (!Number.isFinite(priceNum) || priceNum <= 0) return 'Preço deve ser um valor positivo.';
+    const ALLOWED_TYPES = ['MOTO', 'CARRO', 'CARTA_CREDITO', 'ELETRONICO', 'IMOVEL', 'SERVICO'];
+    if (body?.type && !ALLOWED_TYPES.includes(String(body.type))) return 'Tipo de produto inválido.';
+    const fee = body?.adminFeeRate;
+    if (fee !== undefined && fee !== '' && fee !== null) {
+        const feeNum = Number(fee);
+        if (!Number.isFinite(feeNum) || feeNum < 0 || feeNum > 100) return 'Taxa administrativa deve estar entre 0 e 100.';
+    }
+    return null;
+}
+
 // GET /admin/products
 export const listProducts = async (req: Request, res: Response) => {
     try {
@@ -116,6 +131,11 @@ export const newProductForm = async (req: Request, res: Response) => {
 // POST /admin/products/new
 export const createProduct = async (req: Request, res: Response) => {
     try {
+        const moneyErr = validateProductMoney(req.body);
+        if (moneyErr) {
+            req.flash('error_msg', moneyErr);
+            return res.redirect('/admin/products/new');
+        }
         const { name, price, type, category, imageUrls, description, brand, model, year, specs, active, minDuration, maxDuration, adminFeeRate, isFeatured, isPopular } = req.body;
 
         const min = parseInt(minDuration) || 12;
@@ -213,6 +233,11 @@ export const editProductForm = async (req: Request, res: Response) => {
 export const updateProduct = async (req: Request, res: Response) => {
     const id = req.params.id as string;
     try {
+        const moneyErr = validateProductMoney(req.body);
+        if (moneyErr) {
+            req.flash('error_msg', moneyErr);
+            return res.redirect('/admin/products');
+        }
         const { name, price, type, category, imageUrls, description, brand, model, year, specs, active, minDuration, maxDuration, adminFeeRate, isFeatured, isPopular } = req.body;
 
         const min = parseInt(minDuration) || 12;

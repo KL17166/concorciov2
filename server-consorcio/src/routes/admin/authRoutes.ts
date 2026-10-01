@@ -121,12 +121,8 @@ router.get('/logout', (req, res) => {
     });
 });
 
-router.get('/token', isAdmin, (req, res) => {
-    const token = (req.session as any).adminToken;
-    if (!token) {
-        return res.status(401).json({ error: 'Token não disponível. Faça login novamente.' });
-    }
-    res.json({ token });
-});
+// REMOVIDO (A10, 2026-09-29): GET /admin/token distribuía JWT legível via JS
+// (roubável por qualquer XSS) que desligava WAF/security e sobrevivia ao logout.
+// O painel usa só o cookie HttpOnly de sessão.
 
 export default router;
