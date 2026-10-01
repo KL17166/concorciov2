@@ -103,8 +103,8 @@ function validate(): boolean {
     valid = false
   }
 
-  if (!form.password || form.password.length < 6) {
-    errors.password = 'A senha deve ter pelo menos 6 caracteres'
+  if (!form.password || form.password.length < 8) {
+    errors.password = 'A senha deve ter pelo menos 8 caracteres'
     valid = false
   }
 
@@ -295,8 +295,8 @@ async function handleRegister() {
                 v-model="form.password"
                 :type="obscurePassword ? 'password' : 'text'"
                 class="field-input"
-                placeholder="Mínimo 6 caracteres"
-                minlength="6"
+                placeholder="Mínimo 8 caracteres"
+                minlength="8"
                 required
               />
               <button
@@ -322,7 +322,7 @@ async function handleRegister() {
                 :type="obscureConfirmPassword ? 'password' : 'text'"
                 class="field-input"
                 placeholder="Repita sua senha"
-                minlength="6"
+                minlength="8"
                 required
               />
               <button
