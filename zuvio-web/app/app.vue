@@ -8,6 +8,7 @@ import { useConsortiumStore } from '~/stores/consortium'
 import { useBidStore } from '~/stores/bid'
 import { useAuthStore } from '~/stores/auth'
 import { useNotificationsStore } from '~/stores/notifications'
+import { isDesktopClient, reportGateEvent } from '~/composables/useDeviceGate'
 
 // Only show dev tools in development mode
 const isDev = computed(() => import.meta.dev)
@@ -36,6 +37,22 @@ function dismissKycBanner() {
 }
 
 onMounted(() => {
+  // Porteiro client-side (backup do middleware SSR): se um desktop chegar a
+  // qualquer rota pública via navegação SPA ou redirect burlado, devolve
+  // para /baixar-app e registra a tentativa.
+  const enforceGate = () => {
+    if (isDev.value) return
+    if (!import.meta.client) return
+    if (route.path.startsWith('/admin')) return
+    if (route.path === '/baixar-app') return
+    if (document.cookie.includes('kat_desktop_ok=1')) return
+    if (!isDesktopClient()) return
+    reportGateEvent('gate.client-enforce')
+    router.replace('/baixar-app')
+  }
+  enforceGate()
+  router.afterEach(() => enforceGate())
+
   const syncData = () => {
     if (authStore.isAuthenticated) {
       consortiumStore.loadHomeData()

@@ -33,7 +33,11 @@ export interface CreditCalculationInput {
     adminFeeRate: number; // e.g. 15.0 for 15%
     fundRate: number;     // e.g. 2.0 for 2%
     durationMonths: number;
+    insuranceRate?: number; // e.g. 2.31 — seguro de vida em grupo (opt-in)
 }
+
+/** Taxa do seguro de vida em grupo aplicada ao total quando opt-in. */
+export const INSURANCE_RATE_PERCENT = 2.31;
 
 export interface CreditCalculationResult {
     productPrice: number;
@@ -51,7 +55,7 @@ export function calculatePlanFinancials(input: CreditCalculationInput): CreditCa
         throw new Error('Duração do plano deve ser maior que zero');
     }
 
-    const totalRatePercentage = Number(input.adminFeeRate) + Number(input.fundRate);
+    const totalRatePercentage = Number(input.adminFeeRate) + Number(input.fundRate) + Number(input.insuranceRate ?? 0);
     const creditValue = Number(input.productPrice) * (1 + totalRatePercentage / 100);
     const monthlyInstallment = creditValue / input.durationMonths;
 

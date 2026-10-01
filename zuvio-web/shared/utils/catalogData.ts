@@ -15,7 +15,8 @@ export const PRODUCT_CATEGORIES: { key: ProductTypeKey; label: string; subCatego
       { key: 'scooter', displayName: 'Scooter', icon: '' },
       { key: 'adventure', displayName: 'Adventure', icon: '' },
       { key: 'touring', displayName: 'Touring', icon: '' },
-      { key: 'street', displayName: 'Street', icon: '' }
+      { key: 'street', displayName: 'Street', icon: '' },
+      { key: 'utilitaria', displayName: 'Utilitária', icon: '' }
     ]
   },
   {

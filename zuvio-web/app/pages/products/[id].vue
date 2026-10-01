@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '~/stores/auth'
 import { useConsortiumStore } from '~/stores/consortium'
 import { formatCurrency } from '~~/shared/utils/currency'
 import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
 import { trackEvent } from '~/composables/useTrack'
+import { savePendingContract } from '~/composables/usePendingContract'
 import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
   Star,
   Check,
-  CheckCircle,
-  Info,
   ChevronLeft,
   ChevronRight,
   Shield,
@@ -26,15 +26,20 @@ import {
 } from 'lucide-vue-next'
 
 definePageMeta({
-  middleware: 'auth'
+  // Detalhe público (funil guest): visualização sem login; o "Contratar"
+  // pede cadastro e guarda a seleção (pending) até o pós-auth.
 })
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const consortiumStore = useConsortiumStore()
 
 const currentImageIndex = ref(0)
 const selectedPlan = ref<ConsortiumPlan | null>(null)
+// Seguro de vida em grupo: opt-in padrão ativo, +2,31% no total.
+const insuranceOptIn = ref(true)
+const INSURANCE_RATE = 2.31
 const showFab = ref(false)
 const isPageLoading = ref(true)
 const imageLoadError = ref(false)
@@ -84,6 +89,8 @@ function autoSelectBestPlan() {
 }
 
 onMounted(async () => {
+  // Sem middleware auth: hidrata a sessão para o "Contratar" decidir o destino.
+  authStore.initFromStorage()
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('keydown', handleKeydown)
 
@@ -183,6 +190,14 @@ function selectPlan(plan: ConsortiumPlan) {
   selectedPlan.value = plan
 }
 
+// Parcela exibida com seguro quando ativo.
+// (O servidor recalcula na criação — fonte oficial do valor cobrado.)
+const finalMonthly = computed(() => {
+  const base = selectedPlan.value?.monthlyInstallment ?? 0
+  if (!insuranceOptIn.value || !base) return base
+  return Math.round(base * (1 + INSURANCE_RATE / 100) * 100) / 100
+})
+
 function handleContinue() {
   if (!product.value || !selectedPlan.value) return
   consortiumStore.selectedProduct = product.value
@@ -208,10 +223,24 @@ function handleContinue() {
     entityId: product.value.id,
     metadata: {
       productName: product.value.name,
-      price: product.value.price
+      price: product.value.price,
+      insuranceOptIn: insuranceOptIn.value
     }
   })
 
+  // Guest: guarda a seleção e pede cadastro; o pós-auth volta ao checkout
+  // (redirect simples + pending no storage — query aninhada quebraria o &).
+  if (!authStore.isAuthenticated) {
+    savePendingContract(product.value.id, selectedPlan.value.id, insuranceOptIn.value)
+    router.push({
+      path: '/auth/register',
+      query: { redirect: '/checkout' }
+    })
+    return
+  }
+
+  // Logado: a seleção viaja no pending também (o seguro vai junto).
+  savePendingContract(product.value.id, selectedPlan.value.id, insuranceOptIn.value)
   router.push({
     path: '/checkout',
     query: {
@@ -432,71 +461,56 @@ const benefits = [
       <div class="price-section-container">
         <span class="price-section-label">Valor do Consórcio</span>
         <div class="price-section-value">{{ formatCurrency(product.price) }}</div>
-        <div v-if="selectedPlan" class="price-section-monthly">
-          ou {{ selectedPlan.durationMonths }}x de {{ formatCurrency(selectedPlan.monthlyInstallment) }}
-        </div>
       </div>
 
-      <!-- 4. Plan Selection - Grid of Tabs (_buildPlanSelection) -->
+      <!-- 4. Plan Selection - Pills de prazo (só duração; valor só abaixo) -->
       <div class="plan-selection-container">
         <h2 class="plan-section-title">Escolha o prazo ideal para você</h2>
         <p class="plan-section-subtitle">
           Selecione a quantidade de meses que melhor se adequa ao seu orçamento
         </p>
 
-        <!-- Max Duration Chip -->
-        <div class="max-duration-chip">
-          <Info :size="18" color="#FF6D00" />
-          <span>Duração máxima permitida: {{ product.maxDuration || 80 }} meses</span>
-        </div>
-
-        <!-- 2-Column Grid (childAspectRatio: 1.4) -->
-        <div class="plans-cards-grid">
-          <div
+        <div class="plans-pills-row" role="radiogroup" aria-label="Prazo do consórcio">
+          <button
             v-for="plan in availablePlans"
             :key="plan.id"
-            class="plan-tab-card"
+            type="button"
+            role="radio"
+            :aria-checked="selectedPlan?.id === plan.id"
+            class="plan-pill"
             :class="{ selected: selectedPlan?.id === plan.id }"
             @click="selectPlan(plan)"
           >
-            <div class="plan-tab-top-row">
-              <span class="plan-tab-months">{{ plan.durationMonths }} meses</span>
-              <CheckCircle
-                v-if="selectedPlan?.id === plan.id"
-                :size="24"
-                color="#FFFFFF"
-                class="plan-tab-check"
-              />
-            </div>
-            <div class="plan-tab-amount">
-              {{ formatCurrency(plan.monthlyInstallment) }}
-            </div>
-            <span class="plan-tab-per-month">por mês</span>
-          </div>
+            {{ plan.durationMonths }}x
+          </button>
         </div>
       </div>
 
-      <!-- 5. Selected Plan Info Summary Box (_buildSelectedPlanInfo) -->
+      <!-- Seguro de vida em grupo (opt-in padrão, +2,31% no total) -->
+      <button
+        type="button"
+        class="insurance-row"
+        :aria-pressed="insuranceOptIn"
+        @click="insuranceOptIn = !insuranceOptIn"
+      >
+        <span class="insurance-label">Seguro de vida em grupo</span>
+        <span class="insurance-check" :class="{ checked: insuranceOptIn }">
+          <Check v-if="insuranceOptIn" :size="14" />
+        </span>
+      </button>
+
+      <!-- 5. Valor da parcela do plano escolhido (único lugar com valor) -->
       <div v-if="selectedPlan" class="selected-plan-info-box">
-        <div class="summary-title-row">
-          <Info :size="20" color="#FF6D00" />
-          <span class="summary-title-text">Resumo do Plano Escolhido</span>
+        <div class="installment-side">
+          <div class="installment-label">
+            Valor da parcela {{ insuranceOptIn ? 'com' : 'sem' }}<br />seguro
+          </div>
         </div>
-        <div class="summary-data-list">
-          <div class="summary-data-item">
-            <span class="summary-item-label">Prazo</span>
-            <span class="summary-item-val">{{ selectedPlan.durationMonths }} meses</span>
+        <div class="installment-side installment-final">
+          <div class="installment-value-row">
+            <span class="installment-value">{{ formatCurrency(finalMonthly) }}</span>
           </div>
-          <div class="summary-data-item">
-            <span class="summary-item-label">Parcela mensal</span>
-            <span class="summary-item-val">{{ formatCurrency(selectedPlan.monthlyInstallment) }}</span>
-          </div>
-          <div class="summary-data-item">
-            <span class="summary-item-label">Total a pagar</span>
-            <span class="summary-item-val">
-              {{ formatCurrency(selectedPlan.monthlyInstallment * selectedPlan.durationMonths) }}
-            </span>
-          </div>
+          <div class="installment-per">/mês</div>
         </div>
       </div>
 
@@ -898,12 +912,6 @@ const benefits = [
   letter-spacing: -0.5px;
 }
 
-.price-section-monthly {
-  font-size: 16px;
-  color: #616161;
-  font-weight: 500;
-}
-
 /* ── 4. Plan Selection (_buildPlanSelection) ────────────────────────────── */
 .plan-selection-container {
   padding: 20px;
@@ -924,129 +932,124 @@ const benefits = [
   line-height: 1.4;
 }
 
-.max-duration-chip {
-  display: inline-flex;
-  align-items: center;
+.plans-pills-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  padding: 8px 12px;
-  background-color: rgba(255, 109, 0, 0.1);
-  border: 1px solid rgba(255, 109, 0, 0.3);
-  border-radius: 8px;
-  color: #FF6D00;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 20px;
 }
 
-.plans-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+.plan-pill {
+  padding: 10px 8px;
+  border-radius: 999px;
+  border: 1.5px solid #E0E0E0;
+  background-color: #FFFFFF;
+  color: #424242;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.plan-pill:hover {
+  border-color: #FF6D00;
+  transform: translateY(-1px);
+}
+
+.plan-pill.selected {
+  background: linear-gradient(135deg, #FF6D00 0%, #E65100 100%);
+  border-color: transparent;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(255, 109, 0, 0.35);
+}
+
+/* ── Seguro de vida em grupo ──────────────────────────────────────────── */
+.insurance-row {
+  margin: 16px 20px 0;
+  width: calc(100% - 40px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #FFFFFF;
+  border: 1px solid #E0E0E0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.insurance-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid #BDBDBD;
+  background: #FFFFFF;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.insurance-check.checked {
+  background: #FF6D00;
+  border-color: #FF6D00;
+}
+
+.insurance-label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #263238;
+}
+
+/* ── 5. Valor da parcela (único lugar com valor) ────────────────────────── */
+.selected-plan-info-box {
+  margin: 10px 20px 16px;
+  padding: 14px 16px;
+  background-color: rgba(255, 109, 0, 0.08);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 109, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
 }
 
-.plan-tab-card {
-  padding: 16px;
-  border-radius: 12px;
-  background-color: #F5F5F5;
-  border: 1px solid #E0E0E0;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.installment-side {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  min-height: 110px;
+  gap: 2px;
 }
 
-.plan-tab-card:hover {
-  transform: translateY(-2px);
+.installment-final {
+  align-items: flex-end;
+  text-align: right;
 }
 
-.plan-tab-card.selected {
-  background: linear-gradient(135deg, #FF6D00 0%, #FF8F00 100%);
-  border: 2px solid #FF6D00;
-  box-shadow: 0 4px 12px rgba(255, 109, 0, 0.3);
-}
-
-.plan-tab-top-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.plan-tab-months {
-  font-size: 18px;
-  font-weight: 700;
-  color: #263238;
-}
-
-.plan-tab-card.selected .plan-tab-months {
-  color: #FFFFFF;
-}
-
-.plan-tab-amount {
-  font-size: 24px;
-  font-weight: 700;
-  color: #FF6D00;
-  margin: 6px 0 0 0;
-  letter-spacing: -0.3px;
-}
-
-.plan-tab-card.selected .plan-tab-amount {
-  color: #FFFFFF;
-}
-
-.plan-tab-per-month {
-  font-size: 13.63px;
-  color: #757575;
-}
-
-.plan-tab-card.selected .plan-tab-per-month {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* ── 5. Selected Plan Info (_buildSelectedPlanInfo) ──────────────────────── */
-.selected-plan-info-box {
-  margin: 20px;
-  padding: 20px;
-  background-color: rgba(255, 109, 0, 0.1);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 109, 0, 0.3);
-}
-
-.summary-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.summary-title-text {
-  font-size: 16px;
-  font-weight: 700;
-  color: #263238;
-}
-
-.summary-data-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.summary-data-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.summary-item-label {
+.installment-label {
   font-size: 14px;
+  line-height: 1.35;
   color: #616161;
 }
 
-.summary-item-val {
-  font-size: 14px;
+.installment-value-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.installment-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #FF6D00;
+  letter-spacing: -0.5px;
+}
+
+.installment-per {
+  font-size: 13px;
   font-weight: 700;
-  color: #263238;
+  color: #FF6D00;
 }
 
 /* ── 6. Key Features (_buildKeyFeatures) ────────────────────────────────── */

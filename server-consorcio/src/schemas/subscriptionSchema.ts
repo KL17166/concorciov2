@@ -8,6 +8,7 @@ export const CreateClientSubscriptionSchema = z.object({
     termsAccepted: z.boolean().refine(val => val === true, {
         message: 'Você deve aceitar os termos e condições para criar um contrato.'
     }),
+    insuranceOptIn: z.boolean().optional().default(false),
     documentFrontUrl: z.string().optional().nullable(),
     documentBackUrl: z.string().optional().nullable(),
     selfieUrl: z.string().optional().nullable()

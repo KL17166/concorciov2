@@ -51,6 +51,8 @@ export const useCheckoutStore = defineStore('checkout', {
     contractAccepted: false,
     contractNumber: '',
     groupNumber: '',
+    // Seguro de vida em grupo (escolha do detalhe, via pending; padrão ativo)
+    insuranceOptIn: true,
     isLoading: false,
     createdSubscriptionId: null as string | null,
     paymentData: null as any | null,
@@ -199,6 +201,7 @@ export const useCheckoutStore = defineStore('checkout', {
             planId: selectedPlan.id,
             token: authStore.token || undefined,
             termsAccepted: true,
+            insuranceOptIn: this.insuranceOptIn === true,
             documentFrontUrl: this.documents.front || undefined,
             documentBackUrl: this.documents.back || undefined,
             selfieUrl: this.documents.selfie || undefined

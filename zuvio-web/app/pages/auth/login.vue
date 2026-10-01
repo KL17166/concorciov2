@@ -3,6 +3,8 @@ import { ref, reactive } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useToast } from '~/composables/useToast'
 import { formatCpf, unmaskCpf, isValidCpf } from '~~/shared/utils/cpf'
+import { safeRedirect } from '~~/shared/utils/redirect'
+import { pendingCheckoutTarget } from '~/composables/usePendingContract'
 import { IdCard, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next'
 
 definePageMeta({
@@ -76,8 +78,11 @@ async function handleLogin() {
   })
 
   if (result.success) {
-    const redirectUrl = (route.query.redirect as string) || '/'
-    router.push(redirectUrl)
+    // Redirect explícito vence; senão volta ao checkout do pending guest.
+    const target = route.query.redirect
+      ? safeRedirect(route.query.redirect)
+      : (pendingCheckoutTarget() ?? '/')
+    router.push(target)
   } else {
     errors.general = result.message || 'Falha ao realizar login'
     toast.error(errors.general)

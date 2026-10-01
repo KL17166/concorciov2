@@ -122,6 +122,10 @@ model Subscription {
   balanceDue        Decimal   // Quanto falta pagar
   paidInstallments  Int       @default(0)
   totalInstallments Int       // Total de parcelas do plano
+
+  // Seguro de vida em grupo (opt-in na tela do produto; +2.31% no total)
+  insuranceOptIn    Boolean   @default(false)
+  insuranceRate     Decimal?  // taxa aplicada quando opt-in (ex: 2.31)
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

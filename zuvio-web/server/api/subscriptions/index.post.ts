@@ -17,6 +17,7 @@ export default defineEventHandler(async (event) => {
     planId: body.planId,
     productId: body.productId,
     termsAccepted: body.termsAccepted,
+    insuranceOptIn: body.insuranceOptIn === true,
     documentFrontUrl: body.documentFrontUrl,
     documentBackUrl: body.documentBackUrl,
     selfieUrl: body.selfieUrl,

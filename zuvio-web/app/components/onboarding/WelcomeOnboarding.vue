@@ -5,7 +5,6 @@ import { usePointerSwipe } from '@vueuse/core'
 import {
   Play,
   X,
-  Sparkles,
   ChevronRight,
   ShieldCheck,
   Percent,
@@ -17,7 +16,6 @@ import {
   CarFront,
   House,
   Wallet,
-  UserRound,
   BadgeCheck
 } from 'lucide-vue-next'
 
@@ -128,6 +126,10 @@ function formatCurrency(val: number) {
 // ── Navigation CTAs (preserva ?redirect= do middleware auth) ─────────────────
 const redirectTarget = computed(() => (route.query.redirect as string) || '')
 
+function goToCatalog() {
+  router.push('/catalogo')
+}
+
 function goToRegister() {
   if (redirectTarget.value) {
     router.push({ path: '/auth/register', query: { redirect: redirectTarget.value } })
@@ -203,18 +205,18 @@ function goToLogin() {
 
           <!-- Graphic Montage (matching screenshot 4) -->
           <div class="montage-wrapper montage-slide-4">
-            <!-- Top Left: Avatar profile card with decorative blue bracket -->
+            <!-- Top Left: Titan photo card with Contemplado badge -->
             <div class="avatar-card-container">
-              <div class="bracket-accent bracket-left"></div>
-              <div class="bracket-accent bracket-right"></div>
-              <div class="user-avatar-card">
-                <div class="avatar-illu">
-                  <UserRound :size="34" class="avatar-face-icon" />
-                  <Sparkles :size="16" class="sparkle-top-icon" />
+              <div class="titan-photo-card">
+                <img
+                  src="/img/onboarding/honda_cg_titan.jpg"
+                  alt="Honda CG Titan - conquista Katari"
+                  class="titan-photo-img"
+                />
+                <div class="contemplado-pill">
+                  <BadgeCheck :size="14" class="contemplado-icon" />
+                  <span>Contemplado</span>
                 </div>
-              </div>
-              <div class="avatar-photo-mini avatar-photo-local">
-                <BadgeCheck :size="22" class="mini-shield-icon" />
               </div>
             </div>
 
@@ -353,14 +355,14 @@ function goToLogin() {
 
     <!-- Bottom Action Section (Docked & Fixed) -->
     <footer class="onboarding-actions">
-      <!-- Primary Action: Cadastre-se (Replaces "Ver serviços Honda") -->
+      <!-- Primary Action: Ver catálogo (funil guest: filtro → catálogo → cadastro no contratar) -->
       <button
         type="button"
-        id="btn-onboarding-register"
+        id="btn-onboarding-catalog"
         class="btn-primary-action"
-        @click="goToRegister"
+        @click="goToCatalog"
       >
-        <span class="btn-text">Cadastre-se</span>
+        <span class="btn-text">Ver catálogo</span>
         <ArrowRight :size="18" class="btn-icon" />
       </button>
 
@@ -1271,65 +1273,40 @@ function goToLogin() {
   gap: 6px;
 }
 
-.bracket-accent {
+.titan-photo-card {
+  position: relative;
+  width: 132px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.titan-photo-img {
+  width: 100%;
+  height: 92px;
+  object-fit: cover;
+  display: block;
+}
+
+.contemplado-pill {
   position: absolute;
-  top: -6px;
-  width: 12px;
-  height: 120px;
-  border: 3px solid #0288D1;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(2, 136, 209, 0.92);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
   pointer-events: none;
 }
 
-.bracket-left {
-  left: -8px;
-  border-right: none;
-  border-top-left-radius: 12px;
-  border-bottom-left-radius: 12px;
-}
-
-.bracket-right {
-  right: -8px;
-  border-left: none;
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
-}
-
-.user-avatar-card {
-  width: 78px;
-  height: 70px;
-  background: #E2E8F0;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.avatar-illu {
-  font-size: 34px;
-  position: relative;
-}
-
-.sparkle-top {
-  position: absolute;
-  top: -8px;
-  right: -10px;
-  font-size: 16px;
-}
-
-.avatar-photo-mini {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  border: 2px solid #FFFFFF;
-}
-
-.mini-driver-photo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.contemplado-icon {
+  flex-shrink: 0;
 }
 
 .shape-grey-backdrop {

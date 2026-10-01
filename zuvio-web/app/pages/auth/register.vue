@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
+import { useConsortiumStore } from '~/stores/consortium'
 import { useToast } from '~/composables/useToast'
 import { formatCpf, unmaskCpf, isValidCpf } from '~~/shared/utils/cpf'
+import { formatCurrency } from '~~/shared/utils/currency'
+import { safeRedirect } from '~~/shared/utils/redirect'
+import { readPendingContract, pendingCheckoutTarget } from '~/composables/usePendingContract'
+import type { Product, ConsortiumPlan } from '~~/shared/types/catalog'
 import { UserPlus, ArrowLeft, User, Mail, Phone, Lock, IdCard, Eye, EyeOff, CheckCircle } from 'lucide-vue-next'
 
 definePageMeta({
@@ -14,7 +19,26 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const consortiumStore = useConsortiumStore()
 const toast = useToast()
+
+// Banner do funil guest: mostra o produto que ele já escolheu.
+const pendingProduct = ref<Product | null>(null)
+const pendingPlan = ref<ConsortiumPlan | null>(null)
+
+onMounted(async () => {
+  const pending = readPendingContract()
+  if (!pending) return
+  try {
+    await consortiumStore.ensureProductsLoaded()
+    const prod = consortiumStore.products.find(p => p.id === pending.productId) ?? null
+    if (!prod) return
+    pendingProduct.value = prod
+    pendingPlan.value = prod.plans.find(p => p.id === pending.planId) ?? null
+  } catch {
+    // sem banner, mas o cadastro segue normal
+  }
+})
 
 const form = reactive({
   name: '',
@@ -116,8 +140,26 @@ async function handleRegister() {
 
     if (result.success) {
       toast.success('Conta criada com sucesso! Seja bem-vindo(a).')
-      const redirectUrl = (route.query.redirect as string) || '/'
-      router.push(redirectUrl)
+      // Auto-entra com as credenciais recém-criadas (o backend não retorna
+      // token no register) e vai direto ao destino, sem passar pelo login.
+      const loginResult = await authStore.login({
+        cpf: unmaskCpf(form.cpf),
+        password: form.password
+      })
+      // Redirect explícito vence; senão volta ao checkout do pending guest.
+      const target = route.query.redirect
+        ? safeRedirect(route.query.redirect)
+        : (pendingCheckoutTarget() ?? '/')
+      if (!loginResult.success) {
+        // Conta criada mas auto-login falhou: login manual com o destino.
+        if (target === '/') {
+          router.push('/auth/login')
+        } else {
+          router.push({ path: '/auth/login', query: { redirect: target } })
+        }
+        return
+      }
+      router.push(target)
     } else {
       errors.general = result.message || 'Erro ao criar conta'
       toast.error(errors.general)
@@ -155,6 +197,22 @@ async function handleRegister() {
 
         <h1 class="screen-title">Criar Conta Katari</h1>
         <p class="screen-subtitle">Preencha seus dados para começar seu consórcio</p>
+
+        <!-- Funil guest: o produto que ele já escolheu, esperando o cadastro -->
+        <div v-if="pendingProduct" class="pending-banner">
+          <img
+            :src="pendingProduct.imageUrl || '/img/products/corolla_cross.svg'"
+            :alt="pendingProduct.name"
+            class="pending-thumb"
+          />
+          <div class="pending-texts">
+            <span class="pending-kicker">Você está a um passo de garantir</span>
+            <strong class="pending-name">{{ pendingProduct.name }}</strong>
+            <span v-if="pendingPlan" class="pending-plan">
+              {{ pendingPlan.durationMonths }}x de {{ formatCurrency(pendingPlan.monthlyInstallment) }}
+            </span>
+          </div>
+        </div>
 
         <form class="login-card" @submit.prevent="handleRegister">
           <div v-if="errors.general" class="error-banner">
@@ -392,6 +450,58 @@ async function handleRegister() {
   border-radius: 24px;
   padding: 28px 20px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Funil guest: resumo do produto já escolhido, aguardando o cadastro */
+.pending-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 109, 0, 0.1);
+  border: 1px solid rgba(255, 109, 0, 0.35);
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+}
+
+.pending-thumb {
+  width: 64px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.pending-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.pending-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  color: #FFB74D;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.pending-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pending-plan {
+  font-size: 13px;
+  font-weight: 700;
+  color: #FF8F00;
 }
 
 .error-banner {

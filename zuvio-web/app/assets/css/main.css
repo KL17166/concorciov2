@@ -93,6 +93,27 @@ html, body {
   -webkit-user-select: none;
 }
 
+/* ── Sem barrinha de rolagem (cara de app nativo em todas as telas) ──────
+   Esconde a scrollbar do navegador em tudo (vertical e horizontal),
+   sem desativar a rolagem — igual ao comportamento dentro do APK. */
+html, body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 button, input, select, textarea {
   font-family: inherit;
   font-size: inherit;

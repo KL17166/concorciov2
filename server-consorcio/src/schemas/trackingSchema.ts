@@ -35,6 +35,7 @@ export const TRACK_EVENTS = [
 export const TRACK_SCREENS = [
     'home',
     'welcome',
+    'catalogo',
     'auth',
     'bids',
     'payment',
@@ -56,7 +57,7 @@ export const TrackEventSchema = z.object({
     event: z.enum(TRACK_EVENTS),
     screen: z.enum(TRACK_SCREENS).optional().nullable(),
     entityType: z.enum(TRACK_ENTITY_TYPES).optional().nullable(),
-    entityId: z.string().uuid().optional().nullable(),
+    entityId: z.string().uuid().or(z.string().regex(/^[a-z0-9][a-z0-9-_]{0,119}$/i)).optional().nullable(),
     guestId: z.string().uuid().optional().nullable(),
     metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
         .optional()

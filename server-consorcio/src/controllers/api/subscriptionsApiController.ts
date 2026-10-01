@@ -66,6 +66,7 @@ export const createClientSubscription = async (req: Request, res: Response): Pro
             documentFrontUrl: data.documentFrontUrl,
             documentBackUrl: data.documentBackUrl,
             selfieUrl: data.selfieUrl,
+            insuranceOptIn: data.insuranceOptIn === true,
             channel: 'CLIENT_APP'
         });
 

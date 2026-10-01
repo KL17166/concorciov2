@@ -2,7 +2,7 @@ import { Subscription, Installment, ConsortiumPlan, Product } from '@prisma/clie
 import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 import { generatePaymentToken } from '../../security/paymentToken';
-import { calculatePlanFinancials } from '../../domain/calculations/installmentCalculator';
+import { calculatePlanFinancials, INSURANCE_RATE_PERCENT } from '../../domain/calculations/installmentCalculator';
 import { allocateGroupAndQuota } from '../../domain/calculations/groupQuotaAllocator';
 
 export interface CreateSubscriptionInput {
@@ -16,6 +16,7 @@ export interface CreateSubscriptionInput {
     documentFrontUrl?: string | null;
     documentBackUrl?: string | null;
     selfieUrl?: string | null;
+    insuranceOptIn?: boolean;
     channel: 'CLIENT_APP' | 'ADMIN_PANEL';
 }
 
@@ -82,12 +83,14 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
         throw Object.assign(new Error(`Duração do plano (${plan.durationMonths} meses) fora dos limites permitidos (${minDuration}–${maxDuration} meses)`), { statusCode: 400 });
     }
 
-    // 4. Financial Calculations
+    // 4. Financial Calculations (seguro de vida em grupo: +2.31% se opt-in)
+    const insuranceOptIn = input.insuranceOptIn === true;
     const financials = calculatePlanFinancials({
         productPrice: Number(plan.product.price),
         adminFeeRate: Number(plan.adminFeeRate),
         fundRate: Number(plan.fundRate),
-        durationMonths: plan.durationMonths
+        durationMonths: plan.durationMonths,
+        insuranceRate: insuranceOptIn ? INSURANCE_RATE_PERCENT : 0
     });
 
     // 5. Atomic Creation Transaction with Retry on Concurrency Collisions
@@ -124,6 +127,8 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
                         creditValue: financials.creditValue,
                         balanceDue: financials.creditValue,
                         totalInstallments: financials.totalInstallments,
+                        insuranceOptIn,
+                        insuranceRate: insuranceOptIn ? INSURANCE_RATE_PERCENT : null,
                         status: 'PENDING',
                         paidInstallments: 0,
                         contemplated: false,

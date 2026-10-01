@@ -128,6 +128,17 @@ export const trackingLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+// Porteiro mobile-first: poucos eventos por sessão normal (view + bypass),
+// mas tolerante a falsos positivos de devtools/resize.
+export const deviceGateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: isProduction ? 120 : 1200,
+    keyGenerator: secureKeyGenerator,
+    message: { error: 'Muitos eventos do porteiro. Aguarde alguns minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 export const sessionLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
     max: isProduction ? 120 : 1000,

@@ -5,6 +5,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useConsortiumStore } from '~/stores/consortium'
 import { useCheckoutStore } from '~/stores/checkout'
 import { trackEvent, trackScreenView } from '~/composables/useTrack'
+import { clearPendingContract, readPendingContract } from '~/composables/usePendingContract'
 import {
   ArrowLeft,
   ArrowRight,
@@ -119,16 +120,28 @@ onMounted(async () => {
   await consortiumStore.ensureProductsLoaded()
 
   // Sync selectedProduct and selectedPlan from route query if present
-  if (route.query.productId) {
-    const prodId = String(route.query.productId)
+  // (ou do pending guest, quando o redirect veio simples — evita & aninhado).
+  let pendingId: string | null = null
+  let pendingPlan: string | null = null
+  if (!route.query.productId) {
+    const pending = readPendingContract()
+    if (pending) {
+      pendingId = pending.productId
+      pendingPlan = pending.planId
+    }
+  }
+  const queryProductId = route.query.productId ? String(route.query.productId) : pendingId
+  const queryPlanId = route.query.planId ? String(route.query.planId) : pendingPlan
+  if (queryProductId) {
+    const prodId = queryProductId
     let prod: import('~~/shared/types/catalog').Product | null | undefined = consortiumStore.products.find(p => p.id === prodId)
     if (!prod) {
       prod = await consortiumStore.fetchProductById(prodId)
     }
     if (prod) {
       consortiumStore.selectedProduct = prod
-      if (route.query.planId) {
-        const planId = String(route.query.planId)
+      if (queryPlanId) {
+        const planId = queryPlanId
         const pl = prod.plans.find(p => p.id === planId)
         if (pl) consortiumStore.selectedPlan = pl
       }
@@ -137,6 +150,18 @@ onMounted(async () => {
       return
     }
   }
+
+  // Funil guest: chegou ao checkout, o pending cumpriu o papel.
+  // O seguro escolhido no detalhe viaja junto (vale p/ query e p/ pending).
+  const pendingInsurance = readPendingContract()
+  if (
+    pendingInsurance &&
+    consortiumStore.selectedProduct &&
+    pendingInsurance.productId === consortiumStore.selectedProduct.id
+  ) {
+    checkoutStore.insuranceOptIn = pendingInsurance.insurance === true
+  }
+  clearPendingContract()
 
   // Sincroniza dados do usuário autenticado (nome/cpf são readonly — puxados do cadastro)
   syncUserData()

@@ -72,6 +72,14 @@ const plan = computed<ConsortiumPlan>(() => {
   }
 })
 
+// Seguro de vida em grupo (escolha do detalhe; servidor recalcula na criação)
+const insuranceOn = computed(() => checkoutStore.insuranceOptIn === true)
+const displayMonthly = computed(() => {
+  const base = plan.value?.monthlyInstallment ?? 0
+  if (!insuranceOn.value || !base) return base
+  return Math.round(base * 1.0231 * 100) / 100
+})
+
 function formatDate(date: Date) {
   const d = String(date.getDate()).padStart(2, '0')
   const m = String(date.getMonth() + 1).padStart(2, '0')
@@ -362,12 +370,18 @@ function handleRelogin() {
               <span class="data-value">{{ Number(plan.fundRate).toFixed(2) }}%</span>
             </div>
             <div class="data-row">
+              <span class="data-label">Seguro de vida em grupo</span>
+              <span class="data-value" :class="{ 'highlight-orange': insuranceOn }">
+                {{ insuranceOn ? 'Ativo' : 'Não contratado' }}
+              </span>
+            </div>
+            <div class="data-row">
               <span class="data-label">Parcela Mensal (inicial)</span>
-              <span class="data-value highlight-orange">{{ formatCurrency(plan.monthlyInstallment) }}</span>
+              <span class="data-value highlight-orange">{{ formatCurrency(displayMonthly) }}</span>
             </div>
             <div class="data-row">
               <span class="data-label">Valor Total Estimado</span>
-              <span class="data-value">{{ formatCurrency(plan.monthlyInstallment * plan.durationMonths) }}</span>
+              <span class="data-value">{{ formatCurrency(displayMonthly * plan.durationMonths) }}</span>
             </div>
           </div>
         </div>
